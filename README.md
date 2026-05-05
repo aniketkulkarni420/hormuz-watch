@@ -2,7 +2,7 @@
 
 A single-file dashboard monitoring the Strait of Hormuz with five live data signals — vessel traffic, dark-ship detection, freight rates, geopolitical incidents, and India crude exposure. Built for an equity analyst workflow at [KamayaKya](https://kamayakya.com) (SEBI RA INH000009883).
 
-**Live:** _set after deploy_
+**Live:** https://hormuz-watch-7cd.pages.dev
 
 ## Stack
 
