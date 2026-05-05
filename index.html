@@ -1415,10 +1415,11 @@ function gfwDates(){
 
 function gfwPost(type, cb){
   var dt = gfwDates();
+  // GFW v3 (2026): :latest dataset tag + camelCase startDate/endDate
   var body = {
     datasets:[type],
-    "start-date":dt.start,
-    "end-date":dt.end,
+    startDate:dt.start,
+    endDate:dt.end,
     geometry:{type:"Polygon",coordinates:[[[52,24],[59.5,24],[59.5,28.5],[52,28.5],[52,24]]]}
   };
   fetch("/api/gfw",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
@@ -1432,8 +1433,8 @@ function fetchGFW(){
   if(badge){badge.textContent="GFW...";badge.className="sig-src src-est";}
   var done=0;
   function check(){if(++done>=2)renderGFW();}
-  gfwPost("public-global-encounters-events:v20231026",function(err,rows){gfwState.encounters=err?[]:rows;check();});
-  gfwPost("public-global-loitering-events-carriers:v20231026",function(err,rows){gfwState.loitering=err?[]:rows;check();});
+  gfwPost("public-global-encounters-events:latest",function(err,rows){gfwState.encounters=err?[]:rows;check();});
+  gfwPost("public-global-loitering-events-carriers:latest",function(err,rows){gfwState.loitering=err?[]:rows;check();});
 }
 
 function getGFWPos(e){

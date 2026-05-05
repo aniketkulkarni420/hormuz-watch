@@ -14,8 +14,8 @@ export async function onRequestPost({ request, env }) {
 
   // Whitelist allowed datasets to prevent abuse of the JWT
   const allowed = new Set([
-    "public-global-encounters-events:v20231026",
-    "public-global-loitering-events-carriers:v20231026"
+    "public-global-encounters-events:latest",
+    "public-global-loitering-events-carriers:latest"
   ]);
   if (!Array.isArray(body.datasets) || !body.datasets.every(d => allowed.has(d))) {
     return json({ error: "dataset not allowed" }, 400);
