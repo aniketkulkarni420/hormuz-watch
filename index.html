@@ -311,10 +311,10 @@ header{
     <span class="ct-label">Oil transited today</span>
     <div class="ct-trigger" id="ctTrigger">
       <div style="display:flex;align-items:baseline;gap:7px">
-        <span class="ct-value" id="cargoVal">$0</span>
+        <span class="ct-value" id="cargoVal">—</span>
         <span class="ct-delta" id="ctDelta" style="color:var(--muted)">—</span>
       </div>
-      <span class="ct-sub" id="ctSub">21M bbl/day &times; $80/bbl</span>
+      <span class="ct-sub" id="ctSub">Awaiting AIS &middot; pre-crisis 21M bbl/day baseline</span>
       <!-- Progressive disclosure tooltip (Option C) -->
       <div class="ct-tooltip" id="ctTooltip">
         <div class="ctt-row">
@@ -327,14 +327,14 @@ header{
           <span class="ctt-val" id="ttYest">—</span>
           <span class="ctt-chg" style="color:var(--muted)">baseline</span>
         </div>
-        <div class="ctt-row">
-          <span class="ctt-key">7-day avg</span>
+        <div class="ctt-row" title="Hypothetical: 21M bbl/day × avg recent Brent (no AIS history available)">
+          <span class="ctt-key">Full flow @ avg Brent</span>
           <span class="ctt-val" id="tt7d">—</span>
           <span class="ctt-chg" id="tt7dChg"></span>
         </div>
-        <div class="ctt-row">
-          <span class="ctt-key">Pre-crisis avg</span>
-          <span class="ctt-val" id="ttBase">$1.12B</span>
+        <div class="ctt-row" title="21M bbl/day × $80 Brent — pre-crisis full-flow benchmark">
+          <span class="ctt-key">Pre-crisis baseline</span>
+          <span class="ctt-val" id="ttBase">—</span>
           <span class="ctt-chg" id="ttBaseChg" style="color:var(--red)"></span>
         </div>
         <div class="ctt-row">
@@ -850,46 +850,76 @@ function setChgEl(el, val, base, override){
   el.style.color=up?"var(--green)":"var(--red)";
 }
 
+// CARGO FLOW MODEL — accuracy-first.
+// Pre-crisis baseline: 21 mb/day crude through Hormuz (EIA) ≈ 42 tankers/day → ~500K bbl/vessel.
+// Today's flow scales with actual vessel count: (todayVessels / 42) × 21M × current_brent.
+// When traffic crashes, today's $ falls below pre-crisis $ — matches reality.
+var BASELINE_VESSELS = 42;
+var BASELINE_BBL_DAY = 21000000;
+var PRECRISIS_BRENT  = 80;
+
 (function tick(){
   var n=new Date(), p=function(x){return String(x).padStart(2,"0");};
   document.getElementById("clock").textContent=p(n.getUTCHours())+":"+p(n.getUTCMinutes())+":"+p(n.getUTCSeconds())+" UTC";
   var secs=n.getUTCHours()*3600+n.getUTCMinutes()*60+n.getUTCSeconds();
+
+  // Live traffic counts (TREND_DATA[3]=today, [2]=yesterday). Recompute every tick.
+  var todayVess = (typeof TREND_DATA!=="undefined" && TREND_DATA[3] && TREND_DATA[3].val!=null) ? TREND_DATA[3].val : 0;
+  var yestVess  = (typeof TREND_DATA!=="undefined" && TREND_DATA[2] && TREND_DATA[2].val!=null) ? TREND_DATA[2].val : 0;
+  var todayRatio = todayVess / BASELINE_VESSELS;
+  var yestRatio  = yestVess  / BASELINE_VESSELS;
+
+  // Today's flow rate, traffic-adjusted
+  DOLLARS_PER_SEC = (BASELINE_BBL_DAY * _brentPrice * todayRatio) / 86400;
   var todayVal=Math.floor(DOLLARS_PER_SEC*secs);
   var fmt=formatMoney(todayVal);
-  document.getElementById("cargoVal").textContent=fmt;
+  document.getElementById("cargoVal").textContent = todayVess > 0 ? fmt : "—";
 
-  // Tooltip live today
+  // Update cargo sub-line dynamically
+  var subEl=document.getElementById("ctSub");
+  if(subEl){
+    var todayMb = (BASELINE_BBL_DAY * todayRatio / 1e6).toFixed(1);
+    subEl.textContent = todayVess>0
+      ? (todayVess + " tankers · ~" + todayMb + "M bbl/day · $" + _brentPrice.toFixed(1) + "/bbl")
+      : ("Awaiting AIS · pre-crisis " + (BASELINE_BBL_DAY/1e6) + "M bbl/day baseline");
+  }
+
+  // Tooltip — Today
   var ttToday=document.getElementById("ttToday");
-  if(ttToday) ttToday.textContent=fmt;
+  if(ttToday) ttToday.textContent = todayVess > 0 ? fmt : "—";
 
-  // Yesterday = full 24h at current Brent price
-  var yest=_yesterdayDollars || (DOLLARS_PER_SEC*86400);
+  // Tooltip — Yesterday (yesterday's actual traffic × current Brent)
+  _yesterdayDollars = yestVess > 0 ? (BASELINE_BBL_DAY * _brentPrice * yestRatio) : null;
+  var yest = _yesterdayDollars || 0;
   var ttYest=document.getElementById("ttYest");
-  if(ttYest) ttYest.textContent=formatMoney(Math.floor(yest));
+  if(ttYest) ttYest.textContent = _yesterdayDollars ? formatMoney(Math.floor(_yesterdayDollars)) : "—";
 
-  // Option A delta line (always visible)
+  // Always-visible delta vs yesterday (only when both data points present)
   var deltaEl=document.getElementById("ctDelta");
-  if(deltaEl && secs > 3600) { // only show delta after 1 hour (avoids misleading low values)
+  if(deltaEl && todayVess > 0 && _yesterdayDollars && secs > 3600) {
     var pctVsYest=((todayVal-yest)/yest*100);
     var upD=pctVsYest>=0;
     deltaEl.textContent=(upD?"\u25b2":"\u25bc")+" "+(upD?"+":"")+Math.abs(pctVsYest).toFixed(1)+"% vs yest";
     deltaEl.style.color=upD?"var(--green)":"var(--red)";
-    // tooltip today change
     setChgEl(document.getElementById("ttTodayChg"), todayVal, yest);
+  } else if(deltaEl) {
+    deltaEl.textContent = "";
   }
 
-  // 7-day avg comparison
+  // 7-day avg comparison (full-flow at recent Brent — no AIS history available)
   if(_sevenDayAvg){
     var tt7dEl=document.getElementById("tt7d");
     if(tt7dEl) tt7dEl.textContent=formatMoney(Math.floor(_sevenDayAvg));
-    setChgEl(document.getElementById("tt7dChg"), todayVal, _sevenDayAvg);
+    if(todayVess > 0) setChgEl(document.getElementById("tt7dChg"), todayVal, _sevenDayAvg);
   }
 
   // Pre-crisis baseline comparison (42 vessels × $80 × 86400s)
   var precrisis=Math.floor(42*2000000*80); // ~6.7B barrels equiv. but scaled daily: 42 vessels × daily Brent flow
   // Actually: 21M bbl/day × $80 = $1.68B/day pre-crisis. Use 38 vessels × ratio:
-  var precrisisDollars=21000000*80; // the full-day pre-crisis baseline in dollars
-  setChgEl(document.getElementById("ttBaseChg"), todayVal, precrisisDollars);
+  var precrisisDollars = BASELINE_BBL_DAY * PRECRISIS_BRENT; // 21M × $80 = $1.68B/day full-flow ideal
+  var ttBase=document.getElementById("ttBase");
+  if(ttBase) ttBase.textContent = formatMoney(precrisisDollars);
+  if(todayVess > 0) setChgEl(document.getElementById("ttBaseChg"), todayVal, precrisisDollars);
 
   // Brent in tooltip
   var ttBrent=document.getElementById("ttBrent");
@@ -1554,15 +1584,15 @@ function renderEIA() {
   var wti      = eiaState.wti.length ? eiaState.wti[0].val : null;
   var period   = eiaState.brent[0].period;
 
-  // Update global price references for ticker
+  // Update price reference. DOLLARS_PER_SEC + _yesterdayDollars now recomputed each tick
+  // based on actual vessel traffic (see tick() above) — keeps dashboard accurate when
+  // traffic crashes (e.g. closure scenario).
   _brentPrice = brent;
-  DOLLARS_PER_SEC = (21000000 * brent) / 86400;
-  _yesterdayDollars = DOLLARS_PER_SEC * 86400; // full prior day at same price
-  // 7-day avg: use average of last 4 weekly data points as proxy
+  // 7-day avg shown as full-flow theoretical at recent Brent prices (no AIS history available)
   if(eiaState.brent.length >= 2){
     var sum=0; var cnt=Math.min(eiaState.brent.length,4);
     for(var i=0;i<cnt;i++) sum+=eiaState.brent[i].val;
-    _sevenDayAvg = (sum/cnt) * DOLLARS_PER_SEC / _brentPrice * 86400;
+    _sevenDayAvg = (sum/cnt) * BASELINE_BBL_DAY; // full flow at avg recent Brent
   }
 
   var ctSub = document.getElementById("ctSub");
