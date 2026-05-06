@@ -27,6 +27,11 @@ header{
 .hex{width:26px;height:26px;background:var(--amber);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:11px;color:#000;font-weight:900}
 .htitle{font-size:13px;font-weight:800;letter-spacing:.14em}
 .hsub{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em;margin-top:1px}
+.hsub-sep{color:var(--muted2);margin:0 6px}
+.hsub-credit{color:var(--muted);text-decoration:none;transition:color .15s}
+.hsub-credit:hover{color:var(--amber)}
+.hsub-tag{}
+@media(max-width:900px){.hsub-tag,.hsub-sep{display:none}}
 .cargo-ticker{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--mono);position:relative}
 .ct-label{font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
 .ct-value{font-size:16px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums}
@@ -299,7 +304,7 @@ header{
     <div class="hex">&#9783;</div>
     <div>
       <div class="htitle">HORMUZ WATCH</div>
-      <div class="hsub">Strait of Hormuz &mdash; Multi-Signal Intelligence</div>
+      <div class="hsub"><span class="hsub-tag">Strait of Hormuz &mdash; Multi-Signal Intelligence</span><span class="hsub-sep">&middot;</span>Built by <a class="hsub-credit" href="https://www.linkedin.com/in/aniket-kulkarni-equity-research/" target="_blank" rel="noopener noreferrer">Aniket Kulkarni</a></div>
     </div>
   </div>
   <div class="cargo-ticker">
