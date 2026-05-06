@@ -294,7 +294,116 @@ header{
   padding:2px 7px;border-radius:3px;margin-bottom:6px;
 }
 .sig-tt-text{font-family:var(--mono);font-size:9px;color:var(--text);line-height:1.55}
-@media(max-width:768px){.sig-tooltip{display:none}}
+/* sig-tooltip on mobile is now click-to-show (managed in JS) */
+.sig-tooltip{transition:opacity .18s ease,transform .18s ease}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE LAYOUT — bottom tabs, stacked sections
+   Activates on viewports ≤ 768px wide
+   ═══════════════════════════════════════════════════ */
+.mobile-tabs{display:none}
+@media(max-width:768px){
+  /* viewport baseline */
+  html,body{height:auto;overflow:visible}
+  body{display:block;min-height:100vh;padding-bottom:64px}
+
+  /* ----- HEADER: compact, two-line stack ----- */
+  header{height:auto;min-height:54px;padding:8px 12px;flex-wrap:wrap;gap:8px}
+  .hlogo{flex:1 1 auto;min-width:0}
+  .htitle{font-size:12px}
+  .hsub{font-size:8px;line-height:1.4}
+  .cargo-ticker{order:3;flex:1 1 100%;justify-content:flex-start;padding:4px 0 0}
+  .ct-label{display:inline}
+  .ct-value{font-size:14px}
+  .ct-delta{font-size:9px}
+  .hright{flex:0 0 auto;gap:8px}
+  #clock{font-size:10px}
+
+  /* cargo ticker tooltip — full width on mobile, top-anchored */
+  .ct-tooltip{position:fixed;left:8px!important;right:8px!important;top:auto!important;bottom:80px;
+    transform:translateY(20px)!important;min-width:0;width:auto;max-width:none;padding:14px 16px}
+  .ct-tooltip.visible{transform:translateY(0)!important}
+
+  /* ----- SIGNAL BAR: horizontal scroll strip ----- */
+  .signal-bar{height:auto;overflow-x:auto;overflow-y:hidden;
+    scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+  .signal-bar::-webkit-scrollbar{display:none}
+  .sig{flex:0 0 140px;scroll-snap-align:start;padding:8px 12px;border-right:1px solid var(--border)}
+  .sig-label{font-size:9px}
+  .sig-src{font-size:9px}
+  .sig-val{font-size:16px}
+
+  /* signal-bar tooltip — repositioned, click-to-show */
+  .sig-tooltip{display:none;position:fixed;left:8px;right:8px;top:auto;bottom:80px;
+    transform:translateY(20px);min-width:0;max-width:none;width:auto;
+    padding:14px 16px;z-index:2500}
+  .sig-tooltip.visible{display:block;opacity:1;pointer-events:auto;transform:translateY(0)}
+
+  /* ----- MAIN: stacked vertical, tab-controlled ----- */
+  .main{flex-direction:column;flex:none;overflow:visible}
+
+  /* MAP — fills viewport when active */
+  .mapwrap{order:1;width:100%;flex:none;height:calc(100vh - 220px);min-height:400px;display:none}
+  body.tab-map .mapwrap{display:flex;flex-direction:column}
+  #map{flex:1}
+
+  /* LEFT panel = "Ships" tab — height auto so page scrolls naturally */
+  .lpanel{order:2;width:100%;height:auto;min-height:calc(100vh - 220px);border-right:none;display:none;overflow:visible}
+  body.tab-ships .lpanel{display:flex}
+  body.tab-ships .lpanel .log-scroll{overflow:visible;max-height:none}
+
+  /* RIGHT panel = "Intel" tab — height auto so page scrolls naturally */
+  .rpanel{order:3;width:100%;height:auto;min-height:calc(100vh - 220px);border-left:none;display:none;overflow:visible}
+  body.tab-intel .rpanel{display:flex}
+
+  /* ----- BOTTOM TABS — sticky nav ----- */
+  .mobile-tabs{
+    display:flex;position:fixed;bottom:0;left:0;right:0;height:60px;z-index:2000;
+    background:rgba(7,9,14,.97);backdrop-filter:blur(14px);
+    border-top:1px solid var(--border2);
+  }
+  .mtab{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    background:transparent;border:none;color:var(--muted);font-family:var(--mono);
+    font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;
+    transition:color .15s;position:relative;padding:8px 4px;min-height:44px;
+  }
+  .mtab-icon{font-size:20px;line-height:1}
+  .mtab.active{color:var(--amber)}
+  .mtab.active::after{
+    content:"";position:absolute;top:0;left:25%;right:25%;height:2px;background:var(--amber);
+  }
+
+  /* ----- INFOCARD — bottom sheet ----- */
+  .infocard{position:fixed;left:8px;right:8px;bottom:72px;width:auto;
+    transform:translateY(120%);transition:transform .35s cubic-bezier(.16,1,.3,1)}
+  .infocard.show{transform:translateY(0)}
+
+  /* ----- MAP CONTROLS — compact ----- */
+  .layers{padding:6px;gap:4px}
+  .lbtn{padding:6px 8px;font-size:10px}
+  .ldash{width:10px;height:2px}
+  .lbname{font-size:10px}
+  .tiles{padding:4px;gap:4px}
+  .tbtn{padding:6px 10px;font-size:10px;min-width:60px}
+
+  /* ----- TYPOGRAPHY BUMPS ----- */
+  .rblock{padding:14px 16px}
+  .rhead{font-size:10px}
+  .rhead-src{font-size:10px}
+  .conclusion{font-size:10px}
+  .cv-badge{font-size:9px;padding:3px 8px}
+
+  /* hide LinkedIn credit on very narrow screens to keep header clean */
+  .hsub-credit{font-size:9px}
+}
+@media(max-width:480px){
+  /* extra-small phones — further trim */
+  .htitle{font-size:11px;letter-spacing:.1em}
+  .hsub{display:none}
+  .ct-label{display:none}
+  .live-badge{font-size:8px}
+}
 </style>
 </head>
 <body>
@@ -2020,6 +2129,98 @@ function renderConclusions(){
 setTimeout(renderConclusions, 2500);
 setInterval(renderConclusions, 15000);
 
+// ═══════════════════════════════════════════════════
+// MOBILE — bottom-tab switching + tap-to-toggle tooltips
+// ═══════════════════════════════════════════════════
+function isMobileWidth(){ return window.matchMedia("(max-width:768px)").matches; }
+
+function setMobileTab(tab){
+  document.body.classList.remove("tab-map","tab-ships","tab-intel");
+  document.body.classList.add("tab-"+tab);
+  document.querySelectorAll(".mtab").forEach(function(b){
+    b.classList.toggle("active", b.dataset.tab===tab);
+  });
+  // Leaflet must recompute its size when the map container becomes visible
+  if(tab==="map" && typeof map!=="undefined"){
+    setTimeout(function(){ try{ map.invalidateSize(true); }catch(e){} }, 50);
+  }
+}
+
+// Initialise default tab + click handlers — run AFTER full DOM load so the
+// .mobile-tabs nav (defined below this script in the body) is present.
+function initMobile(){
+  var tabsEl = document.querySelector(".mobile-tabs");
+  if(!tabsEl) return; // bail if nav not yet rendered
+  document.querySelectorAll(".mtab").forEach(function(b){
+    b.addEventListener("click", function(e){
+      e.stopPropagation();
+      setMobileTab(this.dataset.tab);
+    });
+  });
+  // Default landing tab on mobile is the map
+  if(isMobileWidth()){
+    setMobileTab("map");
+  } else {
+    document.body.classList.remove("tab-map","tab-ships","tab-intel");
+  }
+  // Reset on resize
+  window.addEventListener("resize", function(){
+    if(isMobileWidth()){
+      if(!document.body.className.match(/tab-/)) setMobileTab("map");
+    } else {
+      document.body.classList.remove("tab-map","tab-ships","tab-intel");
+    }
+    if(typeof map!=="undefined") setTimeout(function(){ try{ map.invalidateSize(true); }catch(e){} }, 60);
+  });
+}
+// Defer until after the rest of the body (including .mobile-tabs nav) parses
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", initMobile);
+} else {
+  // DOM already parsed — run on next tick so tab nav after this script is in
+  setTimeout(initMobile, 0);
+}
+
+// Convert hover-only signal-bar tooltips → tap-to-toggle on mobile
+var _sigTapsInited = false;
+function initSigTooltipTaps(){
+  if(_sigTapsInited) return;
+  if(!isMobileWidth()) return;
+  document.querySelectorAll(".sig").forEach(function(sig){
+    var tip = sig.querySelector(".sig-tooltip");
+    if(!tip) return;
+    sig.addEventListener("click", function(e){
+      e.stopPropagation();
+      document.querySelectorAll(".sig-tooltip.visible").forEach(function(t){ if(t!==tip) t.classList.remove("visible"); });
+      tip.classList.toggle("visible");
+    });
+  });
+  document.addEventListener("click", function(){
+    document.querySelectorAll(".sig-tooltip.visible").forEach(function(t){ t.classList.remove("visible"); });
+  });
+  _sigTapsInited = true;
+}
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", initSigTooltipTaps);
+} else {
+  setTimeout(initSigTooltipTaps, 0);
+}
+
 </script>
+<!-- Mobile bottom tabs — only visible on ≤768px viewports -->
+<nav class="mobile-tabs" role="tablist" aria-label="Sections">
+  <button class="mtab active" data-tab="map" type="button">
+    <span class="mtab-icon">🗺</span>
+    <span>Map</span>
+  </button>
+  <button class="mtab" data-tab="ships" type="button">
+    <span class="mtab-icon">🚢</span>
+    <span>Ships</span>
+  </button>
+  <button class="mtab" data-tab="intel" type="button">
+    <span class="mtab-icon">📊</span>
+    <span>Intel</span>
+  </button>
+</nav>
 </body>
 </html>
