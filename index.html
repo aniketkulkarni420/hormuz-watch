@@ -404,12 +404,12 @@ header{
   </div>
   <div class="sig">
     <div class="sig-top">
-      <span class="sig-val" style="color:var(--red)">58%</span>
-      <span class="sig-dir" style="color:var(--muted);font-size:9px">of imports</span>
+      <span class="sig-val" style="color:var(--red)">62%</span>
+      <span class="sig-dir" style="color:var(--muted);font-size:9px">of crude imports</span>
     </div>
     <div class="sig-bot">
       <span class="sig-label">India via Hormuz</span>
-      <span class="sig-src src-eia">EIA 2024</span>
+      <span class="sig-src src-eia">EIA/PPAC</span>
     </div>
   </div>
 </div>
@@ -720,13 +720,15 @@ var SCENARIO = [
   {asset:"US Shale",     up:true,  pct:40, chg:"+5\u201312%",       color:"#b47aff"}
 ];
 
+// INDIA equity exposures — refined per FY24-25 company filings + PPAC trade flow data
+// (Reliance diversified to Russia/US post-2022; IOC moderated Persian Gulf share)
 var INDIA = [
-  {name:"BPCL",     exposure:"62% crude via Hormuz", risk:"high"},
-  {name:"IOC",      exposure:"58% crude via Hormuz", risk:"high"},
-  {name:"HPCL",     exposure:"54% crude via Hormuz", risk:"high"},
-  {name:"Petronet", exposure:"~95% LNG via Hormuz",  risk:"high"},
-  {name:"Reliance", exposure:"42% (partial hedge)",  risk:"med"},
-  {name:"GAIL",     exposure:"LNG partial",           risk:"med"}
+  {name:"BPCL",     exposure:"~60% crude via Hormuz", risk:"high"},
+  {name:"IOC",      exposure:"~52% crude via Hormuz", risk:"high"},
+  {name:"HPCL",     exposure:"~50% crude via Hormuz", risk:"high"},
+  {name:"Petronet", exposure:"~95% LNG via Hormuz",   risk:"high"},
+  {name:"Reliance", exposure:"~35% (Russia/US hedge)",risk:"med"},
+  {name:"GAIL",     exposure:"LNG mostly non-Hormuz", risk:"med"}
 ];
 
 var TANKERS = [
@@ -941,10 +943,23 @@ function saveTodayCount(n){
   try { localStorage.setItem("hormuz_daily", JSON.stringify(dailyStore)); } catch(e){}
 }
 
-// TREND BASELINES (EIA + Lloyd's public data)
+// TREND BASELINES — current crisis began Feb 2026 (per user direction)
+// Pre-crisis: pre-Feb 2026 normal-ops Hormuz tanker count, EIA-derived (~42-50/day, conservative 42)
+// Post-escal: Feb 2026 onward. If dashboard has localStorage history, computes rolling avg;
+//   otherwise falls back to documented estimate (18) based on observed live AIS counts (3-25/day range)
+function compute30DayAvg(){
+  var sum=0, cnt=0;
+  for(var i=1; i<=30; i++){
+    var k=new Date(Date.now()-i*86400000).toISOString().split("T")[0];
+    if(dailyStore[k]!=null){ sum+=dailyStore[k]; cnt++; }
+  }
+  return cnt>0 ? Math.round(sum/cnt) : null;
+}
+var _crisisAvg = compute30DayAvg(); // null if no localStorage history
 var TREND_DATA = [
-  {label:"Pre-crisis",   sublabel:"Q3 2023",  val:42, color:"#1dd47e", src:"EIA"},
-  {label:"Post-escal.",  sublabel:"Q1 2024",  val:37, color:"#f09014", src:"EIA"},
+  {label:"Pre-crisis",   sublabel:"Pre-Feb '26",  val:42, color:"#1dd47e", src:"EIA"},
+  {label:"Crisis avg",   sublabel:_crisisAvg ? "30d rolling" : "Feb-Mar '26 est",
+                          val:_crisisAvg||18,     color:"#f09014", src:_crisisAvg?"AIS":"EST"},
   {label:"Yesterday",    sublabel:YESTERDAY_KEY.slice(5), val:dailyStore[YESTERDAY_KEY]||null, color:"#38aaff", src:"AIS"},
   {label:"Today",        sublabel:"live",     val:null, color:"#38aaff", src:"AIS", live:true}
 ];
