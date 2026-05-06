@@ -83,8 +83,8 @@ header{
 .sig-val{font-family:var(--mono);font-size:14px;font-weight:700;line-height:1}
 .sig-dir{font-family:var(--mono);font-size:9px;margin-bottom:1px}
 .sig-bot{display:flex;align-items:center;gap:5px;margin-top:2px}
-.sig-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;flex:1}
-.sig-src{font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.sig-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;flex:1}
+.sig-src{font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
 .src-live{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.2)}
 .src-est{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.2)}
 .src-eia{color:var(--blue);background:rgba(56,170,255,.1);border:1px solid rgba(56,170,255,.2)}
@@ -138,7 +138,7 @@ header{
 .tbtn{padding:5px 10px;background:rgba(7,9,14,.93);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;transition:all .15s;user-select:none}
 .tbtn:hover{color:var(--text);border-color:var(--border2)}
 .tbtn.active{border-color:var(--amber);color:var(--amber)}
-.infocard{position:absolute;bottom:10px;left:10px;z-index:900;width:268px;background:rgba(7,9,14,.97);backdrop-filter:blur(12px);border:1px solid var(--border2);border-radius:8px;overflow:hidden;transform:translateY(8px);opacity:0;pointer-events:none;transition:transform .28s cubic-bezier(.16,1,.3,1),opacity .2s}
+.infocard{position:absolute;bottom:10px;left:10px;z-index:900;width:312px;background:rgba(7,9,14,.97);backdrop-filter:blur(12px);border:1px solid var(--border2);border-radius:8px;overflow:hidden;transform:translateY(8px);opacity:0;pointer-events:none;transition:transform .28s cubic-bezier(.16,1,.3,1),opacity .2s}
 .infocard.show{transform:translateY(0);opacity:1;pointer-events:auto}
 .ibar{height:3px}
 .ibody{padding:13px 15px}
@@ -147,7 +147,16 @@ header{
 .itype{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
 .iclose{cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding-left:8px;flex-shrink:0;transition:color .12s}
 .iclose:hover{color:var(--text)}
-.itext{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.9}
+.itext{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.65;margin-bottom:8px}
+.ifields{display:flex;flex-direction:column;gap:6px;margin-top:9px;padding-top:9px;border-top:1px solid var(--border)}
+.ifield{display:flex;flex-direction:column;gap:2px}
+.ifield-label{font-family:var(--mono);font-size:8px;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.ifield-val{font-family:var(--mono);font-size:9.5px;color:var(--text);line-height:1.5}
+.idep{display:inline-block;font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;align-self:flex-start}
+.idep-upstream{color:var(--red);background:rgba(255,62,82,.12);border:1px solid rgba(255,62,82,.3)}
+.idep-bypass{color:var(--green);background:rgba(29,212,126,.12);border:1px solid rgba(29,212,126,.3)}
+.idep-strait-defining{color:var(--amber);background:rgba(240,144,20,.12);border:1px solid rgba(240,144,20,.3)}
+.idep-strait-adjacent{color:var(--purple);background:rgba(180,122,255,.12);border:1px solid rgba(180,122,255,.3)}
 
 /* RIGHT PANEL */
 .rpanel{width:280px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
@@ -161,7 +170,7 @@ header{
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;
 }
-.rhead-src{font-family:var(--mono);font-size:8px;letter-spacing:.04em;color:var(--muted)}
+.rhead-src{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--muted)}
 
 /* FLAG BREAKDOWN */
 .flag-rows{display:flex;flex-direction:column;gap:5px}
@@ -171,7 +180,7 @@ header{
 .flag-bar-track{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
 .flag-bar-fill{height:100%;border-radius:2px;background:var(--blue);transition:width .8s ease}
 .flag-count{font-family:var(--mono);font-size:9px;color:var(--text);width:20px;text-align:right;flex-shrink:0;font-weight:700}
-.flag-equity{font-family:var(--mono);font-size:8px;color:var(--amber);width:66px;text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flag-equity{font-family:var(--mono);font-size:9px;color:var(--amber);width:66px;text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* TREND CHART — bars and values in separate rows, no overflow */
 .trend-bars{display:flex;flex-direction:column;gap:5px}
@@ -202,7 +211,7 @@ header{
 .traffic-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .tcard{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:9px 11px}
 .tc-val{font-family:var(--mono);font-size:16px;font-weight:700;line-height:1;margin-bottom:4px}
-.tc-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.4}
+.tc-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.5}
 .type-bars{display:flex;flex-direction:column;gap:6px;margin-top:11px}
 .tbar-row{display:flex;align-items:center;gap:8px}
 .tbar-label{font-family:var(--mono);font-size:9px;color:var(--muted);width:62px;text-transform:uppercase;letter-spacing:.03em;flex-shrink:0}
@@ -223,7 +232,7 @@ header{
 .india-row{display:flex;align-items:center;gap:8px;padding:7px 9px;background:var(--panel2);border:1px solid var(--border);border-radius:5px}
 .ir-name{font-size:11px;font-weight:700;width:54px;flex-shrink:0;color:var(--text)}
 .ir-exposure{font-family:var(--mono);font-size:9px;color:var(--muted);flex:1}
-.ir-tag{font-family:var(--mono);font-size:8px;padding:2px 6px;border-radius:3px;font-weight:700;white-space:nowrap}
+.ir-tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;white-space:nowrap}
 .ir-tag.high{color:var(--red);background:rgba(255,62,82,.1);border:1px solid rgba(255,62,82,.25)}
 .ir-tag.med{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.25)}
 
@@ -244,6 +253,43 @@ header{
 .ctt{background:#0b0e16!important;border:1px solid #222d3f!important;color:#cdd8e8!important;font-family:'JetBrains Mono',monospace!important;font-size:10px!important;border-radius:5px!important;padding:5px 10px!important;box-shadow:0 4px 20px rgba(0,0,0,.75)!important}
 .ctt::before{display:none!important}
 @keyframes pulse{0%,100%{transform:scale(.85);opacity:.5}50%{transform:scale(1.4);opacity:.15}}
+
+/* CONCLUSION BADGE — verdict + one-liner under panel data */
+.conclusion{
+  margin-top:10px;padding-top:8px;border-top:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:7px;
+  font-family:var(--mono);font-size:9px;line-height:1.55;
+}
+.cv-badge{
+  font-weight:800;letter-spacing:.06em;flex-shrink:0;
+  padding:2px 6px;border-radius:3px;font-size:8px;text-transform:uppercase;
+}
+.cv-normal{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.25)}
+.cv-low{color:var(--blue);background:rgba(56,170,255,.1);border:1px solid rgba(56,170,255,.25)}
+.cv-elevated{color:var(--amber);background:rgba(240,144,20,.12);border:1px solid rgba(240,144,20,.3)}
+.cv-high{color:var(--red);background:rgba(255,62,82,.1);border:1px solid rgba(255,62,82,.3)}
+.cv-critical{color:#fff;background:var(--red);border:1px solid var(--red)}
+.cv-text{color:var(--text);flex:1}
+
+/* SIGNAL BAR TOOLTIP — same pattern as cargo ticker tooltip */
+.sig{position:relative}
+.sig-tooltip{
+  position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(-4px);
+  background:#0c0f17;border:1px solid var(--border2);border-radius:6px;
+  padding:9px 12px;min-width:220px;max-width:280px;z-index:1500;
+  opacity:0;pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease;
+  box-shadow:0 8px 24px rgba(0,0,0,.7);
+  text-align:left;
+}
+.sig:hover .sig-tooltip{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.sig-tt-verdict{
+  font-family:var(--mono);font-weight:800;letter-spacing:.06em;font-size:9px;
+  text-transform:uppercase;display:inline-block;
+  padding:2px 7px;border-radius:3px;margin-bottom:6px;
+}
+.sig-tt-text{font-family:var(--mono);font-size:9px;color:var(--text);line-height:1.55}
+@media(max-width:768px){.sig-tooltip{display:none}}
 </style>
 </head>
 <body>
@@ -291,6 +337,7 @@ header{
           <span class="ctt-val" id="ttBrent">—</span>
           <span class="ctt-chg" id="ttBrentChg"></span>
         </div>
+        <div id="ctVerdict" style="display:none;margin-top:7px;padding-top:7px;border-top:1px solid var(--border);font-family:var(--mono);font-size:9px;line-height:1.55"></div>
         <div class="ctt-hint" id="ttHint">hover for context &nbsp;&middot;&nbsp; tap to pin</div>
       </div>
     </div>
@@ -315,6 +362,7 @@ header{
       <span class="sig-label">Vessels live</span>
       <span class="sig-src src-live">AIS LIVE</span>
     </div>
+    <div class="sig-tooltip" id="ttipVessels"></div>
   </div>
   <div class="sig">
     <div class="sig-top">
@@ -325,6 +373,7 @@ header{
       <span class="sig-label">Dark / suspect</span>
       <span class="sig-src src-est" id="gfwBadge">GFW loading</span>
     </div>
+    <div class="sig-tooltip" id="ttipDark"></div>
   </div>
   <div class="sig">
     <div class="sig-top">
@@ -335,6 +384,7 @@ header{
       <span class="sig-label">BDTI index</span>
       <span class="sig-src src-est">BDTI EST</span>
     </div>
+    <div class="sig-tooltip" id="ttipBdti"></div>
   </div>
   <div class="sig">
     <div class="sig-top">
@@ -345,11 +395,12 @@ header{
       <span class="sig-label">Incidents / 30d</span>
       <span class="sig-src src-est">ACLED EST</span>
     </div>
+    <div class="sig-tooltip" id="ttipIncidents"></div>
   </div>
   <div class="sig">
     <div class="sig-top">
       <span class="sig-val" style="color:var(--red)">58%</span>
-      <span class="sig-dir" style="color:var(--muted);font-size:8px">of imports</span>
+      <span class="sig-dir" style="color:var(--muted);font-size:9px">of imports</span>
     </div>
     <div class="sig-bot">
       <span class="sig-label">India via Hormuz</span>
@@ -367,7 +418,7 @@ header{
         <div class="ais-label2">AISStream.io &mdash; Bounding box: Hormuz</div>
         <div style="display:flex;align-items:center;gap:4px">
           <div class="ldot connecting" id="aisDot2"></div>
-          <span id="aisLabel2" style="font-family:var(--mono);font-size:7px;color:var(--amber);letter-spacing:.08em">CONNECTING</span>
+          <span id="aisLabel2" style="font-family:var(--mono);font-size:9px;color:var(--amber);letter-spacing:.08em">CONNECTING</span>
         </div>
       </div>
       <div class="ais-status" id="aisStatus">Connecting to live feed&hellip;</div>
@@ -400,6 +451,12 @@ header{
           <div class="iclose" id="iclose">&#x2715;</div>
         </div>
         <div class="itext" id="itext"></div>
+        <div class="ifields" id="ifields" style="display:none">
+          <div class="ifield"><div class="ifield-label">Type · Capacity</div><div class="ifield-val" id="ifield-cap"></div></div>
+          <div class="ifield"><div class="ifield-label">Strategic role</div><div class="ifield-val" id="ifield-role"></div></div>
+          <div class="ifield"><div class="ifield-label">Hormuz dependency</div><span class="idep" id="ifield-dep"></span></div>
+          <div class="ifield"><div class="ifield-label">Equity link</div><div class="ifield-val" id="ifield-equity"></div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -414,9 +471,9 @@ header{
         <span class="rhead-src src-live" style="color:var(--green)">AIS LIVE</span>
       </div>
       <div class="flag-rows" id="flagRows">
-        <div style="font-family:var(--mono);font-size:8px;color:var(--muted2);padding:4px 0">Populating from live AIS&hellip;</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Populating from live AIS&hellip;</div>
       </div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:7px;color:var(--muted2);line-height:1.6">
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         Flag = ship registry. Liberia/Marshall Islands/Panama = flag of convenience, predominantly Gulf crude. Indian-flag = IOC/SCI/BPCL tankers direct.
       </div>
     </div>
@@ -429,7 +486,8 @@ header{
       </div>
       <div id="trendBars" class="trend-bars"></div>
       <div class="trend-legend" id="trendLegend"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:7px;color:var(--muted2);line-height:1.6">
+      <div class="conclusion" id="concTrend" style="display:none"></div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         Yesterday and today from this browser session (localStorage). Baselines from EIA + Lloyd's public reports.
       </div>
     </div>
@@ -451,16 +509,17 @@ header{
           <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">/bbl WTI</span>
           <span style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:auto" id="bwSpread"></span>
         </div>
-        <!-- 4-week sparkline -->
+        <!-- 4-week sparkline (33% bump, height matches viewBox to avoid compression) -->
         <div style="margin-bottom:8px">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:4px">Brent 4-week trend</div>
-          <svg id="brentSparkline" viewBox="0 0 238 32" width="100%" height="32" preserveAspectRatio="none">
-            <text x="50%" y="20" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#4a5870">loading&hellip;</text>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:5px">Brent 4-week trend</div>
+          <svg id="brentSparkline" viewBox="0 0 238 58" width="100%" height="58" preserveAspectRatio="none">
+            <text x="50%" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#4a5870">loading&hellip;</text>
           </svg>
         </div>
-        <div style="font-family:var(--mono);font-size:8px;color:var(--muted2);line-height:1.6" id="brentNote">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5" id="brentNote">
           Updating&hellip;
         </div>
+        <div class="conclusion" id="concPulse" style="display:none"></div>
       </div>
     </div>
 
@@ -468,6 +527,7 @@ header{
     <div class="rblock">
       <div class="rhead">Cross-signal verification</div>
       <div class="xv-rows" id="xvRows"></div>
+      <div class="conclusion" id="concCross" style="display:none"></div>
     </div>
 
     <!-- TENSION GAUGE -->
@@ -499,13 +559,14 @@ header{
         <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber)">0</div><div class="tc-lbl">Outbound<br>vessels</div></div>
       </div>
       <div class="type-bars" id="typeBars"></div>
+      <div class="conclusion" id="concMix" style="display:none"></div>
     </div>
 
     <!-- CLOSURE SCENARIO -->
     <div class="rblock">
       <div class="rhead">Closure scenario impact</div>
       <div class="scenario-rows" id="scenarioRows"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:7px;color:var(--muted2);line-height:1.6">
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         Based on 2019 Gulf Crisis, 2011 Iran threat, 1984 Tanker War.
       </div>
     </div>
@@ -514,7 +575,7 @@ header{
     <div class="rblock">
       <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-eia" style="color:var(--blue)">EIA</span></div>
       <div class="india-rows" id="indiaRows"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:7px;color:var(--muted2);line-height:1.6">
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         Each $10/bbl crude rise = ~&#8377;85K Cr import bill increase. Petronet LNG nearly entirely Hormuz-dependent.
       </div>
     </div>
@@ -523,7 +584,7 @@ header{
     <div class="rblock">
       <div class="rhead">Global tanker tension play</div>
       <div class="tanker-rows" id="tankerRows"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:7px;color:var(--muted2);line-height:1.6">
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         BDTI leads tanker stocks by 2&ndash;3 days in escalation events. Watch for rate spikes while vessel count holds.
       </div>
     </div>
@@ -537,12 +598,85 @@ header{
 // ═══════════════════════════════════════════════════
 
 var LOCS = [
-  {id:"bandar",lat:27.18,lng:56.27,zoom:11,type:"naval",color:"#ff3e52",name:"Bandar Abbas",sub:"Iran \u2014 Naval Base",flag:"\uD83C\uDDEE\uD83C\uDDF7",text:"Iran's primary naval base and IRGCN headquarters. Kilo-class submarines and fast-attack craft. 30km from the shipping lane. Any escalation starts here."},
-  {id:"fujairah",lat:25.13,lng:56.34,zoom:11,type:"port",color:"#f09014",name:"Fujairah",sub:"UAE \u2014 Bypass Terminal",flag:"\uD83C\uDDE6\uD83C\uDDEA",text:"The strategic escape hatch: outside Hormuz entirely on the Indian Ocean. 80M+ barrels storage. Watch Fujairah storage levels as a crisis hedge indicator."},
-  {id:"musandam",lat:26.30,lng:56.50,zoom:10,type:"check",color:"#06d6b0",name:"Musandam Peninsula",sub:"Oman \u2014 Southern Jaw",flag:"\uD83C\uDDF4\uD83C\uDDF2",text:"Oman's exclave. The geographic counterweight to Iran. Oman stays neutral. If Oman is pressured, the strait's governance collapses."},
-  {id:"rastan",lat:27.00,lng:49.65,zoom:11,type:"port",color:"#f09014",name:"Ras Tanura",sub:"Saudi Arabia \u2014 Aramco Hub",flag:"\uD83C\uDDF8\uD83C\uDDE6",text:"World's largest oil export terminal. 6\u20138M bbl/day leave here. All must transit Hormuz for Asia. First casualty of any closure."},
-  {id:"qeshm",lat:26.76,lng:55.83,zoom:11,type:"island",color:"#4a5870",name:"Qeshm Island",sub:"Iran \u2014 Strategic Island",flag:"\uD83C\uDDEE\uD83C\uDDF7",text:"Iran's largest island. IRGCN naval infrastructure below a free-trade facade. Has been used to stage drone swarm exercises over the strait."},
-  {id:"abumusa",lat:25.87,lng:55.03,zoom:12,type:"island",color:"#4a5870",name:"Abu Musa",sub:"Disputed \u2014 Iran Occupied",flag:"\uD83C\uDDEE\uD83C\uDDF7",text:"Occupied by Iran since 1971, claimed by UAE. Sits close to the outbound lane. Airstrip and military garrison. First pressure point in any escalation."}
+  {id:"bandar",lat:27.18,lng:56.27,zoom:11,type:"naval",color:"#ff3e52",name:"Bandar Abbas",sub:"Iran \u2014 Naval Base",flag:"\uD83C\uDDEE\uD83C\uDDF7",
+   text:"Iran's primary naval base and IRGCN headquarters. Kilo-class submarines and fast-attack craft. 30km from the shipping lane. Any escalation starts here.",
+   cap:"Naval base + crude export \u00B7 ~1.0 mb/d throughput",
+   role:"IRGCN HQ \u00B7 Iran's primary maritime power-projection node",
+   dep:"upstream",
+   equity:"Sanctioned vessels often originate here. Watch dark-traffic % rising = Iran enforcement spike."},
+  {id:"fujairah",lat:25.13,lng:56.34,zoom:11,type:"port",color:"#f09014",name:"Fujairah",sub:"UAE \u2014 Bypass Terminal",flag:"\uD83C\uDDE6\uD83C\uDDEA",
+   text:"The strategic escape hatch: outside Hormuz entirely on the Indian Ocean. 80M+ barrels storage. Watch Fujairah storage levels as a crisis hedge indicator.",
+   cap:"Crude storage + bunkering \u00B7 80M bbl tankage \u00B7 1.5 mb/d UAE pipeline inflow",
+   role:"World's 2nd-largest bunkering hub. Hormuz-immune.",
+   dep:"bypass",
+   equity:"ADNOC (private). Rising Fujairah storage = closure-hedge signal. Watch crude stocks weekly."},
+  {id:"musandam",lat:26.30,lng:56.50,zoom:10,type:"check",color:"#06d6b0",name:"Musandam Peninsula",sub:"Oman \u2014 Southern Jaw",flag:"\uD83C\uDDF4\uD83C\uDDF2",
+   text:"Oman's exclave. The geographic counterweight to Iran. Oman stays neutral. If Oman is pressured, the strait's governance collapses.",
+   cap:"Geographic chokepoint \u00B7 forms the southern wall of the strait",
+   role:"Oman's exclave \u00B7 IMO-recognised TSS southern boundary",
+   dep:"strait-defining",
+   equity:"Oman stays neutral. If Omani sovereignty pressured, TSS governance collapses \u2192 closure scenario."},
+  {id:"rastan",lat:27.00,lng:49.65,zoom:11,type:"port",color:"#f09014",name:"Ras Tanura",sub:"Saudi Arabia \u2014 Aramco Hub",flag:"\uD83C\uDDF8\uD83C\uDDE6",
+   text:"World's largest oil export terminal. 6\u20138M bbl/day leave here. All must transit Hormuz for Asia. First casualty of any closure.",
+   cap:"Crude export \u00B7 6.5 mb/d (world's largest single oil terminal)",
+   role:"Saudi Aramco's primary export hub \u00B7 ~70% of Saudi crude exits here",
+   dep:"upstream",
+   equity:"Saudi Aramco (2222.SR). India OMCs source ~19% Saudi crude. First casualty of closure."},
+  {id:"qeshm",lat:26.76,lng:55.83,zoom:11,type:"island",color:"#4a5870",name:"Qeshm Island",sub:"Iran \u2014 Strategic Island",flag:"\uD83C\uDDEE\uD83C\uDDF7",
+   text:"Iran's largest island. IRGCN naval infrastructure below a free-trade facade. Has been used to stage drone swarm exercises over the strait.",
+   cap:"Iran's largest island (1,491 km\u00B2) \u00B7 staging area for IRGCN drone exercises",
+   role:"Free-trade zone facade over military infrastructure",
+   dep:"strait-defining",
+   equity:"No direct equity. Drone activity from Qeshm = leading indicator of escalation."},
+  {id:"abumusa",lat:25.87,lng:55.03,zoom:12,type:"island",color:"#4a5870",name:"Abu Musa",sub:"Disputed \u2014 Iran Occupied",flag:"\uD83C\uDDEE\uD83C\uDDF7",
+   text:"Occupied by Iran since 1971, claimed by UAE. Sits close to the outbound lane. Airstrip and military garrison. First pressure point in any escalation.",
+   cap:"Disputed island \u00B7 airstrip + IRGC garrison \u00B7 adjacent to outbound TSS lane",
+   role:"Iran-occupied (since 1971), claimed by UAE \u2014 first geopolitical flashpoint",
+   dep:"strait-adjacent",
+   equity:"No direct equity. Increased garrison activity = escalation precursor."},
+  // NEW PORTS
+  {id:"raslaffan",lat:25.93,lng:51.59,zoom:11,type:"port",color:"#b47aff",name:"Ras Laffan",sub:"Qatar \u2014 LNG Hub",flag:"\uD83C\uDDF6\uD83C\uDDE6",
+   text:"World's largest LNG export facility. ~80 MTPA. Almost all flows through Hormuz to Asia + Europe.",
+   cap:"LNG export \u00B7 77 MTPA (~world's #1 LNG hub) + condensate",
+   role:"QatarEnergy LNG hub. Supplies ~22% of global LNG.",
+   dep:"upstream",
+   equity:"Petronet LNG (PETRONET.NS) sources ~8.5 MTPA from here. Also GAIL, GSPC. Hormuz closure = direct India LNG hit."},
+  {id:"ahmadi",lat:29.07,lng:48.16,zoom:10,type:"port",color:"#38aaff",name:"Mina al-Ahmadi",sub:"Kuwait \u2014 KPC Terminal",flag:"\uD83C\uDDF0\uD83C\uDDFC",
+   text:"Kuwait's primary oil export terminal. ~2.5 mb/d capacity. 100% of Kuwaiti crude exits via Hormuz.",
+   cap:"Crude export \u00B7 2.5 mb/d (Kuwait Petroleum Corp.)",
+   role:"Kuwait's only major export terminal \u00B7 4th-largest Hormuz crude exporter",
+   dep:"upstream",
+   equity:"KPC (state-owned). India IOC + HPCL major buyers. Closure = full Kuwait export halt."},
+  {id:"jebelali",lat:25.02,lng:55.06,zoom:11,type:"port",color:"#06d6b0",name:"Jebel Ali",sub:"UAE \u2014 Container Hub",flag:"\uD83C\uDDE6\uD83C\uDDEA",
+   text:"World's 9th-largest container port. DP World hub. Mostly non-oil but Hormuz-routed.",
+   cap:"Container \u00B7 19.4 MTEU annually + crude/products handled",
+   role:"DP World flagship port \u00B7 Middle East's largest container terminal",
+   dep:"upstream",
+   equity:"DP World (DPW.DI). India trade lane: ~12% of containerised exports route via Jebel Ali."},
+  {id:"sohar",lat:24.50,lng:56.71,zoom:10,type:"port",color:"#06d6b0",name:"Sohar",sub:"Oman \u2014 Industrial Port",flag:"\uD83C\uDDF4\uD83C\uDDF2",
+   text:"Oman's industrial port \u2014 refining + petchem. Outside Hormuz. Backup hub if strait closes.",
+   cap:"Industrial \u00B7 refinery (198 kbpd) + petchem + bulk",
+   role:"Oman's largest industrial port. Hormuz-immune (Indian Ocean side).",
+   dep:"bypass",
+   equity:"Orpic / OQ (Oman state). Closure scenario beneficiary \u2014 routing premium."},
+  {id:"imam",lat:30.42,lng:49.08,zoom:10,type:"port",color:"#ffd166",name:"Bandar Imam Khomeini",sub:"Iran \u2014 Petchem Hub",flag:"\uD83C\uDDEE\uD83C\uDDF7",
+   text:"Iran's primary petrochemical export terminal. ~1.5 mb/d. Sanctions-exposed shadow fleet origin.",
+   cap:"Petrochemical + crude \u00B7 ~1.5 mb/d",
+   role:"Iran's primary petchem export node \u00B7 sanctioned shadow-fleet origin",
+   dep:"upstream",
+   equity:"NIOC (Iran). Dark-tanker watch \u2014 vessels from here often AIS-spoofing en route to Asia."},
+  {id:"salman",lat:26.21,lng:50.61,zoom:10,type:"port",color:"#f09014",name:"Mina Salman",sub:"Bahrain \u2014 Oil Terminal",flag:"\uD83C\uDDE7\uD83C\uDDED",
+   text:"Bahrain's primary port. Crude + product. Co-hosts US 5th Fleet HQ.",
+   cap:"Crude + product \u00B7 ~0.4 mb/d + US Navy 5th Fleet HQ adjacent",
+   role:"Bahrain's main commercial port + US naval presence",
+   dep:"upstream",
+   equity:"Bapco (Bahrain state). Hosts US 5th Fleet \u2014 strategic deterrent against Iran."},
+  {id:"salalah",lat:16.95,lng:54.00,zoom:9,type:"port",color:"#06d6b0",name:"Salalah",sub:"Oman \u2014 Transshipment",flag:"\uD83C\uDDF4\uD83C\uDDF2",
+   text:"Oman's southern transshipment hub on Indian Ocean. 100% Hormuz-immune.",
+   cap:"Transshipment \u00B7 5 MTEU container hub",
+   role:"Indian Ocean transshipment \u2014 fully Hormuz-immune (south Oman coast)",
+   dep:"bypass",
+   equity:"APM Terminals (Maersk). Closure scenario beneficiary \u2014 transshipment volumes spike."}
 ];
 
 var SHIP_TYPES = {
@@ -832,7 +966,7 @@ function updateFlagDisplay(){
   var maxV = top.length > 0 ? flagCounts[top[0]] : 1;
   var fr = document.getElementById("flagRows");
   if(top.length === 0){
-    fr.innerHTML = '<div style="font-family:var(--mono);font-size:8px;color:var(--muted2);padding:4px 0">Populating from live AIS&hellip;</div>';
+    fr.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Populating from live AIS&hellip;</div>';
     return;
   }
   fr.innerHTML = "";
@@ -947,8 +1081,23 @@ document.querySelectorAll(".tbtn").forEach(function(btn){
   });
 });
 
-var IN_PTS=[[25.48,57.92],[25.68,57.58],[25.92,57.18],[26.18,56.88],[26.33,56.58],[26.43,56.25],[26.52,55.92],[26.58,55.62]];
-var OUT_PTS=[[26.72,55.62],[26.78,55.92],[26.84,56.25],[26.88,56.58],[26.78,56.88],[26.63,57.18],[26.43,57.58],[26.22,57.92]];
+// IMO Hormuz TSS — waypoints in water only.
+// Land hazards: Qeshm Is (~26.55-27.00N, 55.25-56.30E),
+//   Larak (~26.85,56.35), Hormuz Is (~27.10,56.45), Musandam Peninsula tip (~26.40-26.45N).
+// Both lanes thread the gap between Qeshm south coast and Musandam tip (~10nm wide).
+// Densified waypoints inside narrowest corridor (lng 56.2-56.7) for smoother sim animation.
+// Inbound (south lane, blue, NW into Persian Gulf) — south of OUT_PTS:
+var IN_PTS=[
+  [25.48,57.92],[25.68,57.58],[25.92,57.18],[26.10,56.95],
+  [26.20,56.75],[26.28,56.55],[26.33,56.40],[26.37,56.25],
+  [26.40,56.10],[26.42,55.92],[26.44,55.75],[26.45,55.62]
+];
+// Outbound (north lane, amber, SE into Gulf of Oman) — capped at lat 26.50 (5nm S of Qeshm coast):
+var OUT_PTS=[
+  [26.50,55.62],[26.50,55.78],[26.50,55.92],[26.48,56.10],
+  [26.47,56.25],[26.46,56.40],[26.45,56.55],[26.40,56.70],
+  [26.30,56.85],[26.18,57.00],[26.05,57.18],[25.80,57.55],[25.55,57.92]
+];
 function mkLane(pts,color){
   var g=L.polyline(pts,{color:color,weight:18,opacity:.08}).addTo(map);
   var l=L.polyline(pts,{color:color,weight:2.5,opacity:.88}).addTo(map);
@@ -959,7 +1108,11 @@ var outLane=mkLane(OUT_PTS,"#f09014");
 inLane[1].bindTooltip("Inbound \u2190 NW into Persian Gulf",{className:"ctt",sticky:true});
 outLane[1].bindTooltip("Outbound \u2192 SE into Gulf of Oman",{className:"ctt",sticky:true});
 
-var patrolPoly=L.polygon([[27.45,54.1],[27.95,56.1],[27.75,57.4],[27.18,57.4],[26.82,56.0],[26.88,54.6]],{color:"#ff3e52",weight:1.5,opacity:.5,fillColor:"#ff3e52",fillOpacity:.04,dashArray:"6 4"}).addTo(map);
+// IRGCN patrol — single rectangle covering Bandar Abbas, Qeshm/strait, and east approach.
+// Faint fill (4% opacity) means land tinting is barely visible; dashed border is what reads.
+var patrolStyle={color:"#ff3e52",weight:1.5,opacity:.5,fillColor:"#ff3e52",fillOpacity:.04,dashArray:"6 4"};
+var patrolPoly=L.rectangle([[26.20,55.50],[27.20,57.20]],patrolStyle).addTo(map); // SW, NE
+var patrolPolyA=patrolPoly, patrolPolyB=patrolPoly; // back-compat aliases
 patrolPoly.bindTooltip("IRGCN Active Patrol Zone",{className:"ctt"});
 
 var uaePipe=L.polyline([[23.8,53.5],[24.2,54.2],[24.6,55.1],[25.13,56.34]],{color:"#1dd47e",weight:2,opacity:.8,dashArray:"9 6"}).addTo(map);
@@ -970,12 +1123,37 @@ saPipe.bindTooltip("Saudi Petroline East\u2013West (5M bbl/day)",{className:"ctt
 L.circle([26.40,56.47],{radius:4500,color:"#fff",weight:1,opacity:.18,fillColor:"#fff",fillOpacity:.012,dashArray:"4 4"}).addTo(map)
   .bindTooltip("Narrowest Point \u00b7 54 km",{className:"ctt",permanent:true,direction:"top",offset:[0,-5]});
 
-var layerMap={inbound:inLane,outbound:outLane,patrol:[patrolPoly],pipelines:[uaePipe,saPipe]};
-var layerOn={inbound:true,outbound:true,patrol:true,pipelines:true};
-var LAYER_DEFS=[{id:"inbound",name:"Inbound Lane",color:"#38aaff"},{id:"outbound",name:"Outbound Lane",color:"#f09014"},{id:"patrol",name:"IRGCN Patrol",color:"#ff3e52"},{id:"pipelines",name:"Bypass Pipelines",color:"#1dd47e"}];
+// PORT-TO-PORT TRADE ROUTES — actual shipping flows through Hormuz
+// Routes show origin port → through-strait waypoints → onward exit
+// Coordinates threaded through the strait gap (lat 26.30-26.50, the safe corridor between Qeshm and Musandam)
+var ROUTES = [
+  {id:"saudi", name:"Saudi crude → Asia", color:"#ff3e52", desc:"Ras Tanura (6.5 mb/d) → Hormuz → onward Asia",
+   pts:[[27.00,49.65],[26.95,52.00],[26.80,54.00],[26.60,55.50],[26.45,56.30],[26.32,56.85],[26.05,57.30],[25.55,57.95]]},
+  {id:"qatar", name:"Qatar LNG → India", color:"#b47aff", desc:"Ras Laffan (world's largest LNG hub) → Hormuz → India (Petronet/Dahej)",
+   pts:[[25.93,51.59],[26.00,53.50],[26.20,55.50],[26.40,56.30],[26.30,56.85],[25.80,57.60],[25.20,58.50]]},
+  {id:"kuwait", name:"Kuwait crude → Asia", color:"#38aaff", desc:"Mina al-Ahmadi → Hormuz → SE Asia",
+   pts:[[28.50,48.50],[28.00,51.00],[27.50,53.50],[26.90,55.30],[26.50,56.30],[26.30,56.85],[25.50,57.92]]},
+  {id:"iran", name:"Iran exports", color:"#ffd166", desc:"Bandar Abbas → Hormuz → Indian Ocean",
+   pts:[[27.18,56.27],[26.95,56.40],[26.55,56.50],[26.35,56.85],[25.80,57.55]]},
+  {id:"uae", name:"UAE intra-Gulf", color:"#06d6b0", desc:"Jebel Ali → Fujairah (Hormuz bypass route via UAE coast)",
+   pts:[[25.02,55.06],[25.05,55.50],[25.10,56.00],[25.13,56.34]]}
+];
+var routeLayers = ROUTES.map(function(r){
+  var glow = L.polyline(r.pts,{color:r.color,weight:8,opacity:.10}).addTo(map);
+  var line = L.polyline(r.pts,{color:r.color,weight:2,opacity:.85,dashArray:"4 5"}).addTo(map);
+  line.bindTooltip(r.name+" — "+r.desc,{className:"ctt",sticky:true});
+  return [glow,line];
+});
+
+var layerMap={inbound:inLane,outbound:outLane,patrol:[patrolPoly],pipelines:[uaePipe,saPipe],routes:[].concat.apply([],routeLayers)};
+var layerOn={inbound:true,outbound:true,patrol:true,pipelines:true,routes:false}; // Trade Routes off by default — opt-in toggle
+var LAYER_DEFS=[{id:"inbound",name:"Inbound Lane",color:"#38aaff"},{id:"outbound",name:"Outbound Lane",color:"#f09014"},{id:"patrol",name:"IRGCN Patrol",color:"#ff3e52"},{id:"pipelines",name:"Bypass Pipelines",color:"#1dd47e"},{id:"routes",name:"Trade Routes",color:"#b47aff"}];
+
+// Hide Trade Routes initially since layerOn.routes=false
+layerMap.routes.forEach(function(l){map.removeLayer(l);});
 var lctrl=document.getElementById("layerCtrl");
 LAYER_DEFS.forEach(function(def){
-  var d=document.createElement("div");d.className="lbtn";
+  var d=document.createElement("div");d.className="lbtn"+(layerOn[def.id]?"":" off"); // reflect initial state
   d.innerHTML='<div class="ldash" style="background:'+def.color+'"></div><span class="lbname">'+def.name+'</span>';
   d.addEventListener("click",function(){
     layerOn[def.id]=!layerOn[def.id];this.classList.toggle("off",!layerOn[def.id]);
@@ -1009,6 +1187,19 @@ function showLoc(id){
   document.getElementById("iname").textContent=loc.name;
   document.getElementById("itype").textContent=loc.sub;
   document.getElementById("itext").textContent=loc.text;
+  // Populate enriched fields if present
+  var fields=document.getElementById("ifields");
+  if(loc.cap||loc.role||loc.dep||loc.equity){
+    document.getElementById("ifield-cap").textContent=loc.cap||"—";
+    document.getElementById("ifield-role").textContent=loc.role||"—";
+    var depEl=document.getElementById("ifield-dep");
+    depEl.textContent=(loc.dep||"—").replace(/-/g," ").toUpperCase();
+    depEl.className="idep idep-"+(loc.dep||"unknown");
+    document.getElementById("ifield-equity").textContent=loc.equity||"—";
+    fields.style.display="flex";
+  } else {
+    fields.style.display="none";
+  }
   card.classList.add("show");
 }
 function closeCard(){card.classList.remove("show");document.querySelectorAll(".loc-row").forEach(function(el){el.classList.remove("active");});}
@@ -1171,7 +1362,48 @@ TANKERS.forEach(function(s){
 // ═══════════════════════════════════════════════════
 var AIS_KEY = "ec404228905084491fe9a87039c57bc4c67b8af4";
 var aisWs=null, aisConnected=false, reconnectTimer=null;
-var realVesselMarkers={}, vesselTypeCache={}, realCount=0;
+var realVesselMarkers={}, vesselTypeCache={}, vesselDestCache={}, realCount=0;
+
+// Destination whitelist — only display when AIS-reported destination string matches a known port.
+// Per "only certain" rule, ambiguous entries (FOR ORDERS, TBN, etc.) → silent.
+var DEST_WHITELIST = [
+  {match:/RAS\s*TANURA/i,                label:"Ras Tanura"},
+  {match:/MINA\s*AL[\-\s]*AHMADI|AHMADI/i, label:"Mina al-Ahmadi"},
+  {match:/RAS\s*LAFFAN/i,                label:"Ras Laffan"},
+  {match:/JEBEL\s*ALI/i,                 label:"Jebel Ali"},
+  {match:/FUJAIRAH/i,                    label:"Fujairah"},
+  {match:/SOHAR/i,                       label:"Sohar"},
+  {match:/SALALAH/i,                     label:"Salalah"},
+  {match:/BANDAR\s*ABBAS/i,              label:"Bandar Abbas"},
+  {match:/BANDAR\s*IMAM|IMAM\s*KHOMEINI/i, label:"Bandar Imam Khomeini"},
+  {match:/MINA\s*SALMAN|BAHRAIN/i,       label:"Mina Salman"},
+  {match:/KHARG/i,                       label:"Kharg Island"},
+  {match:/SINGAPORE|SPORE/i,             label:"Singapore"},
+  {match:/MUMBAI|JNPT|NHAVA/i,           label:"Mumbai/JNPT"},
+  {match:/SIKKA|JAMNAGAR/i,              label:"Sikka (Reliance)"},
+  {match:/VADINAR/i,                     label:"Vadinar (Nayara)"},
+  {match:/COCHIN|KOCHI/i,                label:"Cochin (BPCL)"},
+  {match:/MANGALORE/i,                   label:"Mangalore (MRPL)"},
+  {match:/CHENNAI|MADRAS/i,              label:"Chennai"},
+  {match:/QINGDAO/i,                     label:"Qingdao"},
+  {match:/NINGBO|ZHOUSHAN/i,             label:"Ningbo"},
+  {match:/SHANGHAI/i,                    label:"Shanghai"},
+  {match:/YOKKAICHI/i,                   label:"Yokkaichi (Japan)"},
+  {match:/CHIBA/i,                       label:"Chiba (Japan)"},
+  {match:/ULSAN|YEOSU|ONSAN/i,           label:"S.Korea refinery hub"},
+  {match:/ROTTERDAM/i,                   label:"Rotterdam"},
+  {match:/SUEZ/i,                        label:"Suez"}
+];
+function parseDestination(raw){
+  var s=String(raw||"").trim().toUpperCase();
+  if(!s||s.length<3)return null;
+  // Reject vague/junk entries explicitly
+  if(/^(FOR\s*ORDERS?|TBN|TBA|UNKNOWN|AT\s*SEA|TRANSIT|VARIOUS|PASSING)/.test(s))return null;
+  for(var i=0;i<DEST_WHITELIST.length;i++){
+    if(DEST_WHITELIST[i].match.test(s))return DEST_WHITELIST[i].label;
+  }
+  return null;
+}
 
 function typeColor(code,name){
   var n=(name||"").toUpperCase();
@@ -1227,6 +1459,11 @@ function connectAIS(){
         if(data.MessageType==="ShipStaticData"){
           var sd=data.Message&&data.Message.ShipStaticData;
           if(sd&&sd.Type)vesselTypeCache[mmsi]=sd.Type;
+          // Capture destination if it matches a known port (whitelist match only — silent if uncertain)
+          if(sd&&sd.Destination){
+            var dest=parseDestination(sd.Destination);
+            if(dest)vesselDestCache[mmsi]=dest;
+          }
           return;
         }
         if(data.MessageType!=="PositionReport")return;
@@ -1238,12 +1475,15 @@ function connectAIS(){
         var typeCode=vesselTypeCache[mmsi]||80;
         var color=typeColor(typeCode,name);
         var dname=name||("MMSI "+mmsi);
+        var destStr=vesselDestCache[mmsi]?(" → "+vesselDestCache[mmsi]):"";
         if(realVesselMarkers[mmsi]){
           realVesselMarkers[mmsi].setLatLng([lat,lng]);
           realVesselMarkers[mmsi].setIcon(mkRealIcon(color,heading));
+          // Refresh tooltip if destination became known after first plot
+          if(destStr) realVesselMarkers[mmsi].setTooltipContent(dname+" | "+spd+"kn"+destStr);
         } else {
           var m=L.marker([lat,lng],{icon:mkRealIcon(color,heading),zIndexOffset:300}).addTo(map);
-          m.bindTooltip(dname+" | "+spd+"kn",{className:"ctt",sticky:true});
+          m.bindTooltip(dname+" | "+spd+"kn"+destStr,{className:"ctt",sticky:true});
           realVesselMarkers[mmsi]=m;realCount++;
           trackFlag(mmsi);
           setAISBadge("live",realCount+" real vessel"+(realCount===1?"":"s")+" in range");
@@ -1327,13 +1567,21 @@ function renderEIA() {
   if(brentEl) brentEl.textContent = "$" + brent.toFixed(1);
 
   // CORRECT COLORS: up = green, down = red (standard price convention)
+  // Brent change line uses Stooq DoD (daily) when available; falls back to EIA WoW
   var chgEl = document.getElementById("brentChg");
-  if(chgEl && brentPrv) {
-    var chg = brent - brentPrv;
-    var up  = chg >= 0;
-    chgEl.textContent = (up?"\u25b2":"\u25bc") + " $" + Math.abs(chg).toFixed(1)
-      + " (" + (up?"+":"") + ((chg/brentPrv)*100).toFixed(1) + "% WoW)";
-    chgEl.style.color = up ? "var(--green)" : "var(--red)";
+  if(chgEl) {
+    if(_stooqDoD && isFinite(_stooqDoD.change)) {
+      var up = _stooqDoD.change >= 0;
+      chgEl.textContent = (up?"\u25b2":"\u25bc") + " $" + Math.abs(_stooqDoD.change).toFixed(1)
+        + " (" + (up?"+":"") + _stooqDoD.pct.toFixed(1) + "% DoD)";
+      chgEl.style.color = up ? "var(--green)" : "var(--red)";
+    } else if(brentPrv) {
+      var chg = brent - brentPrv;
+      var upW = chg >= 0;
+      chgEl.textContent = (upW?"\u25b2":"\u25bc") + " $" + Math.abs(chg).toFixed(1)
+        + " (" + (upW?"+":"") + ((chg/brentPrv)*100).toFixed(1) + "% WoW)";
+      chgEl.style.color = upW ? "var(--green)" : "var(--red)";
+    }
   }
 
   var wtiEl = document.getElementById("wtiPrice");
@@ -1343,7 +1591,7 @@ function renderEIA() {
     if(spreadEl) spreadEl.textContent = "B\u2013W spread: $" + (brent - wti).toFixed(1);
   }
 
-  drawSparkline(eiaState.brent.slice(0, 4).reverse());
+  drawSparkline(eiaState.brent.slice(0, 4).reverse(), "brentSparkline", 44);
 
   var noteEl = document.getElementById("brentNote");
   if(noteEl) {
@@ -1360,25 +1608,32 @@ function renderEIA() {
   eiaState.loaded = true;
 }
 
-function drawSparkline(data) {
-  var svg = document.getElementById("brentSparkline");
+function drawSparkline(data, svgId, H) {
+  svgId = svgId || "brentSparkline";
+  H = H || 44;
+  var svg = document.getElementById(svgId);
   if(!svg || !data.length) return;
   var vals = data.map(function(d){ return d.val; });
   var mn = Math.min.apply(null,vals)*0.997, mx = Math.max.apply(null,vals)*1.003;
-  var W=238, H=32, pad=10;
+  // pad bumped 10→16 so bars look proportional (less squat); topPad 12→14 for label clearance
+  var W=238, pad=16, topPad=14;
   var barW = Math.floor((W - pad*(vals.length+1)) / vals.length);
+  var valFont = 10;
+  var dateFont = 9;
   var html = "";
   vals.forEach(function(v,i){
     var x = pad + i*(barW+pad);
-    var bH = Math.max(3, Math.round(((v-mn)/(mx-mn||1))*(H-10)));
+    var bH = Math.max(3, Math.round(((v-mn)/(mx-mn||1))*(H-topPad)));
     var y  = H - bH;
     var isLatest = (i===vals.length-1);
     var col = isLatest ? "#f09014" : "#8099b3";
-    html += '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+bH+'" rx="1.5" fill="'+col+'" opacity="'+(isLatest?1:0.55)+'"/>';
-    html += '<text x="'+(x+barW/2)+'" y="'+(y-2)+'" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="'+col+'">'+v.toFixed(0)+'</text>';
-    html += '<text x="'+(x+barW/2)+'" y="'+(H+9)+'" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#627a95">'+data[i].period.slice(5)+'</text>';
+    var stroke = isLatest ? ' stroke="#f09014" stroke-width="0.8"' : '';
+    html += '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+bH+'" rx="1.8" fill="'+col+'" opacity="'+(isLatest?1:0.65)+'"'+stroke+'/>';
+    html += '<text x="'+(x+barW/2)+'" y="'+(y-4)+'" text-anchor="middle" font-family="JetBrains Mono" font-size="'+valFont+'" fill="'+col+'" font-weight="700">'+v.toFixed(0)+'</text>';
+    html += '<text x="'+(x+barW/2)+'" y="'+(H+12)+'" text-anchor="middle" font-family="JetBrains Mono" font-size="'+dateFont+'" fill="#8099b3">'+data[i].period.slice(5)+'</text>';
   });
-  svg.setAttribute("viewBox","0 0 "+W+" "+(H+12));
+  svg.setAttribute("viewBox","0 0 "+W+" "+(H+18));
+  svg.setAttribute("height", H+18);
   svg.innerHTML = html;
 }
 
@@ -1398,6 +1653,27 @@ function showEIAError(msg) {
 
 fetchEIA();
 setInterval(fetchEIA, 6*60*60*1000);
+
+// ═══════════════════════════════════════════════════
+// STOOQ — daily Brent close (for DoD on Market Pulse)
+// ═══════════════════════════════════════════════════
+var _stooqDoD = null;
+function fetchStooq(){
+  fetch("/api/stooq")
+    .then(function(r){ if(!r.ok) throw new Error("stooq "+r.status); return r.json(); })
+    .then(function(d){
+      if(d && isFinite(d.today) && isFinite(d.yesterday)){
+        _stooqDoD = d;
+        // Re-render market pulse with DoD if EIA already loaded
+        if(eiaState.loaded) renderEIA();
+        renderConclusions();
+      }
+    })
+    .catch(function(e){ console.warn("Stooq:", e.message); });
+}
+fetchStooq();
+setInterval(fetchStooq, 30*60*1000); // 30-minute refresh
+
 // ═══════════════════════════════════════════════════
 // GFW — GLOBAL FISHING WATCH (v3 POST, correct datasets)
 // ═══════════════════════════════════════════════════
@@ -1448,7 +1724,7 @@ function renderGFW(){
   var enc=gfwState.encounters.length, lor=gfwState.loitering.length, total=enc+lor;
   var darkEl=document.getElementById("sigDark"), dirEl=document.getElementById("sigDarkDir"), badge=document.getElementById("gfwBadge");
   if(darkEl) darkEl.textContent=total>0?total:"0";
-  if(dirEl){dirEl.textContent=enc+"enc "+lor+"loi";dirEl.style.fontSize="7px";dirEl.style.color="var(--muted)";}
+  if(dirEl){dirEl.textContent="";} // 4enc/0loi removed — info in hover tooltip instead
   if(badge){badge.textContent="GFW LIVE";badge.className="sig-src src-live";}
   gfwMarkers.forEach(function(m){try{map.removeLayer(m);}catch(e){}});
   gfwMarkers=[];
@@ -1483,6 +1759,205 @@ function renderGFW(){
 fetchGFW();
 setInterval(fetchGFW,4*60*60*1000);
 
+// ═══════════════════════════════════════════════════
+// CONCLUSION ENGINE — colored verdict + one-liner per panel
+// Threshold sources documented inline; data-backed.
+// ═══════════════════════════════════════════════════
+function _verdict(level, text){
+  // level: 'normal' | 'low' | 'elevated' | 'high' | 'critical'
+  var labels = {normal:"NORMAL", low:"LOW", elevated:"ELEVATED", high:"HIGH", critical:"CRITICAL"};
+  return {level:level, label:labels[level]||level.toUpperCase(), text:text};
+}
+
+// 1. Cargo ticker — % vs pre-crisis baseline ($1.68B/day = 21M bbl × $80)
+function vCargo(todayDollars){
+  var base = 21000000 * 80;
+  if(!todayDollars || todayDollars < 1) return null;
+  // Project today's full day = todayDollars / elapsed seconds × 86400
+  var n = new Date(), secs = n.getUTCHours()*3600+n.getUTCMinutes()*60+n.getUTCSeconds();
+  if(secs < 3600) return null; // wait until first hour for stable projection
+  var fullDay = (todayDollars / secs) * 86400;
+  var pct = (fullDay - base) / base * 100;
+  if(pct < -5)  return _verdict("low",      "Oil flow below baseline. Soft demand or supply easing.");
+  if(pct < 5)   return _verdict("normal",   "Oil flow at pre-crisis baseline. No risk premium pricing in.");
+  if(pct < 15)  return _verdict("elevated", "Oil priced ~"+pct.toFixed(0)+"% above baseline. Mild risk premium.");
+  if(pct < 30)  return _verdict("high",     "Oil "+pct.toFixed(0)+"% above baseline. OMC import bill stress.");
+  return         _verdict("critical", "Crisis pricing. Hedge OMC exposure.");
+}
+
+// 2. Vessels live — snapshot count (Hormuz typical 30-60 in box at any moment)
+function vVessels(count){
+  if(count == null || count === 0) return null;
+  if(count < 30)  return _verdict("low",      "Light traffic. Below typical Hormuz throughput.");
+  if(count <= 60) return _verdict("normal",   "Live traffic in normal Hormuz range (30-60 vessels).");
+  return            _verdict("elevated", "Busy throughput. Above-typical transit count.");
+}
+
+// 3. Dark/suspect — GFW events as % of AIS+GFW total
+function vDark(events, ais){
+  if(events == null) return null;
+  var total = (ais||0) + events;
+  if(total === 0) return _verdict("normal", "No dark events detected. Sanctions-evasion dormant.");
+  var pct = events / total * 100;
+  if(pct < 8)  return _verdict("normal",   "Dark traffic "+pct.toFixed(0)+"%. Below sanctions-evasion threshold.");
+  if(pct < 15) return _verdict("elevated", "Dark traffic "+pct.toFixed(0)+"%. Watch sanctions newsflow.");
+  if(pct < 20) return _verdict("high",     "Dark traffic "+pct.toFixed(0)+"%. Sanctions-evasion crisis territory.");
+  return         _verdict("critical", "Dark traffic "+pct.toFixed(0)+"%. Active enforcement event likely.");
+}
+
+// 4. BDTI — currently simulated at 947, +2.3% WoW
+function vBdti(level, wowPct){
+  if(level == null) return null;
+  // Use absolute level; combine with WoW for color
+  if(level < 800)       return _verdict("low",      "Freight rates depressed. Tanker margins tight.");
+  if(wowPct >= 25)      return _verdict("critical", "Rates spiking +"+wowPct.toFixed(0)+"% WoW. Crisis premium pricing in.");
+  if(wowPct >= 15)      return _verdict("high",     "Rates +"+wowPct.toFixed(0)+"% WoW. Likely catalyst within 2-5 days.");
+  if(wowPct >= 5)       return _verdict("elevated", "Rates rising. If traffic holds = fear premium only.");
+  if(level > 1500)      return _verdict("high",     "BDTI >1500. Stressed freight market.");
+  if(level > 1100)      return _verdict("elevated", "BDTI in tight zone (1100-1500).");
+  return                  _verdict("normal",   "BDTI in normal range (800-1100). No tanker urgency.");
+}
+
+// 5. Incidents/30d (ACLED — currently hardcoded 14)
+function vIncidents(n){
+  if(n == null) return null;
+  if(n < 8)   return _verdict("low",      n+" events / 30d. Below regional baseline.");
+  if(n <= 20) return _verdict("normal",   n+" events / 30d. Normal regional baseline.");
+  if(n <= 35) return _verdict("elevated", n+" events / 30d. Active period — monitor closely.");
+  return        _verdict("high", n+" events / 30d. Active conflict zone.");
+}
+
+// 6. Vessel traffic trend — today vs 30d median (using TREND_DATA: pre-crisis 42, post-escal 37)
+function vTrend(today){
+  if(today == null || today === 0) return null;
+  var median = 37; // post-escalation baseline = current normal
+  var pct = (today - median) / median * 100;
+  if(pct < -30) return _verdict("critical", "Traffic "+pct.toFixed(0)+"% below baseline. Closure scenario activating.");
+  if(pct < -20) return _verdict("high",     "Traffic "+pct.toFixed(0)+"% below baseline. Real disruption in progress.");
+  if(pct < -12) return _verdict("elevated", "Traffic "+pct.toFixed(0)+"% below baseline. Slowdown beyond normal seasonality.");
+  if(pct > 12)  return _verdict("elevated", "Traffic +"+pct.toFixed(0)+"% above baseline. Restocking or surge demand.");
+  return          _verdict("normal", "Traffic within ±12% of baseline. Steady chokepoint flow.");
+}
+
+// 7. Market pulse — Brent-WTI spread
+function vSpread(brent, wti){
+  if(!brent || !wti) return null;
+  var spread = brent - wti;
+  if(spread < 4)        return _verdict("low",      "Brent-WTI spread $"+spread.toFixed(1)+". Atlantic basin loose.");
+  if(spread <= 7)       return _verdict("normal",   "Brent-WTI spread $"+spread.toFixed(1)+". Normal range.");
+  if(spread <= 10)      return _verdict("elevated", "Brent-WTI spread $"+spread.toFixed(1)+". Atlantic tightness or Hormuz risk pricing in.");
+  return                  _verdict("high", "Brent-WTI spread $"+spread.toFixed(1)+". Real disruption being priced.");
+}
+
+// 8. Vessel type mix — VLCC %
+function vMix(vlccPct){
+  if(vlccPct == null) return null;
+  if(vlccPct < 40)      return _verdict("low",      "VLCC share "+vlccPct.toFixed(0)+"%. Light/product-heavy day.");
+  if(vlccPct <= 60)     return _verdict("normal",   "VLCC share "+vlccPct.toFixed(0)+"%. Balanced typical Hormuz mix.");
+  return                  _verdict("elevated", "VLCC share "+vlccPct.toFixed(0)+"%. Crude-heavy — OMC import bill scenario applies.");
+}
+
+// 9. Cross-verify aggregate — count of elevated/high signals
+function vCross(states){
+  // states: array of severity ints (0=normal, 1=elevated, 2=high)
+  if(!states || !states.length) return null;
+  var maxS = Math.max.apply(null, states);
+  var elevCount = states.filter(function(s){return s>=1;}).length;
+  var highCount = states.filter(function(s){return s>=2;}).length;
+  if(highCount >= states.length) return _verdict("critical", "All signals high. Crisis pricing in. Hedged positioning only.");
+  if(highCount >= 1 || elevCount >= 3) return _verdict("high", "Risk-on signal. Long FRO/INSW; short BPCL/IOC tactically.");
+  if(elevCount >= 1 && elevCount <= 2) return _verdict("elevated", "Watching. Tighten OMC stops.");
+  return _verdict("normal", "No anomaly across signals. Trade structurally.");
+}
+
+// Render a verdict into a target element as colored badge + one-liner
+function renderVerdict(targetId, v){
+  var el = document.getElementById(targetId);
+  if(!el || !v) return;
+  el.innerHTML = '<span class="cv-badge cv-'+v.level+'">'+v.label+'</span><span class="cv-text">'+v.text+'</span>';
+  el.style.display = "flex";
+}
+function renderSigTooltip(targetId, v){
+  var el = document.getElementById(targetId);
+  if(!el || !v) return;
+  el.innerHTML = '<div class="sig-tt-verdict cv-'+v.level+'">'+v.label+'</div><div class="sig-tt-text">'+v.text+'</div>';
+}
+
+function renderConclusions(){
+  // Cargo ticker — read live accumulated $ from cargoVal
+  var cargoText = (document.getElementById("cargoVal")||{}).textContent || "$0";
+  // Convert $1.5B / $250M / $250K back to a number
+  var m = cargoText.match(/\$([\d.]+)([BMK]?)/);
+  var todayDollars = 0;
+  if(m){
+    var v = parseFloat(m[1]);
+    if(m[2]==="B") v *= 1e9;
+    else if(m[2]==="M") v *= 1e6;
+    else if(m[2]==="K") v *= 1e3;
+    todayDollars = v;
+  }
+  // Cargo verdict goes inside the existing ticker tooltip (not a separate sig-tooltip)
+  var cargoV = vCargo(todayDollars);
+  var cvEl = document.getElementById("ctVerdict");
+  if(cvEl && cargoV){
+    cvEl.innerHTML = '<span class="cv-badge cv-'+cargoV.level+'">'+cargoV.label+'</span> <span class="cv-text">'+cargoV.text+'</span>';
+    cvEl.style.display = "block";
+  }
+
+  // Signal bar tooltips (1-4)
+  var vesselsCount = parseInt((document.getElementById("sigVessels")||{}).textContent,10);
+  if(isFinite(vesselsCount)) renderSigTooltip("ttipVessels", vVessels(vesselsCount));
+
+  var darkText = (document.getElementById("sigDark")||{}).textContent;
+  var darkN = parseInt(darkText,10);
+  if(isFinite(darkN)) renderSigTooltip("ttipDark", vDark(darkN, (typeof loggedVessels!=="undefined"?loggedVessels.length:0)));
+
+  // BDTI is hardcoded at 947 / +2.3%
+  renderSigTooltip("ttipBdti", vBdti(947, 2.3));
+  renderSigTooltip("ttipIncidents", vIncidents(14));
+
+  // Right-panel inline conclusions (6-9)
+  var todayBars = (typeof TREND_DATA !== "undefined") && TREND_DATA[3] ? TREND_DATA[3].val : null;
+  renderVerdict("concTrend", vTrend(todayBars));
+
+  if(eiaState.loaded){
+    var brent = eiaState.brent[0] && eiaState.brent[0].val;
+    var wti = eiaState.wti[0] && eiaState.wti[0].val;
+    renderVerdict("concPulse", vSpread(brent, wti));
+  }
+
+  // Vessel type mix — read VLCC % from rendered .tbar-pct in #typeBars
+  var typeBars = document.getElementById("typeBars");
+  if(typeBars){
+    var rows = typeBars.querySelectorAll(".tbar-row");
+    var vlccPct = null;
+    rows.forEach(function(r){
+      var lbl = r.querySelector(".tbar-label");
+      if(lbl && /VLCC|crude/i.test(lbl.textContent)){
+        var p = r.querySelector(".tbar-pct");
+        if(p) vlccPct = parseFloat(p.textContent);
+      }
+    });
+    if(vlccPct != null && isFinite(vlccPct)) renderVerdict("concMix", vMix(vlccPct));
+  }
+
+  // Cross-verify aggregate from xv-status colors
+  var xv = document.querySelectorAll("#xvRows .xv-status");
+  if(xv.length){
+    var states = [];
+    xv.forEach(function(s){
+      var c = (s.style.color||"").toLowerCase();
+      if(c.indexOf("red")>-1 || c.indexOf("ff3e52")>-1) states.push(2);
+      else if(c.indexOf("amber")>-1 || c.indexOf("f09014")>-1) states.push(1);
+      else states.push(0);
+    });
+    renderVerdict("concCross", vCross(states));
+  }
+}
+
+// Initial + periodic render (waits for data to populate)
+setTimeout(renderConclusions, 2500);
+setInterval(renderConclusions, 15000);
 
 </script>
 </body>
