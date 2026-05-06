@@ -382,8 +382,8 @@ header{
   </div>
   <div class="sig">
     <div class="sig-top">
-      <span class="sig-val" id="sigBDTI" style="color:var(--amber)">947</span>
-      <span class="sig-dir" style="color:var(--green)">&#9650;2.3%</span>
+      <span class="sig-val" id="sigBDTI" style="color:var(--amber)">2841</span>
+      <span class="sig-dir" style="color:var(--green)">&#9650;3.2%</span>
     </div>
     <div class="sig-bot">
       <span class="sig-label">BDTI index</span>
@@ -1962,8 +1962,17 @@ function renderConclusions(){
   var darkN = parseInt(darkText,10);
   if(isFinite(darkN)) renderSigTooltip("ttipDark", vDark(darkN, (typeof loggedVessels!=="undefined"?loggedVessels.length:0)));
 
-  // BDTI is hardcoded at 947 / +2.3%
-  renderSigTooltip("ttipBdti", vBdti(947, 2.3));
+  // BDTI: read live from the signal bar tile (updated by weekly cron)
+  var bdtiText = (document.getElementById("sigBDTI")||{}).textContent || "0";
+  var bdtiLevel = parseInt(bdtiText, 10) || 0;
+  // WoW % parsed from the adjacent direction span
+  var bdtiDirEl = document.querySelector("#sigBDTI + .sig-dir");
+  var bdtiWow = 0;
+  if(bdtiDirEl){
+    var m = bdtiDirEl.textContent.match(/([0-9.]+)%/);
+    if(m) bdtiWow = parseFloat(m[1]) * (bdtiDirEl.textContent.indexOf("▼")>=0 ? -1 : 1);
+  }
+  renderSigTooltip("ttipBdti", vBdti(bdtiLevel, bdtiWow));
   renderSigTooltip("ttipIncidents", vIncidents(14));
 
   // Right-panel inline conclusions (6-9)
