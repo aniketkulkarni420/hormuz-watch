@@ -391,14 +391,16 @@ header{
     </div>
     <div class="sig-tooltip" id="ttipBdti"></div>
   </div>
-  <div class="sig">
+  <!-- ACLED Incidents tile removed pending Research-tier API access (placeholder data was misleading).
+       Will restore when ACLED OAuth credentials are wired into /api/acled. -->
+  <div class="sig" style="display:none">
     <div class="sig-top">
-      <span class="sig-val" id="sigIncidents" style="color:var(--red)">14</span>
-      <span class="sig-dir" style="color:var(--red)">&#9650;3</span>
+      <span class="sig-val" id="sigIncidents" style="color:var(--red)">—</span>
+      <span class="sig-dir" style="color:var(--red)"></span>
     </div>
     <div class="sig-bot">
       <span class="sig-label">Incidents / 30d</span>
-      <span class="sig-src src-est">ACLED EST</span>
+      <span class="sig-src src-est">ACLED PENDING</span>
     </div>
     <div class="sig-tooltip" id="ttipIncidents"></div>
   </div>
@@ -1079,7 +1081,7 @@ var XV_DEFS = [
    }},
   {src:"ACLED + AIS", label:"Incident-traffic lag",   id:"xv-lag",
    compute:function(aisCount){
-     return {status:"2\u20133 DAY LAG",statusColor:"var(--amber)",body:"Last ACLED incident: Tanker approached by IRGCN patrol boat near Larak (est. 4 days ago). AIS traffic: "+aisCount+" vessels today. No significant drop detected yet."};
+     return {status:"PENDING",statusColor:"var(--muted)",body:"Awaiting ACLED Research-tier API access (request submitted). Once live: real-time Hormuz region incidents + AIS traffic correlation lag analysis. Currently disabled \u2014 no placeholder data shown."};
    }},
   {src:"BDTI + AIS",  label:"Rate vs volume signal",  id:"xv-rate",
    compute:function(aisCount){
@@ -1973,7 +1975,7 @@ function renderConclusions(){
     if(m) bdtiWow = parseFloat(m[1]) * (bdtiDirEl.textContent.indexOf("▼")>=0 ? -1 : 1);
   }
   renderSigTooltip("ttipBdti", vBdti(bdtiLevel, bdtiWow));
-  renderSigTooltip("ttipIncidents", vIncidents(14));
+  // ACLED Incidents removed — will restore when Research-tier API is wired
 
   // Right-panel inline conclusions (6-9)
   var todayBars = (typeof TREND_DATA !== "undefined") && TREND_DATA[3] ? TREND_DATA[3].val : null;
