@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Methodology · Hormuz Watch</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;padding:0;min-height:100vh}
+.wrap{max-width:880px;margin:0 auto;padding:60px 28px 80px}
+header{margin-bottom:50px;padding-bottom:30px;border-bottom:1px solid var(--border)}
+.back{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;margin-bottom:24px}
+.back:hover{color:var(--amber)}
+h1{font-size:38px;font-weight:900;letter-spacing:-.01em;margin-bottom:8px}
+.sub{font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:.04em}
+section{margin-bottom:50px}
+h2{font-size:24px;font-weight:800;letter-spacing:-.005em;margin-bottom:18px;color:var(--amber)}
+h3{font-size:17px;font-weight:700;margin:24px 0 10px}
+p{margin-bottom:14px;color:var(--text)}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-family:var(--mono);font-size:12px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:10px}
+td.metric{color:var(--amber);font-weight:700;white-space:nowrap}
+ul{margin:10px 0 14px 22px}
+li{margin-bottom:7px;color:var(--text)}
+code{font-family:var(--mono);font-size:12px;background:var(--panel);padding:2px 6px;border-radius:3px;color:var(--amber)}
+pre{font-family:var(--mono);font-size:12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px;overflow-x:auto;margin:14px 0;color:var(--text)}
+.callout{background:var(--panel);border-left:3px solid var(--amber);padding:14px 18px;border-radius:0 4px 4px 0;margin:16px 0;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.callout b{color:var(--text);font-weight:700}
+.foot{margin-top:60px;padding-top:30px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--muted2);letter-spacing:.04em;text-align:center}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.tag{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:.06em;margin-left:6px;text-transform:uppercase;font-weight:700}
+.tag.live{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.25)}
+.tag.lag{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.3)}
+.tag.manual{color:var(--blue);background:rgba(56,170,255,.1);border:1px solid rgba(56,170,255,.25)}
+.tag.disabled{color:var(--muted2);background:rgba(98,122,149,.1);border:1px solid var(--border2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="back" href="/">← Back to dashboard</a>
+  <h1>Methodology</h1>
+  <div class="sub">How every metric is computed · last reviewed 2026-05</div>
+</header>
+
+<section>
+<h2>Philosophy</h2>
+<p><b>Accuracy first, recency second, inference third.</b> Every metric on the dashboard either comes from a primary data source we can name, or is explicitly labeled as an estimate. Where a source has a known lag (e.g. EIA published-T+2), the dashboard says so.</p>
+<p>We avoid trade calls. The dashboard is an <em>intelligence aggregator</em> not a recommendation engine — even when verdicts read "Long FRO," they reference the historical playbook, not present advice.</p>
+<div class="callout">
+<b>Honest source ranking:</b> when a feed has multiple tiers (e.g. live commodity → ETF proxy → daily EIA), the dashboard's source badge tells you which tier is currently active. If you see <code>EIA DAILY</code> instead of <code>LIVE FEED</code>, the price is up to 2 trading days stale by design.
+</div>
+</section>
+
+<section>
+<h2>Data sources</h2>
+<table>
+<thead><tr><th>Source</th><th>Used for</th><th>Refresh</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>AISStream.io</td><td>Real-time vessel positions in Hormuz bounding box</td><td>Sub-second (WebSocket)</td><td><span class="tag live">live</span></td></tr>
+<tr><td>yfinance via GitHub Actions</td><td>Brent (BZ=F), WTI (CL=F), tanker stock prices</td><td>15 min during market hours</td><td><span class="tag live">live</span></td></tr>
+<tr><td>TradingView (visual)</td><td>Real-time Brent cross-reference widget</td><td>~1 sec ticks</td><td><span class="tag live">live</span></td></tr>
+<tr><td>EIA v2 API</td><td>Weekly Brent/WTI history (sparkline), daily fallback level</td><td>Weekly publish, 6h fetch</td><td><span class="tag lag">1-2 day lag</span></td></tr>
+<tr><td>Global Fishing Watch v3</td><td>Dark-vessel encounters + loitering (satellite SAR)</td><td>4 hours</td><td><span class="tag live">live</span></td></tr>
+<tr><td>Baltic Exchange</td><td>BDTI freight index level</td><td>Weekly cron</td><td><span class="tag manual">weekly</span></td></tr>
+<tr><td>ACLED</td><td>Conflict event counts (Region 11 Middle East)</td><td>(pending API access)</td><td><span class="tag disabled">disabled</span></td></tr>
+<tr><td>PPAC + company filings</td><td>India OMC exposure %, equity links per port</td><td>Quarterly review</td><td><span class="tag manual">curated</span></td></tr>
+</tbody>
+</table>
+</section>
+
+<section>
+<h2>Metric definitions</h2>
+
+<h3>Transits / 24h</h3>
+<p>A <b>gate-crossing count</b>, not a snapshot. We define a virtual line at longitude 56.45°E (the strait's narrowest point) between latitude 26.20°N and 26.70°N. Every time a unique vessel's reported longitude crosses this line in either direction within the valid latitude band, it counts as one transit. Counter rolls forward 24 hours.</p>
+<p>Why this matters: pre-existing dashboards typically count "vessels in a bounding box" — which includes anchored vessels at Fujairah or Bandar Abbas as "transits." Those vessels aren't transiting anything. Our metric only counts actual east↔west movement across the chokepoint.</p>
+<p><b>Pre-crisis baseline:</b> 42 transits/day (EIA-derived from 21M bbl/day average × ~500K bbl/vessel). The vessel traffic trend chart compares today's 24h count to this baseline.</p>
+
+<h3>Vessel snapshot categories (Transit / Anchored / Approach)</h3>
+<table>
+<thead><tr><th>Category</th><th>Definition</th></tr></thead>
+<tbody>
+<tr><td><code>transit</code></td><td>SOG ≥ 5 knots, in corridor (lat 26.0–26.7, lng 55.5–57.5), heading aligned with TSS (westbound 250-320° or eastbound 70-140°)</td></tr>
+<tr><td><code>anchored</code></td><td>SOG &lt; 0.5 knots (engines off / at anchor)</td></tr>
+<tr><td><code>approach</code></td><td>Everything else moving (slow, off-corridor, indeterminate heading)</td></tr>
+</tbody>
+</table>
+
+<h3>Oil throughput estimate ("Oil transited today")</h3>
+<p>Computed each second:</p>
+<pre>throughput = (transits_24h / 42) × 21,000,000 bbl/day × Brent_price</pre>
+<p>When today's 24h transit count is 21 (half of baseline) and Brent is $109, the projected daily oil flow value is approximately $1.15 billion. The header ticker accumulates the elapsed-day fraction of this number in real time.</p>
+
+<h3>Brent and WTI prices</h3>
+<p>Source priority (top wins):</p>
+<ol>
+<li><b>Cloudflare KV (GitHub Action / yfinance)</b> — actual BZ=F + CL=F futures, 15-min refresh during market hours</li>
+<li><b>Twelve Data Pro</b> — real commodity quotes (requires paid tier; ready for upgrade)</li>
+<li><b>FinnHub ETF proxy (BNO/USO)</b> — NYSE-hours intraday %, applied to EIA daily reference level</li>
+<li><b>EIA daily</b> — accurate, 1-2 trading day lag</li>
+</ol>
+<p>The pulse tag at the top of the Market Pulse panel always names the current active tier.</p>
+
+<h3>Dark traffic %</h3>
+<p>Computed as <code>GFW_events / (AIS_in_corridor + GFW_events)</code>. GFW SAR data captures vessels that appear in satellite imagery but lack corresponding AIS positions (i.e., AIS turned off).</p>
+<p>Thresholds: &lt;8% normal · 8-15% elevated · 15-20% high · &gt;20% critical (based on Iran sanctions-enforcement spikes 2024).</p>
+
+<h3>BDTI</h3>
+<p>Baltic Dirty Tanker Index — composite index of dirty-tanker spot freight rates published by Baltic Exchange. Currently updated weekly via Monday cron job. Direction/magnitude is the analyst signal; precise level less important.</p>
+<p>Thresholds (level): 800-1100 normal · 1100-1500 tight · 1500-2000 stressed · &gt;2000 crisis.</p>
+<p>Thresholds (WoW %): &lt;+5% normal · +5-15% rising · +15-25% high · &gt;+25% critical.</p>
+
+<h3>India % via Hormuz</h3>
+<p>Static 62%. Sourced from PPAC (Petroleum Planning &amp; Analysis Cell, Ministry of Petroleum &amp; Natural Gas, Government of India) and EIA crude trade flow data, FY24-25. Reviewed quarterly.</p>
+</section>
+
+<section>
+<h2>Verdict thresholds</h2>
+<p>Every conclusion ("NORMAL", "ELEVATED", "HIGH", "CRITICAL") uses thresholds backed by published research:</p>
+<ul>
+<li><b>Traffic vs baseline:</b> &lt;-12% slowdown · ±12% normal · -20% high · -30% closure scenario activating. Reference: UNCTAD chokepoint volatility studies; 2019 IRGC seizures saw -12% over 2 weeks; 2025 Israel-Iran exchanges saw -18%.</li>
+<li><b>Dark traffic:</b> see Dark Traffic % section above. References: GFW published research on shadow fleet operations; Atlantic Council 2024 Iran enforcement analysis.</li>
+<li><b>BDTI:</b> see BDTI section. Reference: Baltic Exchange 10-year historical range.</li>
+<li><b>Brent-WTI spread:</b> &lt;$4 loose · $4-7 normal · $7-10 tight · &gt;$10 stressed. Reference: EIA historical Atlantic-basin analysis.</li>
+<li><b>Tension gauge:</b> Low / Moderate / Elevated / High / Critical — 5-state composite driven by traffic + dark % + BDTI WoW.</li>
+</ul>
+</section>
+
+<section>
+<h2>India OMC exposure rationale</h2>
+<table>
+<thead><tr><th>Company</th><th>Hormuz exposure</th><th>Source / reasoning</th></tr></thead>
+<tbody>
+<tr><td class="metric">BPCL</td><td>~60% crude via Hormuz</td><td>FY24-25 sourcing reports; primary suppliers Saudi (Ras Tanura) + UAE (Murban) + Iraq</td></tr>
+<tr><td class="metric">IOC</td><td>~52% crude via Hormuz</td><td>Diversified to ~30% Russian Urals; remainder mostly Persian Gulf</td></tr>
+<tr><td class="metric">HPCL</td><td>~50% crude via Hormuz</td><td>Similar profile to IOC; ME Gulf concentrated</td></tr>
+<tr><td class="metric">Petronet</td><td>~95% LNG via Hormuz</td><td>Long-term Qatar (Ras Laffan) contract dominates Dahej + Kochi terminals</td></tr>
+<tr><td class="metric">Reliance</td><td>~35% crude via Hormuz</td><td>Aggressive diversification to Russian Urals + US Light Sweet since 2022</td></tr>
+<tr><td class="metric">GAIL</td><td>LNG mostly non-Hormuz</td><td>US Sabine Pass + spot LNG portfolio limits Hormuz dependency</td></tr>
+</tbody>
+</table>
+</section>
+
+<section>
+<h2>What we don't claim</h2>
+<ul>
+<li>We don't claim our verdicts predict equity moves with statistical certainty. They reflect industry-standard interpretation frameworks.</li>
+<li>We don't claim live ACLED data — that tile is hidden until the API integration is complete.</li>
+<li>We don't claim every vessel in the bounding box is transiting Hormuz — the 24h gate count and the snapshot categories are separately labeled.</li>
+<li>We don't make trade calls. We are not financial advisers. SEBI RA registration is for research dissemination, not portfolio recommendations.</li>
+</ul>
+</section>
+
+<section>
+<h2>Source attribution</h2>
+<p>Some of our data providers require attribution. They have it:</p>
+<ul>
+<li><b>Global Fishing Watch</b> — encounters + loitering events licensed under <a href="https://globalfishingwatch.org/license-and-attribution/" target="_blank" rel="noopener">CC BY-SA 4.0</a></li>
+<li><b>EIA</b> — US Energy Information Administration, public domain. <a href="https://www.eia.gov" target="_blank" rel="noopener">eia.gov</a></li>
+<li><b>AISStream.io</b> — free maritime tier, requires attribution. <a href="https://aisstream.io" target="_blank" rel="noopener">aisstream.io</a></li>
+<li><b>Baltic Exchange</b> — BDTI level referenced under fair use for research commentary. Levels manually transcribed from public press releases.</li>
+<li><b>TradingView</b> — embedded mini-widget per their <a href="https://www.tradingview.com/policies/" target="_blank" rel="noopener">free widget policy</a></li>
+</ul>
+</section>
+
+<section>
+<h2>Change log</h2>
+<p>For a full commit history, see <a href="https://github.com/aniketkulkarni420/hormuz-watch" target="_blank" rel="noopener">the GitHub repo</a>.</p>
+</section>
+
+<div class="foot">
+Built by Aniket Kulkarni · <a href="https://www.linkedin.com/in/aniket-kulkarni-equity-research/" target="_blank" rel="noopener">LinkedIn</a> · KamayaKya · SEBI Research Analyst INH000009843
+</div>
+</div>
+</body>
+</html>

@@ -6,3 +6,7 @@ pages_build_output_dir = "."
 binding = "DB"
 database_name = "hormuz-watch-data"
 database_id = "cdd305ca-3113-4124-96c3-f0ffd3532fd3"
+
+[[kv_namespaces]]
+binding = "OIL_KV"
+id = "65bcc219241e41e7b9b3f2df645e2bd5"

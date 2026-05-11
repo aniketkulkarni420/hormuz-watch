@@ -1,11 +1,36 @@
 // Cloudflare Pages Function — Brent + WTI live prices
-// SOURCE PRIORITY (forward-compatible):
-//   1. Twelve Data BRENT/WTI    — real commodity prices (free tier 404s; works on Pro+)
-//   2. FinnHub BNO/USO ETF      — proxy intraday %, NYSE hours only (free tier OK)
-//   3. EIA daily RBRTE/RWTC     — accurate level, 1-2 day lag (caller already fetches via /api/stooq)
-// Returns first working source with explicit `source` field so dashboard labels honestly.
+// PRIORITY: read from OIL_KV (populated by GitHub Action with yfinance — actual futures BZ=F/CL=F).
+// Falls back through legacy tiers if KV empty or stale.
+//   1. KV (GHA scraper) → real futures, 15-min refresh, the authoritative source
+//   2. Twelve Data BRENT/WTI (Pro+ only — free tier 404s)
+//   3. FinnHub BNO/USO ETF (proxy, NYSE hours only)
+//   4. EIA daily (always-on fallback, 1-2 day lag)
 export async function onRequestGet({ env }) {
-  // Try Twelve Data first (real commodity prices when account allows)
+  // Tier 1: KV (GitHub Action scraper)
+  if (env.OIL_KV) {
+    try {
+      const raw = await env.OIL_KV.get("latest");
+      if (raw) {
+        const data = JSON.parse(raw);
+        const ageMin = (Date.now() / 1000 - data.fetchedAt) / 60;
+        const stale = ageMin > 60; // 60 min freshness window
+        if (!stale && data.symbols && data.symbols.brent && data.symbols.wti) {
+          const b = data.symbols.brent;
+          const w = data.symbols.wti;
+          return json({
+            source: "GitHub Actions · yfinance (BZ=F + CL=F)",
+            tier: "primary",
+            brent: { level: b.c, change: b.d, changePct: b.dp, open: b.o, prevClose: b.pc, high: b.h, low: b.l, t: b.t },
+            wti:   { level: w.c, change: w.d, changePct: w.dp, open: w.o, prevClose: w.pc, high: w.h, low: w.l, t: w.t },
+            fetchedAt: data.fetchedAt * 1000,
+            ageMin: Math.round(ageMin * 10) / 10
+          });
+        }
+      }
+    } catch (e) { /* fall through */ }
+  }
+
+  // Tier 2: Twelve Data (Pro+)
   if (env.TWELVE_KEY) {
     try {
       const [bRes, wRes] = await Promise.all([
@@ -15,7 +40,6 @@ export async function onRequestGet({ env }) {
           { cf: { cacheTtl: 600, cacheEverything: true } })
       ]);
       const [b, w] = await Promise.all([bRes.json(), wRes.json()]);
-      // Only accept if both came back with valid commodity quotes (not stock substitutions)
       const validCommodity = (q) => q && !q.code && q.exchange && /NYMEX|ICE|CME|MTA/i.test(q.exchange) && isFinite(parseFloat(q.close));
       if (validCommodity(b) && validCommodity(w)) {
         return json({
@@ -26,11 +50,10 @@ export async function onRequestGet({ env }) {
           fetchedAt: Date.now()
         });
       }
-      // Otherwise fall through to ETF / EIA. Don't fail.
     } catch (e) { /* fall through */ }
   }
 
-  // Tier 2: FinnHub BNO/USO ETF intraday % (NYSE hours only)
+  // Tier 3: FinnHub BNO/USO ETF intraday %
   if (env.FINNHUB_KEY) {
     try {
       const [bnoRes, usoRes] = await Promise.all([
@@ -44,7 +67,7 @@ export async function onRequestGet({ env }) {
         return json({
           source: "FinnHub ETF proxy (BNO/USO)",
           tier: "secondary",
-          note: "ETF dp% only; apply to EIA daily level for live tracking. NYSE hours only.",
+          note: "ETF dp% only; apply to EIA daily level. NYSE hours only.",
           brent: { proxyDp: bno.dp, proxyPrice: bno.c, t: bno.t },
           wti:   { proxyDp: uso.dp, proxyPrice: uso.c, t: uso.t },
           fetchedAt: Date.now()
@@ -53,11 +76,11 @@ export async function onRequestGet({ env }) {
     } catch (e) { /* fall through */ }
   }
 
-  // Tier 3 (handled client-side via /api/stooq which queries EIA daily directly)
+  // Tier 4 fallback handled client-side via /api/stooq (EIA daily)
   return json({
     source: "none",
     tier: "tertiary-required",
-    note: "TwelveData free tier blocks BRENT/WTI; FinnHub ETF unavailable. Client should use /api/stooq (EIA daily) for level + display 1-2 day lag honestly."
+    note: "KV empty/stale, paid APIs unavailable. Client should use /api/stooq for EIA daily level with 1-2 day lag disclosure."
   }, 200);
 }
 
@@ -66,7 +89,7 @@ function json(obj, status = 200) {
     status,
     headers: {
       "content-type": "application/json",
-      "cache-control": "public, max-age=600",
+      "cache-control": "public, max-age=300",
       "access-control-allow-origin": "*"
     }
   });

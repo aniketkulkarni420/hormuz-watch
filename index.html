@@ -328,6 +328,50 @@ header{
 .tile-age.stale{color:var(--red)}
 
 /* ═══════════════════════════════════════════════════
+   ONBOARDING OVERLAY — first-visit welcome card
+   ═══════════════════════════════════════════════════ */
+.onboard-veil{
+  position:fixed;inset:0;z-index:9999;background:rgba(7,9,14,.78);backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;padding:24px;
+  animation:fadeIn .3s ease;
+}
+.onboard-card{
+  max-width:580px;width:100%;background:var(--panel);border:1px solid var(--border2);
+  border-radius:12px;padding:32px;box-shadow:0 24px 60px rgba(0,0,0,.6);
+}
+.onboard-hex{
+  width:56px;height:56px;background:var(--amber);
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;color:#000;font-weight:900;margin-bottom:18px;
+}
+.onboard-title{font-size:24px;font-weight:800;letter-spacing:.06em;margin-bottom:8px}
+.onboard-sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:22px}
+.onboard-body{font-family:var(--mono);font-size:13px;line-height:1.65;color:var(--text);margin-bottom:18px}
+.onboard-list{display:flex;flex-direction:column;gap:11px;margin:18px 0 22px}
+.onboard-item{display:flex;gap:14px;align-items:flex-start}
+.onboard-icon{flex-shrink:0;width:32px;height:32px;border-radius:8px;background:rgba(240,144,20,.12);border:1px solid rgba(240,144,20,.3);display:flex;align-items:center;justify-content:center;font-size:16px}
+.onboard-item-text{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--muted)}
+.onboard-item-text b{color:var(--text);font-weight:700}
+.onboard-cta{display:flex;gap:10px;margin-top:24px}
+.onboard-btn{
+  flex:1;padding:13px 18px;border-radius:8px;border:1px solid;background:transparent;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  cursor:pointer;transition:all .15s;
+}
+.onboard-btn.primary{background:var(--amber);color:#000;border-color:var(--amber)}
+.onboard-btn.primary:hover{filter:brightness(1.1)}
+.onboard-btn.secondary{color:var(--muted);border-color:var(--border2)}
+.onboard-btn.secondary:hover{color:var(--text);border-color:var(--muted2)}
+.onboard-foot{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:18px;text-align:center;letter-spacing:.06em}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@media(max-width:640px){
+  .onboard-card{padding:22px 18px}
+  .onboard-title{font-size:20px}
+  .onboard-body{font-size:12px}
+}
+
+/* ═══════════════════════════════════════════════════
    MOBILE LAYOUT — bottom tabs, stacked sections
    Activates on viewports ≤ 768px wide
    ═══════════════════════════════════════════════════ */
@@ -664,6 +708,14 @@ header{
         </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5" id="brentNote">
           Updating&hellip;
+        </div>
+        <!-- TradingView mini-widget for visual cross-reference (live tick) -->
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.04em">
+            Live cross-reference <span style="color:var(--muted2)">&middot; TradingView</span>
+          </div>
+          <div id="tvWidgetBrent" style="height:96px"></div>
+          <div id="tvDivergence" style="font-family:var(--mono);font-size:8px;color:var(--muted2);margin-top:4px;letter-spacing:.04em"></div>
         </div>
         <div class="conclusion" id="concPulse" style="display:none"></div>
       </div>
@@ -1074,21 +1126,15 @@ var PRECRISIS_BRENT  = 80;
   document.getElementById("clock").textContent=p(n.getUTCHours())+":"+p(n.getUTCMinutes())+":"+p(n.getUTCSeconds())+" UTC";
   var secs=n.getUTCHours()*3600+n.getUTCMinutes()*60+n.getUTCSeconds();
 
-  // Cargo flow now uses ACTUAL gate-crossing transit count from B+ engine
-  // (replaces snapshot vessel-count which counted anchored/loitering ships).
-  // todayVess = transits across the gate line in the elapsed portion of today
-  var todayVess = 0;
-  if (typeof transits24h !== "undefined") {
-    var midnightUTC = new Date();
-    midnightUTC.setUTCHours(0,0,0,0);
-    todayVess = transits24h.filter(function(t){ return t.time >= midnightUTC.getTime(); }).length;
-  }
-  // Yesterday = full prior day from localStorage tally (saved by daily storage hook)
-  var yestVess  = (typeof TREND_DATA!=="undefined" && TREND_DATA[2] && TREND_DATA[2].val!=null) ? TREND_DATA[2].val : 0;
-  // Project today's full-day total based on elapsed share of day
-  var dayElapsed = ((new Date()) - midnightUTC) / 86400000; // 0-1
-  var projectedToday = dayElapsed > 0.04 ? todayVess / dayElapsed : 0; // require >1h elapsed
-  var todayRatio = projectedToday / BASELINE_VESSELS;
+  // Cargo flow uses 24h rolling window of gate crossings (NOT calendar day —
+  // calendar-day projection breaks at boundaries: 1 transit at 01:00 UTC
+  // would project to 24 per day. The 24h rolling count is genuinely
+  // representative regardless of when the user views the dashboard).
+  var todayCount = (typeof transits24h !== "undefined") ? transits24h.length : 0;
+  // For "yesterday's count" we use the prior 24h saved by saveTodayCount() hook
+  var yestVess = (typeof TREND_DATA!=="undefined" && TREND_DATA[2] && TREND_DATA[2].val!=null) ? TREND_DATA[2].val : 0;
+  var todayVess = todayCount; // raw 24h count, no projection inflation
+  var todayRatio = todayVess / BASELINE_VESSELS;
   var yestRatio  = yestVess  / BASELINE_VESSELS;
 
   // Today's flow rate, traffic-adjusted
@@ -2045,8 +2091,9 @@ function renderEIA() {
   var pulseTag = document.getElementById("eiaPulseTag");
   if(pulseTag){
     if (primaryOil) {
-      // Real live commodity feed (Twelve Data Pro+) — best case
-      pulseTag.textContent = "LIVE";
+      // Real live commodity feed — KV (GHA/yfinance) or Twelve Data Pro+
+      var srcShort = _liveOil && _liveOil.source ? _liveOil.source.split("·")[0].trim() : "LIVE";
+      pulseTag.textContent = srcShort.length > 14 ? "LIVE FEED" : srcShort.toUpperCase();
       pulseTag.style.color = "var(--green)";
       pulseTag.style.background = "rgba(29,212,126,.1)";
       pulseTag.style.borderColor = "rgba(29,212,126,.2)";
@@ -2466,6 +2513,90 @@ setTimeout(renderConclusions, 2500);
 setInterval(renderConclusions, 15000);
 
 // ═══════════════════════════════════════════════════
+// TRADINGVIEW MINI WIDGET — visual real-time Brent (cross-reference)
+// Loads TradingView's free widget showing BZ (ICE Brent) live tick.
+// Used purely as a display element; backend math reads from /api/oil (KV).
+// ═══════════════════════════════════════════════════
+function loadTradingViewWidget(){
+  var container = document.getElementById("tvWidgetBrent");
+  if (!container) return;
+  // Inject TradingView widget config + script
+  var widgetDiv = document.createElement("div");
+  widgetDiv.className = "tradingview-widget-container__widget";
+  widgetDiv.style.height = "96px";
+  container.appendChild(widgetDiv);
+  var script = document.createElement("script");
+  script.type = "text/javascript";
+  script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
+  script.async = true;
+  script.innerHTML = JSON.stringify({
+    "symbol": "TVC:UKOIL",       // Brent (ICE) on TradingView
+    "width": "100%",
+    "height": 96,
+    "locale": "en",
+    "dateRange": "1D",
+    "colorTheme": "dark",
+    "isTransparent": true,
+    "autosize": false,
+    "largeChartUrl": "",
+    "noTimeScale": true,
+    "trendLineColor": "#f09014",
+    "underLineColor": "rgba(240,144,20,0.15)",
+    "chartType": "line"
+  });
+  widgetDiv.appendChild(script);
+  // Schedule divergence check after widget has had time to render
+  setTimeout(updateTvDivergence, 8000);
+  setInterval(updateTvDivergence, 60000);
+}
+function updateTvDivergence(){
+  var el = document.getElementById("tvDivergence");
+  if (!el) return;
+  // TradingView widget DOM is sandboxed in iframe — we can't directly read its price.
+  // Instead show a freshness reminder + our authoritative backend ref.
+  var backendBrent = (_liveOil && _liveOil.brent && _liveOil.brent.level) ? _liveOil.brent.level
+                   : (_stooqDoD && _stooqDoD.today) ? _stooqDoD.today : null;
+  if (backendBrent) {
+    el.textContent = "Our backend Brent (cargo math anchor): $" + backendBrent.toFixed(2)
+                   + " · TradingView shows live tick above for cross-reference";
+  } else {
+    el.textContent = "Backend Brent pending. TradingView live tick shown above.";
+  }
+}
+// Defer widget load until after initial dashboard renders (don't block first paint)
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", function(){ setTimeout(loadTradingViewWidget, 1500); });
+} else {
+  setTimeout(loadTradingViewWidget, 1500);
+}
+
+// ═══════════════════════════════════════════════════
+// ONBOARDING OVERLAY — first-visit only (localStorage flag)
+// ═══════════════════════════════════════════════════
+function initOnboarding(){
+  var SEEN_KEY = "hormuz_onboard_v1";
+  var veil = document.getElementById("onboardVeil");
+  if (!veil) return;
+  var seen = false;
+  try { seen = localStorage.getItem(SEEN_KEY) === "1"; } catch(e){}
+  if (!seen) {
+    veil.style.display = "flex";
+  }
+  document.getElementById("onboardEnter").addEventListener("click", function(){
+    veil.style.display = "none";
+    try { localStorage.setItem(SEEN_KEY, "1"); } catch(e){}
+  });
+  document.getElementById("onboardMethod").addEventListener("click", function(){
+    window.open("/methodology", "_blank", "noopener");
+  });
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initOnboarding);
+} else {
+  initOnboarding();
+}
+
+// ═══════════════════════════════════════════════════
 // MOBILE — bottom-tab switching + tap-to-toggle tooltips
 // ═══════════════════════════════════════════════════
 function isMobileWidth(){ return window.matchMedia("(max-width:768px)").matches; }
@@ -2543,8 +2674,49 @@ if(document.readyState === "loading"){
 }
 
 </script>
+<!-- First-visit onboarding overlay (auto-hides for return visitors via localStorage) -->
+<div class="onboard-veil" id="onboardVeil" style="display:none">
+  <div class="onboard-card">
+    <div class="onboard-hex">⚓</div>
+    <div class="onboard-title">HORMUZ WATCH</div>
+    <div class="onboard-sub">Multi-signal intelligence · Strait of Hormuz</div>
+    <div class="onboard-body">
+      A live dashboard for the chokepoint that moves 20% of the world's seaborne oil. Built for equity analysts watching Indian OMCs, tanker stocks, and Middle East tension as a macro signal.
+    </div>
+    <div class="onboard-list">
+      <div class="onboard-item">
+        <div class="onboard-icon">🚢</div>
+        <div class="onboard-item-text"><b>Transits / 24h</b> — actual gate-line crossings tracked from live AIS, not anchored vessels</div>
+      </div>
+      <div class="onboard-item">
+        <div class="onboard-icon">💵</div>
+        <div class="onboard-item-text"><b>Brent + WTI</b> — live futures via GitHub Action scraper, EIA daily as fallback (lag clearly labeled)</div>
+      </div>
+      <div class="onboard-item">
+        <div class="onboard-icon">🛰</div>
+        <div class="onboard-item-text"><b>Dark traffic</b> — Global Fishing Watch satellite SAR encounters + loitering events</div>
+      </div>
+      <div class="onboard-item">
+        <div class="onboard-icon">📊</div>
+        <div class="onboard-item-text"><b>Conclusions</b> — verdict badges on every panel (NORMAL · ELEVATED · HIGH · CRITICAL) with data-backed thresholds</div>
+      </div>
+      <div class="onboard-item">
+        <div class="onboard-icon">⚡</div>
+        <div class="onboard-item-text"><b>Health bar at the bottom</b> shows freshness of every source. Click any badge to verify currency.</div>
+      </div>
+    </div>
+    <div class="onboard-cta">
+      <button class="onboard-btn primary" id="onboardEnter">Enter dashboard</button>
+      <button class="onboard-btn secondary" id="onboardMethod">Methodology</button>
+    </div>
+    <div class="onboard-foot">Free. No login. Built by Aniket Kulkarni · KamayaKya · SEBI RA INH000009843</div>
+  </div>
+</div>
+
 <!-- Data freshness health bar — shows per-source last-fetch status -->
 <div class="health-bar" id="healthBar" aria-label="Data source freshness"></div>
+
+<!-- Cloudflare Web Analytics auto-injects when enabled in Pages dashboard (no code needed) -->
 
 <!-- Mobile bottom tabs — only visible on ≤768px viewports -->
 <nav class="mobile-tabs" role="tablist" aria-label="Sections">
