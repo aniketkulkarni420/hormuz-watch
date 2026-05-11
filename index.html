@@ -610,7 +610,7 @@ header{
   <div class="lpanel">
     <div class="ais-bar">
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <div class="ais-label2">AISStream.io &mdash; Bounding box: Hormuz</div>
+        <div class="ais-label2">Live vessel feed &mdash; Hormuz region</div>
         <div style="display:flex;align-items:center;gap:4px">
           <div class="ldot connecting" id="aisDot2"></div>
           <span id="aisLabel2" style="font-family:var(--mono);font-size:9px;color:var(--amber);letter-spacing:.08em">CONNECTING</span>
@@ -748,6 +748,53 @@ header{
         </svg>
         <div class="gauge-level" style="color:#f09014">ELEVATED</div>
         <div class="gauge-desc">IRGCN patrols active.<br>Tanker seizure risk above baseline.</div>
+      </div>
+    </div>
+
+    <!-- VESSEL MOVEMENT — explicit transit/anchored/approach + east/west flow -->
+    <div class="rblock">
+      <div class="rhead">Vessel movement <span class="rhead-src src-live" style="color:var(--green)" id="moveSrc">LIVE FEED</span></div>
+      <!-- Headline: 24h transits with direction split -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
+          <span style="font-family:var(--mono);font-size:30px;font-weight:700;color:var(--amber)" id="mvTransit24h">0</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">crossings · last 24h</span>
+        </div>
+        <!-- Direction split bar -->
+        <div style="display:flex;height:8px;border-radius:3px;overflow:hidden;background:var(--panel2);margin-bottom:6px" id="mvDirBar">
+          <div style="flex:1;background:var(--blue)" title="Westbound"></div>
+          <div style="flex:1;background:var(--amber)" title="Eastbound"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px">
+          <span style="color:var(--blue)">
+            ← <b id="mvWest">0</b> westbound
+            <span style="color:var(--muted2);font-size:9px;display:block;margin-top:2px">entering Persian Gulf</span>
+          </span>
+          <span style="color:var(--amber);text-align:right">
+            <b id="mvEast">0</b> eastbound →
+            <span style="color:var(--muted2);font-size:9px;display:block;margin-top:2px">exiting toward Indian Ocean</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Snapshot categories -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding-top:11px;border-top:1px solid var(--border)">
+        <div style="background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 9px">
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)" id="mvTransit">0</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.4;margin-top:3px">Transiting<br>now</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 9px">
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--red)" id="mvAnchored">0</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.4;margin-top:3px">Anchored<br>(at ports)</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 9px">
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--amber)" id="mvApproach">0</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.4;margin-top:3px">Approach<br>or slow</div>
+        </div>
+      </div>
+      <div style="margin-top:9px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
+        24h count = unique vessels crossing the strait's narrowest point. Snapshot = right now.
+        Transiting requires moving above 5 knots in the corridor; anchored = engines off; approach = slow or off-lane.
       </div>
     </div>
 
@@ -1824,28 +1871,49 @@ setInterval(function(){
   updateVesselUI();
 }, 30*1000);
 
-// UI updater — keeps the sigVessels tile and Ships sub-text in sync
+// UI updater — keeps the sigVessels tile + Vessel Movement card in sync
 // Prefer server-side AIS Worker data when available (cross-user authoritative).
 // Falls back to client-side B+ engine if Worker is unreachable.
-var _aisServer = null; // cached worker /state response
+var _aisServer = null;
 function updateVesselUI(){
-  var t = vesselCategoryCount.transit;
-  var total24h = transits24h.length;
-  // If worker has fresher transit count + categories, prefer those
-  if (_aisServer && _aisServer.transits24h != null) {
-    total24h = _aisServer.transits24h;
-    if (_aisServer.categories && _aisServer.categories.transit != null) {
-      t = _aisServer.categories.transit;
-    }
-  }
+  // Determine source — server-side if available, else client B+ engine
+  var serverActive = !!(_aisServer && _aisServer.wsConnected);
+  var t  = serverActive ? (_aisServer.categories?.transit  || 0) : vesselCategoryCount.transit;
+  var a  = serverActive ? (_aisServer.categories?.anchored || 0) : vesselCategoryCount.anchored;
+  var ap = serverActive ? (_aisServer.categories?.approach || 0) : vesselCategoryCount.approach;
+  var total24h = serverActive ? _aisServer.transits24h : transits24h.length;
+  var east = serverActive ? (_aisServer.eastbound24h || 0)
+                          : transits24h.filter(function(x){return x.dir==="eastbound";}).length;
+  var west = serverActive ? (_aisServer.westbound24h || 0)
+                          : transits24h.filter(function(x){return x.dir==="westbound";}).length;
+
+  // Signal-bar tile
   var sigEl = document.getElementById("sigVessels");
   var dirEl = document.getElementById("sigVesselsDir");
   if (sigEl) sigEl.textContent = total24h;
   if (dirEl) {
     dirEl.textContent = t+" now";
-    dirEl.style.color = "var(--muted)";
-    dirEl.style.fontSize = "9px";
+    dirEl.style.color = "var(--muted)"; dirEl.style.fontSize = "9px";
   }
+
+  // Vessel Movement card
+  var setTxt = function(id, v){ var el=document.getElementById(id); if(el) el.textContent = v; };
+  setTxt("mvTransit24h", total24h);
+  setTxt("mvWest", west);
+  setTxt("mvEast", east);
+  setTxt("mvTransit", t);
+  setTxt("mvAnchored", a);
+  setTxt("mvApproach", ap);
+  // Direction bar proportions
+  var bar = document.getElementById("mvDirBar");
+  if (bar && (east+west) > 0) {
+    var westPct = west/(east+west)*100;
+    bar.children[0].style.flex = westPct;
+    bar.children[1].style.flex = (100-westPct);
+  }
+  // Source label
+  var srcEl = document.getElementById("moveSrc");
+  if (srcEl) srcEl.textContent = serverActive ? "LIVE FEED · server" : "LIVE FEED";
 }
 // Poll AIS Worker every 30s; degrade silently if unavailable
 function fetchAisServer(){
@@ -1941,13 +2009,13 @@ function mkRealIcon(color,heading){
 
 function connectAIS(){
   if(aisWs){try{aisWs.close();}catch(e){}}
-  setAISBadge("connecting","Connecting to AISStream\u2026");
+  setAISBadge("connecting","Connecting to vessel feed\u2026");
   try{
     aisWs=new WebSocket("wss://stream.aisstream.io/v0/stream");
     aisWs.onopen=function(){
       aisWs.send(JSON.stringify({APIKey:AIS_KEY,BoundingBoxes:[[[24.0,52.0],[28.5,59.5]]],FilterMessageTypes:["PositionReport","ShipStaticData"]}));
       aisConnected=true;realCount=0;
-      setAISBadge("live","Live AIS connected \u2014 real vessels loading\u2026");
+      setAISBadge("live","Vessel feed connected \u2014 positions loading\u2026");
       markFetched("ais");
     };
     aisWs.onmessage=function(evt){
