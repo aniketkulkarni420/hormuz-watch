@@ -1,35 +1,25 @@
-name: Oil & Tanker Stock Price Scraper
+name: data-refresh
 
 on:
   schedule:
-    # Every 15 minutes during NYSE + ICE market hours (UTC):
-    # NYSE Mon-Fri 14:30-21:00 UTC, ICE Brent Sun 23:00 - Fri 22:00 UTC
-    - cron: "*/15 * * * 1-5"
-    # Reduced cadence off-hours: every 2 hours
-    - cron: "0 */2 * * 0,6"
-  workflow_dispatch:    # allow manual trigger
+    - cron: "7,22,37,52 * * * 1-5"
+    - cron: "12 1,3,5,7,9,11,13,15,17,19,21,23 * * 0,6"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  scrape-and-push:
+  run:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Install yfinance
-        run: pip install --quiet yfinance==0.2.55 requests
-
-      - name: Scrape prices and push to Cloudflare KV
-        env:
+      - run: pip install --quiet yfinance==0.2.55 requests
+      - env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}

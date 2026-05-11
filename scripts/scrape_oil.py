@@ -202,7 +202,19 @@ def main():
 
     payload = {"fetchedAt": int(time.time()), "source": "github-actions", "symbols": results}
     body = json.dumps(payload, separators=(",", ":"))
-    if not put_kv("latest", body):
+    ok = put_kv("latest", body)
+    # P8 — surface scrape status so /health can show it without opening the Actions tab
+    status_body = json.dumps({
+        "fetchedAt": int(time.time()),
+        "ok": bool(ok and results),
+        "symbolCount": len(results),
+        "job": "data-refresh",
+    }, separators=(",", ":"))
+    try:
+        put_kv("scrape_status_oil", status_body)
+    except Exception as e:
+        print(f"warn: scrape_status_oil write failed: {e}")
+    if not ok:
         sys.exit(1)
     print(f"✓ KV write OK ({len(body)}B, {len(results)} symbols)")
 

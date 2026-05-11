@@ -15,7 +15,7 @@ export async function onRequestPost({ request, env }) {
   // Bucket timestamp to nearest hour so multiple calls within an hour collapse to one row
   const tsHour = Math.floor(Date.now() / 3600000) * 3600;
 
-  const [oilR, stooqR, eiaR, gfwEncR, gfwLoiR] = await Promise.allSettled([
+  const [oilR, stooqR, eiaR, gfwEncR, gfwLoiR, aisR] = await Promise.allSettled([
     fetch(origin + "/api/oil"),
     fetch(origin + "/api/stooq"),
     fetch(origin + "/api/eia?series=RBRTE&length=2"),
@@ -36,16 +36,24 @@ export async function onRequestPost({ request, env }) {
         endDate: new Date().toISOString().slice(0, 10),
         geometry: { type: "Polygon", coordinates: [[[52, 24], [59.5, 24], [59.5, 28.5], [52, 28.5], [52, 24]]] }
       })
-    })
+    }),
+    fetch(origin + "/api/ais")
   ]);
 
   const parseJson = async (r) => {
     if (r.status !== "fulfilled" || !r.value.ok) return null;
     try { return await r.value.json(); } catch { return null; }
   };
-  const [oilD, stooqD, eiaD, gfwEncD, gfwLoiD] = await Promise.all([
-    parseJson(oilR), parseJson(stooqR), parseJson(eiaR), parseJson(gfwEncR), parseJson(gfwLoiR)
+  const [oilD, stooqD, eiaD, gfwEncD, gfwLoiD, aisD] = await Promise.all([
+    parseJson(oilR), parseJson(stooqR), parseJson(eiaR), parseJson(gfwEncR), parseJson(gfwLoiR), parseJson(aisR)
   ]);
+
+  // C3 — pull vessel counts from /api/ais so backtest has non-null transits_24h
+  const aisSummary = (aisD && aisD.summary) || {};
+  const vTransit24h = isFinite(aisSummary.transits24h) ? aisSummary.transits24h : null;
+  const vTransiting = isFinite(aisSummary.categories?.transit)  ? aisSummary.categories.transit  : null;
+  const vAnchored   = isFinite(aisSummary.categories?.anchored) ? aisSummary.categories.anchored : null;
+  const vApproach   = isFinite(aisSummary.categories?.approach) ? aisSummary.categories.approach : null;
 
   let brent = null, wti = null, brentSource = "none";
   if (oilD && oilD.tier === "primary" && oilD.brent) {
@@ -67,7 +75,8 @@ export async function onRequestPost({ request, env }) {
     oil:   oilR.status === "fulfilled" && oilR.value.ok ? (oilD?.tier || "ok") : "fail",
     stooq: stooqR.status === "fulfilled" && stooqR.value.ok ? "ok" : "fail",
     eia:   eiaR.status === "fulfilled" && eiaR.value.ok ? "ok" : "fail",
-    gfw:   gfwEncR.status === "fulfilled" && gfwEncR.value.ok ? "ok" : "fail"
+    gfw:   gfwEncR.status === "fulfilled" && gfwEncR.value.ok ? "ok" : "fail",
+    ais:   aisR.status === "fulfilled" && aisR.value.ok && vTransit24h != null ? "ok" : "fail"
   };
 
   try {
@@ -80,7 +89,7 @@ export async function onRequestPost({ request, env }) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       tsHour,
-      null, null, null, null,
+      vTransit24h, vTransiting, vAnchored, vApproach,
       isFinite(brent) ? brent : null,
       brentSource,
       isFinite(wti) ? wti : null,
@@ -90,7 +99,7 @@ export async function onRequestPost({ request, env }) {
       62.0,
       JSON.stringify(sourceHealth)
     ).run();
-    return json({ ok: true, tsHour, brent, wti, gfwEnc, gfwLoi, brentSource, sourceHealth });
+    return json({ ok: true, tsHour, brent, wti, gfwEnc, gfwLoi, brentSource, sourceHealth, vTransit24h, vTransiting, vAnchored, vApproach });
   } catch (e) {
     return json({ error: "D1 write failed", detail: String(e) }, 500);
   }

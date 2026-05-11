@@ -13,13 +13,18 @@ export async function onRequestGet({ env }) {
       if (raw) {
         const data = JSON.parse(raw);
         const ageMin = (Date.now() / 1000 - data.fetchedAt) / 60;
-        const stale = ageMin > 60; // 60 min freshness window
-        if (!stale && data.symbols && data.symbols.brent && data.symbols.wti) {
+        const stale = ageMin > 60; // 60 min = "stale" flag; > 6h falls through to live API tiers
+        const veryStale = ageMin > 360;
+        const staleMin = stale ? Math.round(ageMin) : 0;
+        if (!veryStale && data.symbols && data.symbols.brent && data.symbols.wti) {
           const b = data.symbols.brent;
           const w = data.symbols.wti;
+          // I5 — return KV value even when stale, but flag staleness so the frontend can degrade the badge
           return json({
             source: "Live commodity feed",
-            tier: "primary",
+            tier: stale ? "primary-stale" : "primary",
+            stale: stale,
+            staleMin: staleMin,
             brent: { level: b.c, change: b.d, changePct: b.dp, open: b.o, prevClose: b.pc, high: b.h, low: b.l, t: b.t },
             wti:   { level: w.c, change: w.d, changePct: w.dp, open: w.o, prevClose: w.pc, high: w.h, low: w.l, t: w.t },
             fetchedAt: data.fetchedAt * 1000,

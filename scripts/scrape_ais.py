@@ -172,7 +172,20 @@ def main():
         }
     }
     body = json.dumps(payload, separators=(",", ":"))
-    if not kv_put("ais_state", body):
+    ok = kv_put("ais_state", body)
+    # P8 — surface scrape status for /health
+    try:
+        status_body = json.dumps({
+            "fetchedAt": int(time.time()),
+            "ok": bool(ok and msg_count > 0),
+            "messageCount": msg_count,
+            "vesselCount": len(state),
+            "job": "vessel-sync",
+        }, separators=(",", ":"))
+        kv_put("scrape_status_ais", status_body)
+    except Exception as e:
+        print(f"  warn: scrape_status_ais write failed: {e}")
+    if not ok:
         print("  KV write FAILED"); sys.exit(1)
     print(f"  ✓ KV write OK ({len(body)} bytes, {msg_count} messages, {len(state)} vessels, {len(transits)} transits, cats={cats})")
 

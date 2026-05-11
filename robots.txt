@@ -3,6 +3,7 @@ Allow: /
 Allow: /methodology
 Allow: /terms
 Disallow: /api/
+Disallow: /admin/
 
 # AI / LLM scrapers — not allowed without permission
 User-agent: GPTBot

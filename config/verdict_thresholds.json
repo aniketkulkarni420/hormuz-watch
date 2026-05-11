@@ -1,0 +1,43 @@
+{
+  "$schema": "Verdict thresholds for chokepoint dashboards. Each band drives a NORMAL / ELEVATED / HIGH / CRITICAL label. Calibrated against published disruption episodes and operational baselines. Recalibrated quarterly.",
+  "lastRecalibrated": "2026-05-11",
+  "calibrationWindow": "2019-2024 disruption episodes",
+  "footnote": "Recalibrated quarterly from 2019-2024 disruption episodes. Crisis-average transit days drawn from documented tanker-attack analyses across the same window.",
+  "regions": {
+    "hormuz": {
+      "crisisTransitDaysAverage": 18,
+      "crisisTransitDaysSource": "2019-2024 disruption episode aggregation",
+      "trafficVsBaseline": {
+        "criticalBelowPct": -30,
+        "highBelowPct": -20,
+        "elevatedBelowPct": -12,
+        "elevatedAbovePct": 12
+      },
+      "darkPct": {
+        "normalBelow": 8,
+        "elevatedBelow": 15,
+        "highBelow": 20
+      },
+      "bdtiLevel": {
+        "lowBelow": 800,
+        "normalBelow": 1100,
+        "elevatedBelow": 1500,
+        "highBelow": 2000
+      },
+      "bdtiWoWPct": {
+        "elevatedAbove": 5,
+        "highAbove": 15,
+        "criticalAbove": 25
+      },
+      "brentWtiSpread": {
+        "lowBelow": 4,
+        "normalBelow": 7,
+        "elevatedBelow": 10
+      },
+      "vlccSharePct": {
+        "lowBelow": 40,
+        "normalBelow": 60
+      }
+    }
+  }
+}

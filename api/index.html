@@ -89,7 +89,7 @@ a:hover{text-decoration:underline}
 <div class="endpoint">
   <div class="ep-head"><span class="method GET">GET</span><span class="path">/api/stooq</span><span class="tier public">public</span></div>
   <div class="ep-body">
-    <p>Daily reference Brent price (legacy endpoint name). Always-on fallback when live feed degrades. 1-2 trading day lag.</p>
+    <p><b>Deprecated alias for <code>/api/oil</code>'s daily-reference tier.</b> Despite the legacy name, this endpoint reads the EIA daily reference (with internal Yahoo fall-through) — not Stooq. Use <code>/api/oil</code> for new integrations; this alias is retained only for back-compat. 1-2 trading day lag.</p>
     <pre>{ "today": 109.6, "yesterday": 108.4, "todayDate": "2026-05-08", "yesterdayDate": "2026-05-07" }</pre>
   </div>
 </div>

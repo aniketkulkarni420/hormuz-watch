@@ -1,0 +1,15 @@
+# Cloudflare Pages headers
+# Admin and API routes — keep out of search indexes
+/admin/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store
+
+/api/*
+  X-Robots-Tag: noindex, nofollow
+  Access-Control-Allow-Origin: *
+
+# Global security headers
+/*
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Content-Type-Options: nosniff
+  Permissions-Policy: interest-cohort=()
