@@ -1,0 +1,15 @@
+name = "hormuz-ais-aggregator"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[[durable_objects.bindings]]
+name = "AIS"
+class_name = "AISAggregator"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["AISAggregator"]
+
+[triggers]
+crons = ["*/5 * * * *"]   # warm-up ping every 5 minutes

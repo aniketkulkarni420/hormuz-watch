@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Health · Hormuz Watch</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;padding:0;min-height:100vh}
+.wrap{max-width:880px;margin:0 auto;padding:50px 24px 60px}
+header{margin-bottom:36px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.back{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;margin-bottom:18px}
+.back:hover{color:var(--amber)}
+h1{font-size:32px;font-weight:900;letter-spacing:-.01em;margin-bottom:6px}
+.sub{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+.overall{margin:24px 0 36px;padding:16px 20px;border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.overall.ok{background:rgba(29,212,126,.06);border-color:rgba(29,212,126,.25)}
+.overall.degraded{background:rgba(240,144,20,.06);border-color:rgba(240,144,20,.3)}
+.overall.down{background:rgba(255,62,82,.06);border-color:rgba(255,62,82,.3)}
+.overall-dot{width:18px;height:18px;border-radius:50%;flex-shrink:0}
+.overall.ok .overall-dot{background:var(--green);box-shadow:0 0 12px var(--green)}
+.overall.degraded .overall-dot{background:var(--amber);box-shadow:0 0 12px var(--amber)}
+.overall.down .overall-dot{background:var(--red);box-shadow:0 0 12px var(--red)}
+.overall-label{font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.overall-detail{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit, minmax(280px,1fr));gap:14px;margin-bottom:36px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.card-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot-warn{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.dot-fail{background:var(--red);box-shadow:0 0 8px var(--red)}
+.dot-pending{background:var(--muted2)}
+.dot-disabled{background:var(--muted2);opacity:.4}
+.card-name{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;flex:1}
+.card-status{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;padding:3px 7px;border-radius:3px;font-weight:700}
+.card-status.ok{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.25)}
+.card-status.warn{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.3)}
+.card-status.fail{color:var(--red);background:rgba(255,62,82,.1);border:1px solid rgba(255,62,82,.3)}
+.card-status.pending{color:var(--muted2);background:rgba(98,122,149,.1);border:1px solid var(--border2)}
+.card-status.disabled{color:var(--muted2);background:transparent;border:1px solid var(--border)}
+.card-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--muted);padding:3px 0}
+.card-row b{color:var(--text);font-weight:700}
+.card-desc{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);line-height:1.6}
+.refresh{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;margin:24px 0}
+.refresh button{background:transparent;border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:10px;padding:7px 14px;border-radius:4px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase}
+.refresh button:hover{border-color:var(--amber);color:var(--amber)}
+.foot{margin-top:48px;padding-top:26px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--muted2);letter-spacing:.04em;text-align:center}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="back" href="/">← Back to dashboard</a>
+  <h1>System Health</h1>
+  <div class="sub">Real-time status of every data signal · auto-refreshes every 30s</div>
+</header>
+
+<div class="overall" id="overall">
+  <div class="overall-dot"></div>
+  <div class="overall-label" id="overallLabel">Checking...</div>
+  <div class="overall-detail" id="overallDetail"></div>
+</div>
+
+<div class="cards" id="cards"></div>
+
+<div class="refresh">
+  <button onclick="refreshAll()">Refresh now</button>
+</div>
+
+<div class="foot">
+© 2026 Aniket Kulkarni · <a href="/methodology">Methodology</a> · <a href="/terms">Terms</a>
+</div>
+</div>
+
+<script>
+// Signal definitions — what to ping + how to interpret response
+var SIGNALS = [
+  { key: "oil",   name: "Live commodity feed (Brent + WTI)", url: "/api/oil",
+    desc: "Live futures with multi-tier fallback. Refreshes every 15 min via scheduled scrape." },
+  { key: "stooq", name: "Daily oil reference",               url: "/api/stooq",
+    desc: "Daily reference prices anchor as fallback when live feed degrades." },
+  { key: "eia",   name: "EIA weekly oil history",            url: "/api/eia?series=RBRTE&length=2",
+    desc: "Weekly Brent history powers the 4-week sparkline." },
+  { key: "gfw",   name: "Satellite vessel detection",        url: "/api/gfw",
+    method: "POST",
+    body: { datasets:["public-global-encounters-events:latest"], startDate: "2026-04-05", endDate: "2026-05-05",
+      geometry:{ type:"Polygon", coordinates:[[[52,24],[59.5,24],[59.5,28.5],[52,28.5],[52,24]]] } },
+    desc: "Dark traffic encounters + loitering events within Hormuz region." },
+  { key: "history", name: "Historical data store",           url: "/api/history?metric=brent_price&range=24h",
+    desc: "Cloudflare D1 stores hourly snapshots of every metric for trend analysis." },
+  { key: "snapshot", name: "Static snapshot endpoint",       url: "/api/snapshot",
+    desc: "Cached state snapshot consumed by downstream tools." }
+];
+
+function pingSignal(s) {
+  var start = Date.now();
+  var opts = { method: s.method || "GET" };
+  if (s.body) {
+    opts.headers = { "Content-Type": "application/json" };
+    opts.body = JSON.stringify(s.body);
+  }
+  return fetch(s.url, opts)
+    .then(function(r){
+      var elapsed = Date.now() - start;
+      return r.text().then(function(t){
+        var data; try { data = JSON.parse(t); } catch(e){ data = null; }
+        return { ok: r.ok, status: r.status, elapsed: elapsed, data: data, body: t.slice(0, 200) };
+      });
+    })
+    .catch(function(e){
+      return { ok: false, status: 0, elapsed: Date.now() - start, error: e.message };
+    });
+}
+
+function renderCard(s, result) {
+  var statusKey, statusLabel, valueDetail;
+  if (!result.ok) {
+    statusKey = "fail"; statusLabel = "FAIL";
+    valueDetail = (result.status || "network") + " · " + (result.error || result.body || "").slice(0, 60);
+  } else if (result.elapsed > 5000) {
+    statusKey = "warn"; statusLabel = "SLOW";
+    valueDetail = "OK · " + result.elapsed + "ms (slow)";
+  } else {
+    statusKey = "ok"; statusLabel = "OK";
+    valueDetail = "HTTP " + result.status + " · " + result.elapsed + "ms";
+  }
+  // Extract data-specific freshness if possible
+  var freshness = "";
+  if (s.key === "oil" && result.data) {
+    if (result.data.tier === "primary" && result.data.brent) {
+      freshness = "Brent: $" + result.data.brent.level.toFixed(2) + " · age " + (result.data.ageMin || "?") + "min";
+    } else if (result.data.tier === "secondary") {
+      freshness = "ETF proxy active";
+    } else {
+      freshness = "Tier: " + (result.data.tier || "unknown");
+    }
+  } else if (s.key === "stooq" && result.data && result.data.today) {
+    freshness = "Last: $" + result.data.today + " (" + (result.data.todayDate || "—") + ")";
+  } else if (s.key === "history" && result.data && Number.isInteger(result.data.count)) {
+    freshness = result.data.count + " D1 points last 24h";
+  } else if (s.key === "gfw" && result.data && result.data.entries) {
+    freshness = result.data.entries.length + " events in last 30d window";
+  }
+  return '<div class="card">'
+    + '<div class="card-head">'
+    +   '<div class="card-dot dot-' + statusKey + '"></div>'
+    +   '<div class="card-name">' + s.name + '</div>'
+    +   '<div class="card-status ' + statusKey + '">' + statusLabel + '</div>'
+    + '</div>'
+    + '<div class="card-row"><span>Status</span><b>' + valueDetail + '</b></div>'
+    + (freshness ? '<div class="card-row"><span>Data</span><b>' + freshness + '</b></div>' : "")
+    + '<div class="card-desc">' + s.desc + '</div>'
+    + '</div>';
+}
+
+function refreshAll() {
+  document.getElementById("overallLabel").textContent = "Checking…";
+  document.getElementById("overallDetail").textContent = "";
+  Promise.all(SIGNALS.map(pingSignal)).then(function(results){
+    var cards = document.getElementById("cards");
+    cards.innerHTML = SIGNALS.map(function(s, i){ return renderCard(s, results[i]); }).join("");
+    // Compute overall
+    var ok = results.filter(function(r){ return r.ok && r.elapsed < 5000; }).length;
+    var slow = results.filter(function(r){ return r.ok && r.elapsed >= 5000; }).length;
+    var fail = results.filter(function(r){ return !r.ok; }).length;
+    var overall = document.getElementById("overall");
+    var label = document.getElementById("overallLabel");
+    var detail = document.getElementById("overallDetail");
+    overall.classList.remove("ok","degraded","down");
+    if (fail === 0 && slow === 0) {
+      overall.classList.add("ok");
+      label.textContent = "All systems operational";
+    } else if (fail === 0) {
+      overall.classList.add("degraded");
+      label.textContent = "Some signals slow";
+    } else if (fail < results.length) {
+      overall.classList.add("degraded");
+      label.textContent = "Partial degradation";
+    } else {
+      overall.classList.add("down");
+      label.textContent = "Major outage";
+    }
+    detail.textContent = ok + " OK · " + slow + " slow · " + fail + " fail · checked " + new Date().toLocaleTimeString();
+  });
+}
+refreshAll();
+setInterval(refreshAll, 30000);
+</script>
+</body>
+</html>
