@@ -519,3 +519,69 @@ Full audit of the live dashboard performed 2026-05-11. No changes applied — th
 ---
 
 *End of handoff. Last verified against production at commit `f86fe28` on 2026-05-11. §17 audit appended 2026-05-11.*
+
+---
+
+## 18. AUDIT FIX LOG · 2026-05-11
+
+All fixes shipped in commit **`527458a`** unless noted. Order matches §17 prioritisation table.
+
+### 18A. Critical (4 / 4)
+| ID | Status | Notes |
+|---|---|---|
+| C1 | ✅ fixed in `527458a` | Vessel Movement source label now flips to `INITIALISING · awaiting first scrape` when totals are zero, instead of showing 0/0/0 with a misleading `LIVE FEED` chip. |
+| C2 | ✅ fixed in `527458a` | Subscribe form copy reworded to "Notify me when the weekly digest launches" + "Pre-launch list · one email when live". Path (b) — actual digest cron — remains deferred to Tier 2.2. |
+| C3 | ✅ fixed in `527458a` | `functions/api/record.js` now fetches `/api/ais` alongside oil/GFW and persists `transits_24h`, `vessels_transiting`, `vessels_anchored`, `vessels_approach`. Schema already had these columns — no migration needed. |
+| C4 | ✅ fixed in `527458a` | `updateVesselUI` computes `ageMin` from `_aisServer.lastMsgAgeSec` (or client AIS lastFetch) and swaps the `LIVE FEED` badge to amber `STALE · Nm ago` after 20 min, red after 60 min. |
+
+### 18B. Important (7 / 8)
+| ID | Status | Notes |
+|---|---|---|
+| I1 | ⏸ deferred — not currently triggered | The dashboard does **not** fetch per-symbol live prices for INSW/FRO/STNG/etc. The tanker plays panel only displays static `upside` strings; no `$0.00` issue exists today. Re-open if Twelve Data Pro is enabled and live ticker chips are added. |
+| I2 | ✅ fixed in `527458a` | Salalah marker color changed from `#06d6b0` to `#38aaff` for contrast against the dark CARTO basemap. |
+| I3 | ✅ fixed in `527458a` | `robots.txt` now disallows `/admin/`. New `_headers` file emits `X-Robots-Tag: noindex, nofollow, noarchive` for `/admin/*`. |
+| I4 | ✅ fixed in `527458a` | Created `config/verdict_thresholds.json` with `crisisTransitDaysAverage: 18` + `lastRecalibrated: 2026-05-11` + footnote ("Recalibrated quarterly from 2019–2024 disruption episodes"). Methodology page updated to reference the config. |
+| I5 | ✅ fixed in `527458a` | `/api/oil` now emits `stale: bool` + `staleMin: int` alongside the KV payload. Tier flips to `primary-stale` when ageMin > 60 but still returns data so the frontend can degrade the badge instead of swallowing the value. Falls through to live APIs only when KV is > 6h old. |
+| I6 | ✅ fixed in `527458a` | Subscribe bar now has dismiss `✕` button (sessionStorage flag `hw_sub_dismiss`). Mobile media-query adds `padding-bottom:96px` on `.dashboard,.main` so the bar can't overlap the last card. |
+| I7 | ✅ fixed in `527458a` | BDTI signal-bar tile now shows `· as of <Mon Day>` and swaps to an amber `STALE · Nd` badge when the manual update is > 9 days old. |
+| I8 | ✅ fixed in `527458a` | `/api/stooq` is now documented as a deprecated alias for `/api/oil`'s daily-reference tier in `api/index.html`. Did not delete the endpoint because `record.js` and existing IRM downstream callers still reference it; collapsing to a single endpoint can happen once those consumers are updated. |
+
+### 18C. Polish (9 / 10 — P7 needs domain decision)
+| ID | Status | Notes |
+|---|---|---|
+| P1 | ✅ fixed in `527458a` | New `404.html` matching the dark dashboard theme; CTA back to `/` + Methodology link. |
+| P2 | ✅ fixed in `527458a` | Simple grid-bucket density limiter — when `realCount > 50` and `map.getZoom() <= 8`, new vessels in already-busy 0.05° cells are dropped from the map (still counted in state). No new dependency. |
+| P3 | ✅ fixed in `527458a` | `@media print` block: white bg, black text, hides header / subscribe / mobile-tabs / health-bar / overlays. |
+| P4 | ✅ fixed in `527458a` | Verdict bands now carry a `desc` field (e.g. ELEVATED = "Above typical range. Mild risk premium / monitor closely.") which is wired into the `title` attribute of every rendered badge. |
+| P5 | ✅ fixed in `527458a` | Each verdict band rendered with a leading mono-icon (`●` normal, `○` low, `▲` elevated, `▲▲` high, `⚠` critical) so the band is distinguishable from colour alone. |
+| P6 | ✅ fixed in `527458a` | Subscribe success/error glyphs (`✓` / `✗`) stripped — colour + class is enough and these characters were the most visibly inconsistent across Windows/Mac fallbacks. Other emoji left alone to avoid scope creep. |
+| P7 | ⏸ deferred — needs user input | Resend custom domain. User must purchase + verify DNS for a sender like `hello@hormuz.watch` before this is actionable. |
+| P8 | ✅ fixed in `527458a` | Both scrape scripts now write `scrape_status_oil` / `scrape_status_ais` keys to KV (`{ ok, fetchedAt, job }`). `/health` can read these to surface scrape failures without opening the Actions tab. |
+| P9 | ✅ fixed in `527458a` | Tanker tickers (FRO/INSW/TNK/NAT/DHT) link to `tradingview.com/symbols/NYSE-<TICKER>/`. India OMC names (BPCL/IOC/etc.) link to NSE TradingView pages. Both open in new tab with `rel=noopener`. |
+| P10 | ✅ fixed in `527458a` | Methodology page has a TOC nav (Philosophy / Inputs / Metric definitions / Verdict thresholds / India exposure / Limitations / Sources) with anchor links. |
+
+### 18D. Strategic (3 actioned / 4 — S3/S5/S6/S7 documented)
+| ID | Status | Notes |
+|---|---|---|
+| S1 | ✅ fixed in `527458a` | Subscribe footer bar dialled down: lighter background (`rgba(7,9,14,.85)`), opacity 0.85 → 1 on hover, secondary-button styling (panel + amber on hover), smaller padding. CTA reads "Notify me" not "Subscribe". |
+| S2 | ✅ fixed in `527458a` | Commentary banner capped at `max-height:100px` with overflow hidden; `.expanded` modifier (added by `toggleCmt`) opens to `60vh` + auto-scroll. |
+| S3 | ⏸ deferred — recommend keep inline `<style>` per page | Inline styles across the six sub-pages are small (40-60 lines each). Externalising to `/assets/site.css` would add a render-blocking request without reducing surface area meaningfully. Re-open once a 7th page lands. |
+| S4 | ✅ fixed in `527458a` | Added one-line dashboard footer above the health bar: "Intelligence aggregator. Not investment advice. Data may be delayed or unavailable. See terms." + © + links. |
+| S5 | ⏸ deferred — recommendation: option (a) wait | Recommend leaving D1 to forward-collect from launch day. EIA + GFW historical backfill (option b) is ~4 hrs but: (i) burns a half-day of build time that could go to Tier 3.5 Bab el-Mandeb, (ii) "30 days from public launch" is a defensible empty state, (iii) backfill conflates pre-launch baselines with live-state semantics. Revisit once a paying customer asks for it. |
+| S6 | ⏸ deferred — recommendation: path-based routing | When second region (`babelmandeb`) ships, recommend `/regions/<id>/` over subdomains for SEO consolidation + simpler CF Pages config. Subdomain or rebrand only if domain purchase forces the issue. |
+| S7 | ⏸ deferred — recommendation: keep `Hormuz Watch` as flagship | Sister brands per chokepoint (`Mandeb Watch`, `Suez Watch`) preserve brand equity already accruing to Hormuz Watch. Parent rebrand (`Chokepoint Watch`) only if a portfolio play becomes strategically necessary — premature now. |
+
+### 18E. Defensibility (3 actioned / 4 — D3 left as TODO)
+| ID | Status | Notes |
+|---|---|---|
+| D1 | ✅ fixed in `527458a` | Methodology page no longer publishes exact threshold cut-points for Dark % (`<8 / 8–15 / 15–20`) or BDTI level/WoW. Replaced with categorical bands; specific cut-points live in `config/verdict_thresholds.json` (not in the public methodology page). |
+| D2 | ✅ fixed in `527458a` | Both workflow YAMLs renamed (`oil-scraper.yml` → `data-refresh`, `ais-scraper.yml` → `vessel-sync`). Descriptive comments stripped. Cron schedules randomized off the `*/10` and `*/15` marks (now `3,13,23,33,43,53` and `7,22,37,52`). Functional cadence preserved. |
+| D3 | ⏸ deferred — needs license research | Per-source license/ToS surface review on `/api`. Left a `TODO (D3)` comment in `methodology/index.html` Sources section. Needs legal review before publishing specific licenses on a public page. |
+| D4 | ✅ fixed in `527458a` | `/terms` section 3 now reads "Data may be delayed, incorrect, or unavailable at any time. Hormuz Watch makes no warranty of accuracy, completeness, or timeliness. Not investment advice." |
+
+### 18F. Summary
+- **Fixed:** 25 of 33
+- **Deferred:** 8 (I1 not triggered, P7 needs domain, S3 cost/benefit, S5/S6/S7 strategic decisions documented, D3 needs license research, C2-part-b queued for Tier 2.2)
+- **No new dependencies introduced.** Marker density handled with a grid-bucket render threshold instead of `leaflet.markercluster`.
+
+*§18 appended 2026-05-11 against commit `527458a`.*
