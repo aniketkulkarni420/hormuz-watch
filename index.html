@@ -170,6 +170,19 @@ header{
 .rpanel::-webkit-scrollbar{width:2px}
 .rpanel::-webkit-scrollbar-thumb{background:var(--border)}
 .rblock{border-bottom:1px solid var(--border);padding:12px 14px}
+.rsection{
+  font-family:var(--mono);font-size:9px;color:var(--muted2);
+  letter-spacing:.18em;text-transform:uppercase;font-weight:700;
+  padding:18px 16px 7px;background:var(--panel);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:9px;
+}
+.rsection::before{
+  content:"";flex:0 0 14px;height:1px;background:var(--amber);
+}
+.rsection::after{
+  content:"";flex:1;height:1px;background:var(--border);
+}
 .rhead{
   font-family:var(--mono);font-size:9px;color:var(--amber);
   letter-spacing:.12em;text-transform:uppercase;
@@ -699,38 +712,13 @@ header{
     </div>
   </div>
 
-  <!-- RIGHT: INTELLIGENCE PANEL -->
+  <!-- RIGHT: INTELLIGENCE PANEL — Reorder B (sectioned by priority) -->
   <div class="rpanel">
 
-    <!-- FLAG FLOW -->
-    <div class="rblock">
-      <div class="rhead">
-        Flag state flow today
-        <span class="rhead-src src-live" style="color:var(--green)">LIVE FEED</span>
-      </div>
-      <div class="flag-rows" id="flagRows">
-        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Populating from live AIS&hellip;</div>
-      </div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        Flag = ship registry. Liberia/Marshall Islands/Panama = flag of convenience, predominantly Gulf crude. Indian-flag = IOC/SCI/BPCL tankers direct.
-      </div>
-    </div>
+    <!-- ═══════════ SECTION 1: PRICE & FLOW ═══════════ -->
+    <div class="rsection">Price &amp; flow</div>
 
-    <!-- TREND CHART -->
-    <div class="rblock">
-      <div class="rhead">
-        Vessel traffic trend
-        <span class="rhead-src src-eia" style="color:var(--blue)">TRAFFIC FEED</span>
-      </div>
-      <div id="trendBars" class="trend-bars"></div>
-      <div class="trend-legend" id="trendLegend"></div>
-      <div class="conclusion" id="concTrend" style="display:none"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        Yesterday and today from this browser session (localStorage). Baselines from EIA + Lloyd's public reports.
-      </div>
-    </div>
-
-    <!-- EIA MARKET PULSE -->
+    <!-- MARKET PULSE -->
     <div class="rblock">
       <div class="rhead">
         Market pulse
@@ -747,7 +735,6 @@ header{
           <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">/bbl WTI</span>
           <span style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:auto" id="bwSpread"></span>
         </div>
-        <!-- 4-week sparkline (33% bump, height matches viewBox to avoid compression) -->
         <div style="margin-bottom:8px">
           <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:5px">Brent 4-week trend</div>
           <svg id="brentSparkline" viewBox="0 0 238 58" width="100%" height="58" preserveAspectRatio="none">
@@ -757,40 +744,11 @@ header{
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5" id="brentNote">
           Updating&hellip;
         </div>
-        <!-- Volatility row (computed from KV high/low) -->
         <div id="brentVolRow" style="display:none;margin-top:10px;padding:7px 10px;background:var(--panel2);border-radius:4px;font-family:var(--mono);font-size:10px;color:var(--muted);justify-content:space-between;align-items:center">
           <span>Range today</span>
           <span id="brentVolVal" style="color:var(--text);font-weight:700"></span>
         </div>
         <div class="conclusion" id="concPulse" style="display:none"></div>
-      </div>
-    </div>
-
-    <!-- CROSS-VERIFICATION -->
-    <div class="rblock">
-      <div class="rhead">Cross-signal verification</div>
-      <div class="xv-rows" id="xvRows"></div>
-      <div class="conclusion" id="concCross" style="display:none"></div>
-    </div>
-
-    <!-- TENSION GAUGE -->
-    <div class="rblock">
-      <div class="rhead">Hormuz tension level</div>
-      <div class="gauge-wrap">
-        <svg viewBox="0 0 120 72" width="120" height="72">
-          <path d="M 10 66 A 50 50 0 0 1 110 66" fill="none" stroke="#222d3f" stroke-width="8" stroke-linecap="round"/>
-          <line x1="10" y1="66" x2="14" y2="66" stroke="#354355" stroke-width="1.5"/>
-          <line x1="24.6" y1="30.6" x2="27.5" y2="33.1" stroke="#354355" stroke-width="1.5"/>
-          <line x1="60" y1="16" x2="60" y2="20" stroke="#354355" stroke-width="1.5"/>
-          <line x1="95.4" y1="30.6" x2="92.5" y2="33.1" stroke="#354355" stroke-width="1.5"/>
-          <line x1="110" y1="66" x2="106" y2="66" stroke="#354355" stroke-width="1.5"/>
-          <path d="M 10 66 A 50 50 0 0 1 60 16" fill="none" stroke="#f09014" stroke-width="8" stroke-linecap="round"/>
-          <circle cx="60" cy="16" r="4" fill="#f09014"/>
-          <text x="8" y="78" font-family="JetBrains Mono" font-size="6" fill="#627a95">LOW</text>
-          <text x="82" y="78" font-family="JetBrains Mono" font-size="6" fill="#627a95">CRITICAL</text>
-        </svg>
-        <div class="gauge-level" style="color:#f09014">ELEVATED</div>
-        <div class="gauge-desc">IRGCN patrols active.<br>Tanker seizure risk above baseline.</div>
       </div>
     </div>
 
@@ -841,16 +799,53 @@ header{
       </div>
     </div>
 
-    <!-- LIVE TRAFFIC MIX -->
+    <!-- TREND CHART (re-added in Section 1: Price & flow) -->
     <div class="rblock">
-      <div class="rhead">Vessel type mix <span class="rhead-src src-live" style="color:var(--green)">LIVE FEED</span></div>
-      <div class="traffic-grid">
-        <div class="tcard"><div class="tc-val" id="inboundCount" style="color:var(--blue)">0</div><div class="tc-lbl">Inbound<br>vessels</div></div>
-        <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber)">0</div><div class="tc-lbl">Outbound<br>vessels</div></div>
+      <div class="rhead">
+        Vessel traffic trend
+        <span class="rhead-src src-eia" style="color:var(--blue)">TRAFFIC FEED</span>
       </div>
-      <div class="type-bars" id="typeBars"></div>
-      <div class="conclusion" id="concMix" style="display:none"></div>
+      <div id="trendBars" class="trend-bars"></div>
+      <div class="trend-legend" id="trendLegend"></div>
+      <div class="conclusion" id="concTrend" style="display:none"></div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
+        Yesterday and today from this browser session and the historical store. Baselines derived from official statistics and public reports.
+      </div>
     </div>
+
+    <!-- ═══════════ SECTION 2: SYNTHESIS ═══════════ -->
+    <div class="rsection">Synthesis</div>
+
+    <!-- CROSS-VERIFICATION -->
+    <div class="rblock">
+      <div class="rhead">Cross-signal verification</div>
+      <div class="xv-rows" id="xvRows"></div>
+      <div class="conclusion" id="concCross" style="display:none"></div>
+    </div>
+
+    <!-- TENSION GAUGE -->
+    <div class="rblock">
+      <div class="rhead">Hormuz tension level</div>
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 120 72" width="120" height="72">
+          <path d="M 10 66 A 50 50 0 0 1 110 66" fill="none" stroke="#222d3f" stroke-width="8" stroke-linecap="round"/>
+          <line x1="10" y1="66" x2="14" y2="66" stroke="#354355" stroke-width="1.5"/>
+          <line x1="24.6" y1="30.6" x2="27.5" y2="33.1" stroke="#354355" stroke-width="1.5"/>
+          <line x1="60" y1="16" x2="60" y2="20" stroke="#354355" stroke-width="1.5"/>
+          <line x1="95.4" y1="30.6" x2="92.5" y2="33.1" stroke="#354355" stroke-width="1.5"/>
+          <line x1="110" y1="66" x2="106" y2="66" stroke="#354355" stroke-width="1.5"/>
+          <path d="M 10 66 A 50 50 0 0 1 60 16" fill="none" stroke="#f09014" stroke-width="8" stroke-linecap="round"/>
+          <circle cx="60" cy="16" r="4" fill="#f09014"/>
+          <text x="8" y="78" font-family="JetBrains Mono" font-size="6" fill="#627a95">LOW</text>
+          <text x="82" y="78" font-family="JetBrains Mono" font-size="6" fill="#627a95">CRITICAL</text>
+        </svg>
+        <div class="gauge-level" style="color:#f09014">ELEVATED</div>
+        <div class="gauge-desc">IRGCN patrols active.<br>Tanker seizure risk above baseline.</div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SECTION 3: WHAT IT MEANS ═══════════ -->
+    <div class="rsection">What it means</div>
 
     <!-- CLOSURE SCENARIO -->
     <div class="rblock">
@@ -866,7 +861,7 @@ header{
       <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-eia" style="color:var(--blue)">EQUITY DATA</span></div>
       <div class="india-rows" id="indiaRows"></div>
       <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        Each $10/bbl crude rise = ~&#8377;85K Cr import bill increase. Petronet LNG nearly entirely Hormuz-dependent.
+        ~62% of India's crude imports flow through Hormuz. Each $10/bbl crude rise = ~&#8377;85K Cr import bill increase. Petronet LNG nearly entirely Hormuz-dependent.
       </div>
     </div>
 
@@ -876,6 +871,34 @@ header{
       <div class="tanker-rows" id="tankerRows"></div>
       <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         BDTI leads tanker stocks by 2&ndash;3 days in escalation events. Watch for rate spikes while vessel count holds.
+      </div>
+    </div>
+
+    <!-- ═══════════ SECTION 4: CONTEXT ═══════════ -->
+    <div class="rsection">Context</div>
+
+    <!-- VESSEL TYPE MIX (moved to Context — slower-changing detail) -->
+    <div class="rblock">
+      <div class="rhead">Vessel type mix <span class="rhead-src src-live" style="color:var(--green)">LIVE FEED</span></div>
+      <div class="traffic-grid">
+        <div class="tcard"><div class="tc-val" id="inboundCount" style="color:var(--blue)">0</div><div class="tc-lbl">Inbound<br>vessels</div></div>
+        <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber)">0</div><div class="tc-lbl">Outbound<br>vessels</div></div>
+      </div>
+      <div class="type-bars" id="typeBars"></div>
+      <div class="conclusion" id="concMix" style="display:none"></div>
+    </div>
+
+    <!-- FLAG FLOW (re-added in Context — slowest-moving signal) -->
+    <div class="rblock">
+      <div class="rhead">
+        Flag state flow today
+        <span class="rhead-src src-live" style="color:var(--green)">LIVE FEED</span>
+      </div>
+      <div class="flag-rows" id="flagRows">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Populating from live vessel feed&hellip;</div>
+      </div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
+        Flag = ship registry. Liberia/Marshall Islands/Panama = flag of convenience, predominantly Gulf crude. Indian-flag = IOC/SCI/BPCL tankers direct.
       </div>
     </div>
 
