@@ -399,4 +399,123 @@ Refer to **§7 Tier Status** — pick from "Planned" or "Deferred — revisit" i
 
 ---
 
-*End of handoff. Last verified against production at commit `f86fe28` on 2026-05-11.*
+## 17. AUDIT FINDINGS · 33 issues with proposed solutions
+
+Full audit of the live dashboard performed 2026-05-11. No changes applied — these are the documented backlog items. Grouped by severity. Each item: **ID · Title · Problem · Fix.**
+
+### 17A. CRITICAL (4) — ship blockers / trust risks
+
+**C1 · Vessel Movement card shows 0/0/0 on first load**
+- *Problem:* `/api/ais` returns empty until the GHA scraper writes its first KV blob (~10 min after each push). Cold dashboards display "0 east · 0 west · 0 transit" with no "loading" or "awaiting first scrape" message — looks broken.
+- *Fix:* In `index.html` Vessel Movement render, treat `ais.lastUpdate == null OR ais.vesselCount == 0 AND age < 15 min` as **"Initialising · first scrape in <Nm>"** state. Show skeleton + ETA badge, not zeros.
+
+**C2 · Subscribe form promises a weekly digest that doesn't exist yet**
+- *Problem:* Footer subscribe says "weekly digest every Monday." There is no digest cron, no template, no `/api/digest/send` worker. Subscribers will sit unconfirmed or confirmed-but-silent indefinitely.
+- *Fix:* Two paths — (a) reword copy to "Get notified when the weekly digest launches" until Tier 2.2 is live; or (b) ship a minimal Monday cron in `functions/scheduled.js` that emails latest commentary + verdict + 7-day transit delta. Pick (a) immediately; queue (b) for Tier 2.2 completion.
+
+**C3 · Backtest lab reads transits_24h from D1 but `record.js` doesn't persist it**
+- *Problem:* `functions/api/record.js` snapshots oil + verdict but doesn't fetch from `/api/ais` and store vessel counts. Backtest's "vessel anomaly" chart will be flat-null forever.
+- *Fix:* In `record.js`, also `await fetch(env.SITE_URL + '/api/ais')`, extract `east_24h`, `west_24h`, `transit_24h`, `anchored`, `approach`, write to a new `vessel_snapshots` table (or add columns to `snapshots`). Update `schema.sql` and run a migration via wrangler.
+
+**C4 · Vessel Movement source label can claim "LIVE FEED" when data is 30+ min stale**
+- *Problem:* The card renders "LIVE FEED" badge unconditionally. If the GHA scraper fails twice (CF outage, AISStream key expired), data ages silently — users still see "LIVE."
+- *Fix:* Compute `ageMin = (now - ais.lastUpdate)/60`. If `ageMin > 20`, swap badge to **"STALE · last <N>m ago"** in amber; if `> 60`, red. Mirror the same pattern oil-card uses.
+
+### 17B. IMPORTANT (8) — visible quality issues
+
+**I1 · Cargo ticker shows `$0` for symbols FinnHub free-tier doesn't cover**
+- *Problem:* INSW, FRO, STNG etc. return `null` from FinnHub free tier; ticker renders `$0.00` and `0.00%` — looks like a real crash to zero.
+- *Fix:* In the ticker render, if `price == null OR 0`, show `—` and a small "no feed" tooltip. Skip the symbol entirely if 3 consecutive fetches return null.
+
+**I2 · Salalah pin invisible on dark map tiles**
+- *Problem:* Marker color is `#0b1a2c` against the dark CARTO basemap — visually gone.
+- *Fix:* Switch Salalah marker to `#38aaff` outline with white fill, or use the same amber-pulse style as the Hormuz gate.
+
+**I3 · `/admin/commentary/` not blocked in robots.txt**
+- *Problem:* `robots.txt` blocks `/api/` and 7 LLM bots but lets all crawlers index the admin page. `meta name=robots noindex` is present but only a soft signal.
+- *Fix:* Add `Disallow: /admin/` to robots.txt. Also serve `X-Robots-Tag: noindex, nofollow` via Pages `_headers` for that path.
+
+**I4 · "Crisis average = 18 days transit" hardcoded in methodology**
+- *Problem:* Number was sourced from 2019 tanker-attack analysis but is presented as live anchor for "Crisis" verdict in methodology page. Becomes wrong as conditions evolve.
+- *Fix:* Move the constant into `config/verdict_thresholds.json`, reference last-recalibrated date, and add a footnote: "Recalibrated quarterly from 2019–2024 disruption episodes."
+
+**I5 · KV staleness not surfaced on `/api/oil`**
+- *Problem:* If Twelve Data + FinnHub + EIA all fail, the cached KV value can be hours old. Frontend uses it as if fresh.
+- *Fix:* `/api/oil` already stores `cachedAt`. Add `staleMin` field in response. Frontend's oil card already has the badge logic — just wire it.
+
+**I6 · Subscribe footer bar overlaps content on mobile**
+- *Problem:* On <600px viewports the fixed subscribe bar overlaps the last data card. Tested on iPhone SE viewport.
+- *Fix:* Either make it dismissible (sessionStorage flag) or convert to a sticky non-fixed block that sits below the last card. Add `padding-bottom: 90px` on `.dashboard` for mobile.
+
+**I7 · BDTI tile has no staleness flag**
+- *Problem:* Baltic Dirty Tanker Index updates weekly. Tile shows the number with no "as of" date. If the GHA scrape breaks, users see last week's number as if fresh.
+- *Fix:* Add `bdti.asOf` ISO date to the response; render "as of <Mon Day>" subtitle. If `> 9 days` old, amber "stale" badge.
+
+**I8 · `/api/stooq` endpoint name is misleading**
+- *Problem:* It actually tries Stooq → falls through to Yahoo Finance proxy. Anyone reading the codebase or API page assumes Stooq is the only source.
+- *Fix:* Rename to `/api/oil` (already exists — collapse to one endpoint). Update `methodology/index.html` and `api/index.html` source list.
+
+### 17C. POLISH (10) — UX rough edges
+
+**P1 · No custom 404 page** — currently shows the default CF Pages 404. Add `404.html` matching dashboard dark theme with link back to `/`.
+
+**P2 · Map markers don't cluster** — when vessel count >50 the map becomes a wall of dots. Use Leaflet.markercluster or a simple bucket-by-grid-cell rendering threshold.
+
+**P3 · No print stylesheet** — analysts who print the dashboard for committee meetings get pitch-black backgrounds eating ink. Add `@media print` with white bg, black text, hide nav/footer.
+
+**P4 · Missing hover tooltips on verdict badges** — what does ELEVATED mean vs HIGH? Add `title=` attributes pulling from methodology thresholds.
+
+**P5 · Color-blind gap on verdict palette** — amber (ELEVATED) vs red (HIGH) hard to distinguish for deuteranopia. Add icons (▲ ▲▲ ▲▲▲ ⚠) alongside color, not color-only.
+
+**P6 · Emoji rendering inconsistent** — ✓ ✗ ⚠ render differently on Windows/Mac/Linux. Replace with inline SVGs or Lucide icon font.
+
+**P7 · Resend currently sends from `onboarding@resend.dev`** — works but looks scammy. Pending: pick a custom domain (suggest `hormuz.watch` or `hormuzwatch.com`), add Resend DNS records, switch RESEND_FROM.
+
+**P8 · GHA cron logs not surfaced** — if a scrape fails, only way to know is to open Actions tab. Add a `/health` JSON field `lastScrapeOk: bool` populated by the scraper itself writing to KV.
+
+**P9 · No equity fundamental links** — ticker chips don't link anywhere. Wire each to its TradingView ticker page in a new tab.
+
+**P10 · Methodology page has no table of contents** — it's a long scroll. Add anchor links at top for each section (Inputs, Thresholds, Verdict logic, Limitations).
+
+### 17D. STRATEGIC (7) — positioning & growth
+
+**S1 · Subscribe pitch loudness** — the footer bar is dialled to 8/10. For a pre-launch tool with no real digest yet, dial to 4/10. Or remove until digest ships.
+
+**S2 · Commentary placement** — currently at top of dashboard. When empty, the slot is hidden — good. When populated, it pushes the verdict card below the fold on laptops. Decision: keep it top (commentary IS the moat) but cap height at 100px with "expand" toggle.
+
+**S3 · Cross-page brand consistency** — `/methodology`, `/terms`, `/health`, `/api`, `/backtest` all use the dashboard theme but minor spacing/typography drift. Lock a shared CSS file (`/assets/site.css`) and import everywhere.
+
+**S4 · No disclaimer on dashboard footer** — "Not investment advice" appears in `/terms` but not on the main page. Add one-liner at footer next to copyright.
+
+**S5 · D1 backfill decision** — currently only forward-collecting from launch day. To make backtest useful from day-one of public launch, decide: (a) leave empty until 30 days accumulate, (b) backfill from EIA + GFW historical for 2019–2025. Option (b) takes ~4 hrs but unlocks marketing.
+
+**S6 · Multi-region routing** — `config/regions.json` has 4 regions but only Hormuz is wired. Decide URL pattern before second region ships: `/regions/hormuz/`, subdomain `hormuz.chokepointwatch.com`, or single-page region selector. Recommend path-based for SEO.
+
+**S7 · Product naming when scaling** — "Hormuz Watch" doesn't scale to Bab el-Mandeb. Either (a) keep Hormuz as flagship + sister brands (Mandeb Watch, Suez Watch), (b) rebrand parent to "Chokepoint Watch" or "Maritime Risk Monitor." Decision deferred but blocks domain purchase.
+
+### 17E. DEFENSIBILITY (4) — moat & exposure
+
+**D1 · Methodology page still too detailed** — current page explains verdict thresholds + exact transit-day breakpoints. Competitor with engineering can fork in <1 week. Move calibration constants behind a "sample" page; keep only the conceptual framework public.
+
+**D2 · GHA workflow YAML reveals architecture** — public repo shows scrape cadence, secret names, AISStream usage pattern. Anyone reading can replicate. Mitigations: (a) move scrapers to private repo (loses anti-Streisand but defensibility wins for now), (b) keep public but obfuscate cadence with `schedule: cron` randomization and remove descriptive job names.
+
+**D3 · Source attribution incomplete on `/api`** — currently lists "EIA, FinnHub, Twelve Data, AISStream, GFW." Should add license/ToS link per source so legal posture is documented. Also clarifies what's redistributable.
+
+**D4 · No data freshness clause in terms** — `/terms` says "best effort" but doesn't cap liability for stale or wrong data. Add explicit clause: "Data may be delayed, incorrect, or unavailable. Hormuz Watch makes no warranty of accuracy or timeliness. Not investment advice."
+
+---
+
+### 17F. Prioritisation table
+
+| Tier | Block | Items | Rough effort |
+|---|---|---|---|
+| Do this week | Critical | C1, C2, C3, C4 | 6–8 hrs |
+| Within 2 weeks | Important | I1–I8 | 4–6 hrs |
+| Within 30 days | Strategic | S1, S2, S4, S5 | 8–12 hrs |
+| Within 30 days | Defensibility | D1, D2, D4 | 3–5 hrs |
+| Backlog | Polish | P1–P10 | 6–10 hrs |
+| Decision-gated | S3, S6, S7, D3, P7 | needs user input first | — |
+
+---
+
+*End of handoff. Last verified against production at commit `f86fe28` on 2026-05-11. §17 audit appended 2026-05-11.*
