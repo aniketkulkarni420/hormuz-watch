@@ -1,25 +1,29 @@
 # Hormuz Watch
 
-A single-file dashboard monitoring the Strait of Hormuz with five live data signals — vessel traffic, dark-ship detection, freight rates, geopolitical incidents, and India crude exposure. Built for an equity analyst workflow at [KamayaKya](https://kamayakya.com) (SEBI RA INH000009883).
+A single-file dashboard monitoring the Strait of Hormuz with five live data signals — vessel traffic, dark-ship detection, freight rates, conflict events, and India crude exposure.
 
 **Live:** https://hormuz-watch-7cd.pages.dev
+**Methodology:** https://hormuz-watch-7cd.pages.dev/methodology
 
 ## Stack
 
 - `index.html` — self-contained dashboard (Leaflet + vanilla JS, no build)
-- `functions/api/eia.js` — Cloudflare Pages Function proxying EIA v2 weekly oil prices
-- `functions/api/gfw.js` — Pages Function proxying Global Fishing Watch v3 events
-- AISStream WebSocket — called directly from the browser (free-tier key, low blast radius)
+- `functions/api/*.js` — Cloudflare Pages Functions (API proxies for EIA, GFW, FinnHub, Twelve Data, oil aggregator)
+- `functions/api/record.js` + `history.js` — D1 historical snapshot writer + reader
+- `scripts/scrape_oil.py` — GitHub Actions Python scraper for live Brent/WTI/tanker stocks via yfinance → Cloudflare KV
+- AISStream WebSocket — vessel positions
 
 ## Data sources
 
 | Signal | Source | Refresh |
 |---|---|---|
-| Vessel positions | AISStream.io WebSocket | live |
-| Dark ships / loitering | Global Fishing Watch v3 | 4h |
-| Brent / WTI weekly | EIA v2 | 6h |
-| Tanker freight (BDTI) | simulated | — |
-| Incidents (ACLED) | not yet wired | — |
+| Vessel positions | AISStream.io WebSocket | real-time |
+| Brent + WTI (live futures) | yfinance (BZ=F, CL=F) via GitHub Action → Cloudflare KV | 15 min |
+| Brent + WTI (fallback) | EIA daily | 1-2 day lag |
+| Dark ships / loitering | Global Fishing Watch v3 | 4 h |
+| Tanker freight (BDTI) | Baltic Exchange (manual weekly) | weekly |
+| Conflict events (ACLED) | pending API access | — |
+| Equity exposure | PPAC + company filings | quarterly review |
 
 ## Local development
 
@@ -31,16 +35,16 @@ Create `.dev.vars` (gitignored) from the example:
 
 ```
 cp .dev.vars.example .dev.vars
-# then fill in EIA_KEY and GFW_TOKEN
+# fill in: EIA_KEY, GFW_TOKEN, FINNHUB_KEY, TWELVE_KEY, SNAPSHOT_TOKEN
 ```
 
 ## Deploy
 
-Auto-deploys on push to `main` via Cloudflare Pages. Required env vars in the Pages project settings (Production):
+Auto-deploys on push to `main` via Cloudflare Pages. Required env vars in Pages production settings:
+- `EIA_KEY`, `GFW_TOKEN`, `FINNHUB_KEY`, `TWELVE_KEY`, `SNAPSHOT_TOKEN`
 
-- `EIA_KEY`
-- `GFW_TOKEN`
+D1 + KV bindings configured in `wrangler.toml`.
 
-## License
+## Author
 
-All rights reserved · ANSK Consulting Private Limited
+Built by [Aniket Kulkarni](https://www.linkedin.com/in/aniket-kulkarni-equity-research/).
