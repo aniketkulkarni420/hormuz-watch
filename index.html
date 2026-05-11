@@ -978,12 +978,13 @@ document.addEventListener("click", function(e){
 // UI auto-flags stale data (amber/red) and footer health bar surfaces all states.
 // ═══════════════════════════════════════════════════
 var dataAge = {
-  ais:     { name:"AIS (vessel positions)",          lastFetch:null, fresh:30*1000,     stale:5*60*1000,  status:"connecting", src:"AISStream.io" },
-  finnhub: { name:"Brent + WTI futures (live)",      lastFetch:null, fresh:10*60*1000,   stale:60*60*1000, status:"pending",   src:"FinnHub · BZ=F + CL=F" },
-  eia:     { name:"EIA weekly spot (sparkline ref)", lastFetch:null, fresh:6*3600*1000,  stale:24*3600*1000, status:"pending", src:"EIA v2 weekly" },
-  gfw:     { name:"GFW dark vessel events",          lastFetch:null, fresh:4*3600*1000,  stale:24*3600*1000, status:"pending", src:"Global Fishing Watch" },
-  bdti:    { name:"BDTI freight index",              lastFetch:null, fresh:7*86400*1000, stale:14*86400*1000, status:"manual", src:"Baltic Exchange (manual weekly)" },
-  acled:   { name:"ACLED conflict events",           lastFetch:null, fresh:0,            stale:0,            status:"disabled", src:"ACLED (pending API access)" }
+  ais:        { name:"AIS (vessel positions)",            lastFetch:null, fresh:30*1000,     stale:5*60*1000,    status:"connecting", src:"AISStream.io" },
+  twelvedata: { name:"Brent + WTI live commodity feed",   lastFetch:null, fresh:10*60*1000,  stale:60*60*1000,   status:"pending",    src:"Twelve Data (requires Pro+)" },
+  finnhub:    { name:"BNO/USO ETF (NYSE intraday proxy)", lastFetch:null, fresh:10*60*1000,  stale:60*60*1000,   status:"pending",    src:"FinnHub · BNO + USO" },
+  eia:        { name:"EIA daily + weekly spot",           lastFetch:null, fresh:6*3600*1000, stale:24*3600*1000, status:"pending",    src:"EIA v2" },
+  gfw:        { name:"GFW dark vessel events",            lastFetch:null, fresh:4*3600*1000, stale:24*3600*1000, status:"pending",    src:"Global Fishing Watch" },
+  bdti:       { name:"BDTI freight index",                lastFetch:null, fresh:7*86400*1000, stale:14*86400*1000, status:"manual",   src:"Baltic Exchange (manual weekly)" },
+  acled:      { name:"ACLED conflict events",             lastFetch:null, fresh:0,            stale:0,            status:"disabled", src:"ACLED (pending API access)" }
 };
 function markFetched(key){ if(dataAge[key]){ dataAge[key].lastFetch = Date.now(); dataAge[key].status = "live"; updateHealthBar(); } }
 function markFailed(key){ if(dataAge[key]){ dataAge[key].status = "error"; updateHealthBar(); } }
@@ -1009,8 +1010,8 @@ function ageLabel(key){
 function updateHealthBar(){
   var bar = document.getElementById("healthBar");
   if (!bar) return;
-  var order = ["ais","finnhub","eia","gfw","bdti","acled"];
-  var labels = {ais:"AIS", finnhub:"Brent/WTI live", eia:"EIA wk", gfw:"GFW", bdti:"BDTI", acled:"ACLED"};
+  var order = ["ais","twelvedata","finnhub","eia","gfw","bdti","acled"];
+  var labels = {ais:"AIS", twelvedata:"Brent/WTI live", finnhub:"ETF proxy", eia:"EIA", gfw:"GFW", bdti:"BDTI", acled:"ACLED"};
   var html = "";
   order.forEach(function(k){
     var d = dataAge[k]; if (!d) return;
@@ -1960,18 +1961,24 @@ function renderEIA() {
     _sevenDayAvg = (sum/cnt) * BASELINE_BBL_DAY; // full flow at avg recent Brent
   }
 
-  // PRICE SOURCE LOGIC:
-  //   FinnHub free tier blocks futures, so we use BNO/USO ETF proxies for intraday %.
-  //   EIA daily gives the actual Brent/WTI price level (1-2 day lag).
-  //   Combined: live-tracked estimate that updates within 5-15 min of market moves.
-  var liveBrent = _liveOil && _liveOil.brent && isFinite(_liveOil.brent.dp) ? _liveOil.brent : null;
-  var liveWti   = _liveOil && _liveOil.wti   && isFinite(_liveOil.wti.dp)   ? _liveOil.wti   : null;
-  // Apply ETF day-% move to EIA daily reference price (Stooq endpoint result = EIA daily close)
+  // PRICE SOURCE LOGIC (honest):
+  //   Headline level = EIA daily (accurate, 1-2 day lag)
+  //   IF Twelve Data primary returns valid commodity quote → use that for headline (real-time)
+  //   ETF intraday % shown SEPARATELY as 'NYSE intraday' indicator when non-zero
+  //   Never blend ETF % into headline unless explicitly during NYSE hours with meaningful move
+  var primaryOil = (_liveOil && _liveOil.tier === "primary" && _liveOil.brent && isFinite(_liveOil.brent.level)) ? _liveOil : null;
+  var secondaryEtf = (_liveOil && _liveOil.tier === "secondary" && _liveOil.brent && isFinite(_liveOil.brent.proxyDp)) ? _liveOil : null;
   var refBrent = _stooqDoD && isFinite(_stooqDoD.today) ? _stooqDoD.today : brent;
   var refWti   = wti;
-  var headlineBrent = liveBrent ? refBrent * (1 + liveBrent.dp / 100) : refBrent;
-  var headlineWti   = liveWti   ? refWti   * (1 + liveWti.dp / 100)   : refWti;
-  // For the cargo math global price reference
+  var headlineBrent, headlineWti;
+  if (primaryOil) {
+    headlineBrent = primaryOil.brent.level;
+    headlineWti   = primaryOil.wti.level;
+  } else {
+    // EIA daily is the headline — honest about lag
+    headlineBrent = refBrent;
+    headlineWti   = refWti;
+  }
   _brentPrice = headlineBrent;
 
   var ctSub = document.getElementById("ctSub");
@@ -1980,16 +1987,18 @@ function renderEIA() {
   var brentEl = document.getElementById("brentPrice");
   if(brentEl) brentEl.textContent = "$" + headlineBrent.toFixed(1);
 
-  // Brent change line \u2014 BNO ETF dp% as live tracker (refreshes every 5min).
-  // Falls back to EIA daily DoD, then EIA weekly WoW.
+  // Brent change line.
+  //   Primary: Twelve Data live commodity (if Pro+ tier).
+  //   Else: EIA daily DoD from /api/stooq.
+  //   Last resort: EIA weekly WoW.
+  // ETF (BNO) intraday move shown as a SECOND line beneath if non-zero and during NYSE hours.
   var chgEl = document.getElementById("brentChg");
   if(chgEl) {
-    if(liveBrent && isFinite(liveBrent.dp)) {
-      var up = liveBrent.dp >= 0;
-      var moveDollars = refBrent * liveBrent.dp / 100;
-      chgEl.textContent = (up?"\u25b2":"\u25bc") + " $" + Math.abs(moveDollars).toFixed(2)
-        + " (" + (up?"+":"") + liveBrent.dp.toFixed(2) + "% today)";
-      chgEl.style.color = up ? "var(--green)" : "var(--red)";
+    if(primaryOil && isFinite(primaryOil.brent.changePct)) {
+      var upP = primaryOil.brent.changePct >= 0;
+      chgEl.textContent = (upP?"\u25b2":"\u25bc") + " $" + Math.abs(primaryOil.brent.change).toFixed(2)
+        + " (" + (upP?"+":"") + primaryOil.brent.changePct.toFixed(2) + "% live)";
+      chgEl.style.color = upP ? "var(--green)" : "var(--red)";
     } else if(_stooqDoD && isFinite(_stooqDoD.change)) {
       var up2 = _stooqDoD.change >= 0;
       chgEl.textContent = (up2?"\u25b2":"\u25bc") + " $" + Math.abs(_stooqDoD.change).toFixed(1)
@@ -2016,27 +2025,41 @@ function renderEIA() {
   var noteEl = document.getElementById("brentNote");
   if(noteEl) {
     var sixWkChg = brentOld ? ((brent-brentOld)/brentOld*100).toFixed(1) : null;
-    var liveSrc = liveBrent
-      ? "Level: EIA daily \u00b7 Intraday: BNO/USO ETF proxy"
-      : "Source: EIA daily (1-2d lag)";
-    var liveTs = liveBrent && liveBrent.t ? (" \u00b7 ETF quote " + new Date(liveBrent.t*1000).toISOString().slice(11,16) + " UTC") : "";
-    noteEl.textContent = liveSrc + liveTs
+    var srcLine;
+    if (primaryOil) {
+      srcLine = "Source: Twelve Data live commodity feed";
+    } else if (secondaryEtf) {
+      var bnoDp = secondaryEtf.brent.proxyDp;
+      var bnoLine = (bnoDp >= 0 ? "+" : "") + bnoDp.toFixed(2) + "%";
+      srcLine = "Level: EIA daily (1-2 day lag) \u00b7 NYSE intraday est: BNO " + bnoLine;
+    } else {
+      srcLine = "Source: EIA daily (1-2 day lag) \u00b7 live commodity feed pending";
+    }
+    var stooqDate = _stooqDoD && _stooqDoD.todayDate ? " \u00b7 close: " + _stooqDoD.todayDate : "";
+    noteEl.textContent = srcLine + stooqDate
       + " \u00b7 Sparkline: EIA weekly spot (wk of " + period + ")"
-      + (sixWkChg ? " \u00b7 6-wk: "+(parseFloat(sixWkChg)>=0?"+":"")+sixWkChg+"%" : "");
+      + (sixWkChg ? " \u00b7 6-wk: " + (parseFloat(sixWkChg) >= 0 ? "+" : "") + sixWkChg + "%" : "");
   }
 
   // Pulse tag reflects PRIMARY price source (FinnHub when available, else EIA fallback)
   var pulseTag = document.getElementById("eiaPulseTag");
   if(pulseTag){
-    if (_liveOil && _liveOil.brent && isFinite(_liveOil.brent.dp)) {
-      var fH = freshness("finnhub");
-      if (fH === "fresh")      { pulseTag.textContent="LIVE TRACKING";   pulseTag.style.color="var(--green)";  pulseTag.style.background="rgba(29,212,126,.1)"; pulseTag.style.borderColor="rgba(29,212,126,.2)"; }
-      else if (fH === "aging") { pulseTag.textContent="TRACKING AGING";  pulseTag.style.color="var(--amber)";  pulseTag.style.background="rgba(240,144,20,.1)"; pulseTag.style.borderColor="rgba(240,144,20,.3)"; }
-      else                     { pulseTag.textContent="TRACKING STALE";  pulseTag.style.color="var(--red)";    pulseTag.style.background="rgba(255,62,82,.1)";  pulseTag.style.borderColor="rgba(255,62,82,.3)"; }
+    if (primaryOil) {
+      // Real live commodity feed (Twelve Data Pro+) — best case
+      pulseTag.textContent = "LIVE";
+      pulseTag.style.color = "var(--green)";
+      pulseTag.style.background = "rgba(29,212,126,.1)";
+      pulseTag.style.borderColor = "rgba(29,212,126,.2)";
+    } else if (secondaryEtf) {
+      // EIA daily + ETF intraday indicator (free-tier honest)
+      pulseTag.textContent = "EIA + ETF";
+      pulseTag.style.color = "var(--blue)";
+      pulseTag.style.background = "rgba(56,170,255,.1)";
+      pulseTag.style.borderColor = "rgba(56,170,255,.25)";
     } else {
       var fE = freshness("eia");
-      if (fE === "fresh")      { pulseTag.textContent="EIA DAILY";       pulseTag.style.color="var(--amber)"; pulseTag.style.background="rgba(240,144,20,.1)"; pulseTag.style.borderColor="rgba(240,144,20,.3)"; }
-      else                     { pulseTag.textContent="EIA STALE";       pulseTag.style.color="var(--red)";   pulseTag.style.background="rgba(255,62,82,.1)";  pulseTag.style.borderColor="rgba(255,62,82,.3)"; }
+      if (fE === "fresh")      { pulseTag.textContent = "EIA DAILY";   pulseTag.style.color = "var(--amber)"; pulseTag.style.background = "rgba(240,144,20,.1)"; pulseTag.style.borderColor = "rgba(240,144,20,.3)"; }
+      else                     { pulseTag.textContent = "EIA STALE";   pulseTag.style.color = "var(--red)";   pulseTag.style.background = "rgba(255,62,82,.1)";  pulseTag.style.borderColor = "rgba(255,62,82,.3)"; }
     }
   }
   // India-via-Hormuz signal-bar tile stays EIA/PPAC (trade flow data, not price)
@@ -2103,18 +2126,23 @@ function fetchOil(){
   fetch("/api/oil")
     .then(function(r){ if(!r.ok) throw new Error("oil "+r.status); return r.json(); })
     .then(function(d){
-      if(d && d.brent && isFinite(d.brent.c) && d.brent.c > 0){
-        _liveOil = d;
+      if(!d) return;
+      _liveOil = d;
+      // Mark the source that actually responded
+      if (d.tier === "primary") {
+        markFetched("twelvedata");
+        if (d.brent && isFinite(d.brent.level)) _brentPrice = d.brent.level;
+      } else if (d.tier === "secondary") {
         markFetched("finnhub");
-        _brentPrice = d.brent.c;
-        // Re-render market pulse if EIA loaded (Market Pulse panel uses live prices for headline)
-        if(eiaState.loaded) renderEIA();
-        renderConclusions();
+        // Keep _brentPrice anchored to EIA level (don't blend ETF into it)
+      } else {
+        // tertiary-required: no live source. Rely on EIA daily already fetched.
       }
+      if(eiaState.loaded) renderEIA();
+      renderConclusions();
     })
     .catch(function(e){
-      console.warn("Oil (FinnHub):", e.message);
-      // Silent — EIA daily fallback kicks in via fetchStooq below
+      console.warn("Oil tiered fetch:", e.message);
     });
 }
 fetchOil();
