@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API · Hormuz Watch</title>
+<meta name="robots" content="index">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;padding:0;min-height:100vh}
+.wrap{max-width:880px;margin:0 auto;padding:50px 24px 60px}
+header{margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.back{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;margin-bottom:18px}
+.back:hover{color:var(--amber)}
+h1{font-size:34px;font-weight:900;letter-spacing:-.01em;margin-bottom:6px}
+.sub{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+section{margin-bottom:40px}
+h2{font-size:22px;font-weight:800;margin-bottom:14px;color:var(--amber)}
+h3{font-size:16px;font-weight:700;margin:20px 0 10px}
+p{margin-bottom:13px;color:var(--text)}
+.endpoint{background:var(--panel);border:1px solid var(--border);border-radius:8px;margin-bottom:18px;overflow:hidden}
+.ep-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.method{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.06em}
+.method.GET{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.25)}
+.method.POST{color:var(--blue);background:rgba(56,170,255,.1);border:1px solid rgba(56,170,255,.25)}
+.path{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);flex:1}
+.tier{font-family:var(--mono);font-size:9px;text-transform:uppercase;padding:2px 7px;border-radius:3px;letter-spacing:.06em}
+.tier.public{color:var(--green);background:rgba(29,212,126,.08);border:1px solid rgba(29,212,126,.25)}
+.tier.auth{color:var(--amber);background:rgba(240,144,20,.08);border:1px solid rgba(240,144,20,.3)}
+.ep-body{padding:14px 18px;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.6}
+.ep-body p{color:var(--text);margin-bottom:10px}
+.ep-body code,pre{font-family:var(--mono);font-size:11px;background:var(--panel2);padding:1px 5px;border-radius:3px;color:var(--amber)}
+pre{display:block;padding:11px 14px;margin:10px 0;overflow-x:auto;color:var(--text);font-size:11px;border:1px solid var(--border)}
+.foot{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--muted2);letter-spacing:.04em;text-align:center}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.callout{background:rgba(240,144,20,.05);border-left:3px solid var(--amber);padding:12px 16px;border-radius:0 4px 4px 0;margin:14px 0;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.callout b{color:var(--text)}
+.params-table{width:100%;border-collapse:collapse;margin:10px 0}
+.params-table th,.params-table td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;vertical-align:top}
+.params-table th{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em}
+.params-table td.param{color:var(--amber);white-space:nowrap;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="back" href="/">← Back to dashboard</a>
+  <h1>Public API</h1>
+  <div class="sub">Endpoint reference · base URL: <code>https://hormuz-watch-7cd.pages.dev</code></div>
+</header>
+
+<section>
+<h2>Overview</h2>
+<p>The dashboard's data endpoints are publicly readable. They power the front-end UI but can also be consumed by downstream tools (research dashboards, alerting scripts, internal models).</p>
+<p>All endpoints return JSON. CORS is open (<code>Access-Control-Allow-Origin: *</code>). No authentication is required for read endpoints.</p>
+<div class="callout">
+<b>Fair-use note:</b> automated polling exceeding 1 request per minute per endpoint is discouraged and may be rate-limited. For higher-frequency or commercial use, please reach out — we provide service tiers with SLAs.
+</div>
+</section>
+
+<section>
+<h2>Endpoints</h2>
+
+<div class="endpoint">
+  <div class="ep-head"><span class="method GET">GET</span><span class="path">/api/oil</span><span class="tier public">public</span></div>
+  <div class="ep-body">
+    <p>Live Brent + WTI prices with tiered source fallback.</p>
+    <p>Response shape:</p>
+    <pre>{
+  "source": "Live commodity feed",
+  "tier": "primary" | "secondary" | "tertiary-required",
+  "brent": { "level": 108.42, "change": 0.94, "changePct": 0.87, "high": 109.1, "low": 107.8, "t": 1778... },
+  "wti":   { "level":  95.18, "change": ..., "changePct": ..., ... },
+  "fetchedAt": 1778...,
+  "ageMin": 1.1
+}</pre>
+    <p>When <code>tier: "secondary"</code>, the ETF proxy structure is returned instead — see source.</p>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-head"><span class="method GET">GET</span><span class="path">/api/stooq</span><span class="tier public">public</span></div>
+  <div class="ep-body">
+    <p>Daily reference Brent price (legacy endpoint name). Always-on fallback when live feed degrades. 1-2 trading day lag.</p>
+    <pre>{ "today": 109.6, "yesterday": 108.4, "todayDate": "2026-05-08", "yesterdayDate": "2026-05-07" }</pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-head"><span class="method GET">GET</span><span class="path">/api/eia</span><span class="tier public">public</span></div>
+  <div class="ep-body">
+    <p>EIA petroleum price series proxy. Used for weekly history (sparkline).</p>
+    <p>Parameters:</p>
+    <table class="params-table">
+      <tr><th>Name</th><th>Description</th><th>Example</th></tr>
+      <tr><td class="param">series</td><td>EIA series code</td><td><code>RBRTE</code> (Brent), <code>RWTC</code> (WTI)</td></tr>
+      <tr><td class="param">length</td><td>Number of points to return</td><td><code>6</code></td></tr>
+      <tr><td class="param">frequency</td><td>weekly | daily | monthly</td><td><code>weekly</code></td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-head"><span class="method POST">POST</span><span class="path">/api/gfw</span><span class="tier public">public</span></div>
+  <div class="ep-body">
+    <p>Satellite-detected vessel encounter + loitering events within the Hormuz geometry.</p>
+    <p>Body (JSON):</p>
+    <pre>{
+  "datasets": ["public-global-encounters-events:latest"],
+  "startDate": "2026-04-05",
+  "endDate":   "2026-05-05",
+  "geometry":  { "type": "Polygon", "coordinates": [[[52,24],[59.5,24],[59.5,28.5],[52,28.5],[52,24]]] }
+}</pre>
+    <p>Returns <code>{ entries: [...] }</code> with event objects.</p>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-head"><span class="method GET">GET</span><span class="path">/api/history</span><span class="tier public">public</span></div>
+  <div class="ep-body">
+    <p>Historical time series from Cloudflare D1. Hourly snapshots of every metric.</p>
+    <p>Parameters:</p>
+    <table class="params-table">
+      <tr><th>Name</th><th>Description</th><th>Example</th></tr>
+      <tr><td class="param">metric</td><td>Column name (whitelisted)</td><td><code>brent_price</code>, <code>wti_price</code>, <code>bw_spread</code>, <code>transits_24h</code>, <code>dark_pct</code>, <code>bdti</code></td></tr>
+      <tr><td class="param">range</td><td>Lookback window</td><td><code>24h</code>, <code>7d</code>, <code>30d</code></td></tr>
+    </table>
+    <p>Response:</p>
+    <pre>{ "metric": "brent_price", "range": "7d", "points": [{ "ts": 1778..., "v": 108.42 }, ...], "count": 168 }</pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-head"><span class="method GET">GET</span><span class="path">/api/snapshot</span><span class="tier public">public</span></div>
+  <div class="ep-body">
+    <p>Cached current-state snapshot. Used by downstream tools (e.g. India Risk Monitor) for the <code>hormuz_throughput</code> metric. Returns a stable schema across regime changes.</p>
+    <pre>{
+  "as_of": "2026-05-08T...",
+  "daily_transit_estimate": 84,
+  "vessel_count_inbound": 38, "vessel_count_outbound": 42,
+  "pct_of_normal": 60.0,
+  "dark_vessels": 947,
+  "bdti": 14,
+  ...
+}</pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-head"><span class="method POST">POST</span><span class="path">/api/record</span><span class="tier auth">token-auth</span></div>
+  <div class="ep-body">
+    <p>Hourly snapshot writer. Called by an internal cron job. Requires <code>X-Snapshot-Token</code> header. Not for public use.</p>
+  </div>
+</div>
+</section>
+
+<section>
+<h2>External Worker endpoints</h2>
+<p>Specialised data sources hosted as separate Cloudflare Workers:</p>
+
+<div class="endpoint">
+  <div class="ep-head"><span class="method GET">GET</span><span class="path">hormuz-ais-aggregator.aniket-kulkarni.workers.dev/state</span><span class="tier public">public</span></div>
+  <div class="ep-body">
+    <p>Authoritative server-side AIS aggregation. Single Durable Object subscribes to AISStream once, computes gate-crossings centrally so all users share the same numbers.</p>
+    <pre>{
+  "transits24h": 84,
+  "eastbound24h": 41, "westbound24h": 43,
+  "categories": { "transit": 12, "anchored": 8, "approach": 5 },
+  "vesselCount": 25,
+  "lastMsgAgeSec": 3,
+  "wsConnected": true
+}</pre>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-head"><span class="method GET">GET</span><span class="path">hormuz-ais-aggregator.aniket-kulkarni.workers.dev/transits</span><span class="tier public">public</span></div>
+  <div class="ep-body">
+    <p>Recent gate-crossing events. Parameter <code>?range=24h</code> (or <code>7d</code> etc).</p>
+    <pre>{ "count": 84, "transits": [{ "mmsi": ..., "name": "...", "dir": "eastbound", "time": ..., "lat": ..., "lng": ... }] }</pre>
+  </div>
+</div>
+</section>
+
+<section>
+<h2>Service tiers</h2>
+<p>Free public usage is fair-use limited. For SLA-backed, commercial, or high-volume access, contact <a href="https://www.linkedin.com/in/aniket-kulkarni-equity-research/" target="_blank" rel="noopener">Aniket via LinkedIn</a>. Tiers in development:</p>
+<ul style="margin-left:22px;font-family:var(--mono);font-size:12px;line-height:1.8">
+  <li><b style="color:var(--text)">Free</b> — Fair-use public API (current)</li>
+  <li><b style="color:var(--text)">Research</b> — Higher rate limits + historical access + email digest</li>
+  <li><b style="color:var(--text)">Institutional</b> — White-label, custom regions, dedicated SLA</li>
+</ul>
+</section>
+
+<div class="foot">
+© 2026 Aniket Kulkarni · <a href="/methodology">Methodology</a> · <a href="/terms">Terms</a> · <a href="/health">Health</a>
+</div>
+</div>
+</body>
+</html>

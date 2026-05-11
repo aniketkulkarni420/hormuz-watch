@@ -1032,13 +1032,14 @@ document.addEventListener("click", function(e){
 // UI auto-flags stale data (amber/red) and footer health bar surfaces all states.
 // ═══════════════════════════════════════════════════
 var dataAge = {
-  ais:        { name:"AIS (vessel positions)",            lastFetch:null, fresh:30*1000,     stale:5*60*1000,    status:"connecting", src:"AISStream.io" },
-  twelvedata: { name:"Brent + WTI live commodity feed",   lastFetch:null, fresh:10*60*1000,  stale:60*60*1000,   status:"pending",    src:"Twelve Data (requires Pro+)" },
-  finnhub:    { name:"BNO/USO ETF (NYSE intraday proxy)", lastFetch:null, fresh:10*60*1000,  stale:60*60*1000,   status:"pending",    src:"FinnHub · BNO + USO" },
-  eia:        { name:"EIA daily + weekly spot",           lastFetch:null, fresh:6*3600*1000, stale:24*3600*1000, status:"pending",    src:"EIA v2" },
-  gfw:        { name:"GFW dark vessel events",            lastFetch:null, fresh:4*3600*1000, stale:24*3600*1000, status:"pending",    src:"Global Fishing Watch" },
-  bdti:       { name:"BDTI freight index",                lastFetch:null, fresh:7*86400*1000, stale:14*86400*1000, status:"manual",   src:"Baltic Exchange (manual weekly)" },
-  acled:      { name:"ACLED conflict events",             lastFetch:null, fresh:0,            stale:0,            status:"disabled", src:"ACLED (pending API access)" }
+  ais:        { name:"Vessel positions (live feed)",      lastFetch:null, fresh:30*1000,     stale:5*60*1000,    status:"connecting", src:"Live AIS stream" },
+  aisserver:  { name:"Vessel aggregator (server-side)",   lastFetch:null, fresh:60*1000,     stale:10*60*1000,   status:"pending",    src:"Authoritative cross-user state" },
+  twelvedata: { name:"Brent + WTI live commodity feed",   lastFetch:null, fresh:10*60*1000,  stale:60*60*1000,   status:"pending",    src:"Live commodity feed (Pro)" },
+  finnhub:    { name:"BNO/USO ETF (NYSE intraday proxy)", lastFetch:null, fresh:10*60*1000,  stale:60*60*1000,   status:"pending",    src:"ETF proxy intraday" },
+  eia:        { name:"Daily + weekly oil reference",      lastFetch:null, fresh:6*3600*1000, stale:24*3600*1000, status:"pending",    src:"Official daily reference" },
+  gfw:        { name:"Satellite vessel detection",        lastFetch:null, fresh:4*3600*1000, stale:24*3600*1000, status:"pending",    src:"Satellite SAR feed" },
+  bdti:       { name:"Freight index",                     lastFetch:null, fresh:7*86400*1000, stale:14*86400*1000, status:"manual",   src:"Weekly freight publish" },
+  acled:      { name:"Conflict events",                   lastFetch:null, fresh:0,            stale:0,            status:"disabled", src:"Pending API access" }
 };
 function markFetched(key){ if(dataAge[key]){ dataAge[key].lastFetch = Date.now(); dataAge[key].status = "live"; updateHealthBar(); } }
 function markFailed(key){ if(dataAge[key]){ dataAge[key].status = "error"; updateHealthBar(); } }
@@ -1064,8 +1065,8 @@ function ageLabel(key){
 function updateHealthBar(){
   var bar = document.getElementById("healthBar");
   if (!bar) return;
-  var order = ["ais","twelvedata","finnhub","eia","gfw","bdti","acled"];
-  var labels = {ais:"AIS", twelvedata:"Brent/WTI live", finnhub:"ETF proxy", eia:"EIA", gfw:"GFW", bdti:"BDTI", acled:"ACLED"};
+  var order = ["ais","aisserver","twelvedata","finnhub","eia","gfw","bdti","acled"];
+  var labels = {ais:"AIS", aisserver:"Server agg", twelvedata:"Live commodity", finnhub:"ETF proxy", eia:"Reference", gfw:"Satellite", bdti:"Freight", acled:"Events"};
   var html = "";
   order.forEach(function(k){
     var d = dataAge[k]; if (!d) return;
@@ -1232,6 +1233,37 @@ var TREND_DATA = [
   {label:"Yesterday",    sublabel:YESTERDAY_KEY.slice(5), val:dailyStore[YESTERDAY_KEY]||null, color:"#38aaff", src:"AIS"},
   {label:"Today",        sublabel:"live",     val:null, color:"#38aaff", src:"AIS", live:true}
 ];
+
+// Pull yesterday's transit count from D1 (authoritative cross-user source).
+// Falls back to localStorage for users with prior-day session data.
+function refreshYesterdayFromD1(){
+  fetch("/api/history?metric=transits_24h&range=3d")
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (!d || !d.points || !d.points.length) return;
+      // Find a point closest to 24h ago that has a non-null value
+      var target = (Date.now()/1000) - 86400;
+      var best = null, bestDelta = Infinity;
+      d.points.forEach(function(p){
+        if (p.v === null) return;
+        var delta = Math.abs(p.ts - target);
+        if (delta < bestDelta) { bestDelta = delta; best = p; }
+      });
+      if (best && best.v !== null && best.v > 0) {
+        TREND_DATA[2].val = best.v;
+        TREND_DATA[2].src = "D1";
+        // Re-render trend chart with updated yesterday value
+        if (typeof renderTrend === "function") {
+          var liveCount = (TREND_DATA[3] && TREND_DATA[3].val) || 0;
+          renderTrend(liveCount);
+        }
+      }
+    })
+    .catch(function(e){ console.warn("Yesterday from D1:", e.message); });
+}
+// Fire after dashboard mounts + every 30 min thereafter
+setTimeout(refreshYesterdayFromD1, 3000);
+setInterval(refreshYesterdayFromD1, 30*60*1000);
 
 function renderTrend(liveCount){
   var data = TREND_DATA.slice();
@@ -1793,11 +1825,19 @@ setInterval(function(){
 }, 30*1000);
 
 // UI updater — keeps the sigVessels tile and Ships sub-text in sync
+// Prefer server-side AIS Worker data when available (cross-user authoritative).
+// Falls back to client-side B+ engine if Worker is unreachable.
+var _aisServer = null; // cached worker /state response
 function updateVesselUI(){
   var t = vesselCategoryCount.transit;
-  var a = vesselCategoryCount.anchored;
-  var ap = vesselCategoryCount.approach;
   var total24h = transits24h.length;
+  // If worker has fresher transit count + categories, prefer those
+  if (_aisServer && _aisServer.transits24h != null) {
+    total24h = _aisServer.transits24h;
+    if (_aisServer.categories && _aisServer.categories.transit != null) {
+      t = _aisServer.categories.transit;
+    }
+  }
   var sigEl = document.getElementById("sigVessels");
   var dirEl = document.getElementById("sigVesselsDir");
   if (sigEl) sigEl.textContent = total24h;
@@ -1807,6 +1847,21 @@ function updateVesselUI(){
     dirEl.style.fontSize = "9px";
   }
 }
+// Poll AIS Worker every 30s; degrade silently if unavailable
+function fetchAisServer(){
+  fetch("https://hormuz-ais-aggregator.aniket-kulkarni.workers.dev/state")
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (d && d.wsConnected) {
+        _aisServer = d;
+        markFetched("aisserver");
+        updateVesselUI();
+      }
+    })
+    .catch(function(){ /* silent — client-side fallback continues */ });
+}
+setTimeout(fetchAisServer, 5000);
+setInterval(fetchAisServer, 30000);
 
 // Destination whitelist — only display when AIS-reported destination string matches a known port.
 // Per "only certain" rule, ambiguous entries (FOR ORDERS, TBN, etc.) → silent.

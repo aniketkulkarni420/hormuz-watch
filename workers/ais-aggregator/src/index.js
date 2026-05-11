@@ -1,49 +1,43 @@
-// Cloudflare Worker — Hormuz AIS aggregator
-// Single Durable Object holds one persistent WebSocket to AISStream.
-// All dashboard browsers read its state via HTTP, so every user sees the same
-// authoritative transit counts. Replaces per-browser AIS clients (P0.5 fix).
-//
-// Endpoints:
-//   GET  /state              → current vessel state + 24h transit count
-//   GET  /transits?range=24h → recent gate crossings
-//   POST /__ping             → manual restart / health probe (token-gated)
-//
-// State persisted in Durable Object storage:
-//   transits24h: [{mmsi, name, dir, time, lat, lng}, ...]   (rolling 24h)
-//   vesselState: {mmsi: {lat, lng, sog, heading, side, lastSeen, category, name}, ...}
-//   lastMsgTs:   unix ms of most recent AIS message
+// Cloudflare Worker — Hormuz AIS aggregator (Durable Object)
+// Single DO instance subscribes to AISStream once, computes gate-crossings
+// authoritatively, persists state. All dashboard browsers read this state
+// via HTTP — every user sees the same numbers.
 
 const GATE_LNG = 56.45;
 const GATE_LAT_MIN = 26.20;
 const GATE_LAT_MAX = 26.70;
 const CORRIDOR = { latMin: 26.0, latMax: 26.7, lngMin: 55.5, lngMax: 57.5 };
-const STATE_TTL_MS = 30 * 60 * 1000;       // drop vessel state after 30 min idle
-const TRANSIT_WINDOW = 24 * 3600 * 1000;   // rolling 24h
+const STATE_TTL_MS = 30 * 60 * 1000;
+const TRANSIT_WINDOW = 24 * 3600 * 1000;
 const RECONNECT_DELAY_MS = 15 * 1000;
-const SAVE_INTERVAL_MS = 30 * 1000;        // flush to durable storage every 30s
+const SAVE_INTERVAL_MS = 30 * 1000;
+const KEEPALIVE_MS = 5 * 60 * 1000;
 
 export class AISAggregator {
   constructor(state, env) {
     this.state = state;
     this.env = env;
     this.ws = null;
+    this.connectAttempt = 0;
     this.transits24h = [];
     this.vesselState = {};
     this.lastMsgTs = 0;
-    this.connecting = false;
     this.lastSaveTs = 0;
     this.dirty = false;
-    // Restore from durable storage on cold start
-    this.state.blockConcurrencyWhile(async () => {
-      this.transits24h = (await this.state.storage.get("transits24h")) || [];
-      this.vesselState = (await this.state.storage.get("vesselState")) || {};
-      this.lastMsgTs = (await this.state.storage.get("lastMsgTs")) || 0;
+    state.blockConcurrencyWhile(async () => {
+      this.transits24h = (await state.storage.get("transits24h")) || [];
+      this.vesselState = (await state.storage.get("vesselState")) || {};
+      this.lastMsgTs   = (await state.storage.get("lastMsgTs"))   || 0;
+      // Ensure an alarm is scheduled so we wake up periodically
+      const existing = await state.storage.getAlarm();
+      if (!existing) await state.storage.setAlarm(Date.now() + 30 * 1000);
     });
   }
 
   async fetch(request) {
     const url = new URL(request.url);
-    await this.ensureWebSocket();
+    // Lazy-connect WebSocket on first request (don't block the response)
+    if (!this.ws) this.connectWs().catch(e => console.error("ws connect:", e?.message));
 
     if (url.pathname === "/state") {
       return this.respondState();
@@ -53,92 +47,68 @@ export class AISAggregator {
     }
     if (url.pathname === "/__ping") {
       const tok = request.headers.get("X-Token");
-      if (tok !== this.env.SNAPSHOT_TOKEN) return new Response("unauthorized", { status: 401 });
-      this.reconnect();
-      return json({ ok: true, reconnect: true });
+      if (!this.env.SNAPSHOT_TOKEN || tok !== this.env.SNAPSHOT_TOKEN) {
+        return new Response("unauthorized", { status: 401 });
+      }
+      await this.connectWs();
+      return json({ ok: true, wsState: this.ws ? this.ws.readyState : null });
     }
     return new Response("not found", { status: 404 });
   }
 
-  async ensureWebSocket() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
-    if (this.connecting) return;
-    this.connecting = true;
-    try {
-      const pair = new WebSocketPair();
-      // Actually open outbound connection to AISStream
-      const upstream = await fetch("https://stream.aisstream.io/v0/stream", {
-        headers: { Upgrade: "websocket" },
-      }).catch(() => null);
-      if (!upstream || !upstream.webSocket) {
-        // fetch-based ws not available in this environment; use the WebSocket constructor
-        this.openClient();
-        return;
-      }
-      upstream.webSocket.accept();
-      this.ws = upstream.webSocket;
-      this.bindHandlers();
-      this.sendSubscribe();
-    } catch (e) {
-      console.error("ws open failed:", e?.message);
-      this.connecting = false;
-      this.state.storage.setAlarm(Date.now() + RECONNECT_DELAY_MS);
-    }
-  }
-
-  openClient() {
-    // Constructor-style WebSocket — works in Workers for outbound WS
-    const ws = new WebSocket("wss://stream.aisstream.io/v0/stream");
-    this.ws = ws;
-    ws.addEventListener("open", () => {
-      this.connecting = false;
-      this.sendSubscribe();
-    });
-    ws.addEventListener("message", (e) => this.onMessage(e));
-    ws.addEventListener("close", () => this.scheduleReconnect());
-    ws.addEventListener("error", () => this.scheduleReconnect());
-  }
-
-  bindHandlers() {
-    this.ws.addEventListener("message", (e) => this.onMessage(e));
-    this.ws.addEventListener("close", () => this.scheduleReconnect());
-    this.ws.addEventListener("error", () => this.scheduleReconnect());
-  }
-
-  sendSubscribe() {
+  async connectWs() {
+    if (this.ws && this.ws.readyState <= 1) return; // CONNECTING or OPEN
     if (!this.env.AIS_KEY) {
-      console.error("AIS_KEY env var missing");
+      console.error("AIS_KEY missing — cannot connect");
       return;
     }
-    this.ws.send(JSON.stringify({
-      APIKey: this.env.AIS_KEY,
-      BoundingBoxes: [[[24.0, 52.0], [28.5, 59.5]]],
-      FilterMessageTypes: ["PositionReport", "ShipStaticData"]
-    }));
-  }
+    try {
+      this.connectAttempt++;
+      // Cloudflare Workers outbound WebSocket pattern via fetch + Upgrade header
+      const resp = await fetch("https://stream.aisstream.io/v0/stream", {
+        headers: { "Upgrade": "websocket" },
+      });
+      const ws = resp.webSocket;
+      if (!ws) {
+        console.error("ws upgrade failed, status:", resp.status);
+        await this.state.storage.setAlarm(Date.now() + RECONNECT_DELAY_MS);
+        return;
+      }
+      ws.accept();
+      this.ws = ws;
+      this.connectAttempt = 0;
 
-  scheduleReconnect() {
-    this.connecting = false;
-    this.ws = null;
-    this.state.storage.setAlarm(Date.now() + RECONNECT_DELAY_MS);
-  }
+      ws.addEventListener("message", (e) => this.onMessage(e));
+      ws.addEventListener("close", () => {
+        this.ws = null;
+        this.state.storage.setAlarm(Date.now() + RECONNECT_DELAY_MS).catch(() => {});
+      });
+      ws.addEventListener("error", () => {
+        try { ws.close(); } catch (e) {}
+        this.ws = null;
+        this.state.storage.setAlarm(Date.now() + RECONNECT_DELAY_MS).catch(() => {});
+      });
 
-  reconnect() {
-    if (this.ws) {
-      try { this.ws.close(); } catch (e) {}
-      this.ws = null;
+      // Subscribe to Hormuz bounding box
+      ws.send(JSON.stringify({
+        APIKey: this.env.AIS_KEY,
+        BoundingBoxes: [[[24.0, 52.0], [28.5, 59.5]]],
+        FilterMessageTypes: ["PositionReport", "ShipStaticData"],
+      }));
+    } catch (e) {
+      console.error("connectWs error:", e?.message);
+      await this.state.storage.setAlarm(Date.now() + RECONNECT_DELAY_MS);
     }
-    this.connecting = false;
-    this.ensureWebSocket();
   }
 
   onMessage(e) {
     try {
-      const msg = JSON.parse(typeof e.data === "string" ? e.data : new TextDecoder().decode(e.data));
+      const text = typeof e.data === "string" ? e.data : new TextDecoder().decode(e.data);
+      const msg = JSON.parse(text);
       const meta = msg.MetaData || {};
       const mmsi = meta.MMSI;
-      const name = (meta.ShipName || "").trim();
       if (!mmsi) return;
+      const name = (meta.ShipName || "").trim();
       this.lastMsgTs = Date.now();
 
       if (msg.MessageType === "ShipStaticData") {
@@ -150,7 +120,6 @@ export class AISAggregator {
         return;
       }
       if (msg.MessageType !== "PositionReport") return;
-
       const pos = (msg.Message && msg.Message.PositionReport) || {};
       const lat = meta.latitude;
       const lng = meta.longitude;
@@ -158,7 +127,7 @@ export class AISAggregator {
       const heading = (pos.TrueHeading && pos.TrueHeading < 360) ? pos.TrueHeading : (pos.Cog || 0);
       const sog = pos.Sog || 0;
 
-      // Gate crossing detection (use previous longitude)
+      // Gate crossing detection
       const prev = this.vesselState[mmsi];
       if (prev && lat >= GATE_LAT_MIN && lat <= GATE_LAT_MAX) {
         const prevSide = prev.lng > GATE_LNG ? "east" : "west";
@@ -175,7 +144,7 @@ export class AISAggregator {
         }
       }
 
-      // Categorize vessel
+      // Categorize
       let category = "approach";
       if (sog < 0.5) category = "anchored";
       else if (sog >= 5 &&
@@ -195,25 +164,13 @@ export class AISAggregator {
       };
       this.dirty = true;
 
-      // Periodic flush to durable storage (avoid hot-path write per message)
+      // Periodic flush
       if (Date.now() - this.lastSaveTs > SAVE_INTERVAL_MS) {
-        this.persist();
+        this.persist().catch(() => {});
       }
-    } catch (e) {
-      console.error("msg parse:", e?.message);
+    } catch (err) {
+      console.error("msg parse:", err?.message);
     }
-  }
-
-  async persist() {
-    // Prune before save
-    this.prune();
-    this.lastSaveTs = Date.now();
-    await Promise.all([
-      this.state.storage.put("transits24h", this.transits24h),
-      this.state.storage.put("vesselState", this.vesselState),
-      this.state.storage.put("lastMsgTs", this.lastMsgTs),
-    ]);
-    this.dirty = false;
   }
 
   prune() {
@@ -225,18 +182,33 @@ export class AISAggregator {
     });
   }
 
+  async persist() {
+    this.prune();
+    this.lastSaveTs = Date.now();
+    await Promise.all([
+      this.state.storage.put("transits24h", this.transits24h),
+      this.state.storage.put("vesselState", this.vesselState),
+      this.state.storage.put("lastMsgTs", this.lastMsgTs),
+    ]);
+    this.dirty = false;
+  }
+
   async alarm() {
-    // Triggered on schedule for reconnection
+    // Wake-up: persist + ensure connection alive
     if (this.dirty) await this.persist();
-    await this.ensureWebSocket();
-    // Re-schedule periodic alarm for housekeeping
-    this.state.storage.setAlarm(Date.now() + 5 * 60 * 1000);
+    if (!this.ws || this.ws.readyState !== 1) {
+      await this.connectWs();
+    }
+    // Always re-schedule keepalive
+    await this.state.storage.setAlarm(Date.now() + KEEPALIVE_MS);
   }
 
   respondState() {
     this.prune();
     const categories = { transit: 0, anchored: 0, approach: 0 };
-    Object.values(this.vesselState).forEach(v => { if (categories[v.category] !== undefined) categories[v.category]++; });
+    Object.values(this.vesselState).forEach(v => {
+      if (categories[v.category] !== undefined) categories[v.category]++;
+    });
     return json({
       transits24h: this.transits24h.length,
       eastbound24h: this.transits24h.filter(t => t.dir === "eastbound").length,
@@ -244,7 +216,8 @@ export class AISAggregator {
       categories,
       vesselCount: Object.keys(this.vesselState).length,
       lastMsgAgeSec: this.lastMsgTs ? Math.floor((Date.now() - this.lastMsgTs) / 1000) : null,
-      wsConnected: !!(this.ws && this.ws.readyState === WebSocket.OPEN),
+      wsConnected: !!(this.ws && this.ws.readyState === 1),
+      wsState: this.ws ? this.ws.readyState : -1,
     });
   }
 
@@ -254,7 +227,7 @@ export class AISAggregator {
     const n = m ? parseInt(m[1], 10) : 24;
     const unit = m && m[2] === "d" ? 86400000 : 3600000;
     const cutoff = Date.now() - n * unit;
-    const list = this.transits24h.filter(t => t.time > cutoff).slice(-100);
+    const list = this.transits24h.filter(t => t.time > cutoff).slice(-200);
     return json({ count: list.length, transits: list });
   }
 }
@@ -265,10 +238,20 @@ export default {
     const obj = env.AIS.get(id);
     return obj.fetch(request);
   },
+  async scheduled(event, env) {
+    // Cron warm-up keeps DO alive
+    const id = env.AIS.idFromName("hormuz-singleton");
+    const obj = env.AIS.get(id);
+    return obj.fetch(new Request("https://internal/__warm"));
+  },
 };
 
 function json(obj) {
   return new Response(JSON.stringify(obj), {
-    headers: { "content-type": "application/json", "access-control-allow-origin": "*", "cache-control": "no-store" },
+    headers: {
+      "content-type": "application/json",
+      "access-control-allow-origin": "*",
+      "cache-control": "no-store",
+    },
   });
 }

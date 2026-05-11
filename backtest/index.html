@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backtest · Hormuz Watch</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;padding:0;min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:40px 24px 60px}
+header{margin-bottom:30px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.back{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;margin-bottom:18px}
+.back:hover{color:var(--amber)}
+h1{font-size:32px;font-weight:900;letter-spacing:-.01em;margin-bottom:6px}
+.sub{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+.controls{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:30px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;align-items:center}
+.ctrl-group{display:flex;flex-direction:column;gap:4px}
+.ctrl-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+select,input{background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;min-width:160px}
+select:focus,input:focus{outline:none;border-color:var(--amber)}
+.run-btn{margin-left:auto;background:var(--amber);color:#000;border:0;padding:10px 22px;border-radius:5px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.run-btn:hover{filter:brightness(1.1)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:14px;margin-bottom:24px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+.card-title{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.card-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--amber)}
+.card-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px}
+.chart-wrap{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:20px}
+.chart-title{font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px}
+canvas{width:100%;height:260px;display:block}
+.empty-state{background:var(--panel);border:1px dashed var(--border2);border-radius:8px;padding:40px 24px;text-align:center;margin-bottom:20px}
+.empty-state h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.empty-state p{font-family:var(--mono);font-size:12px;color:var(--muted);max-width:520px;margin:0 auto;line-height:1.6}
+.foot{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--muted2);text-align:center}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.diagnostic{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="back" href="/">← Back to dashboard</a>
+  <h1>Backtest lab</h1>
+  <div class="sub">Replay historical state · query D1 snapshots · compare metrics over time</div>
+</header>
+
+<div class="controls">
+  <div class="ctrl-group">
+    <span class="ctrl-label">Metric</span>
+    <select id="metric">
+      <option value="brent_price">Brent price</option>
+      <option value="wti_price">WTI price</option>
+      <option value="bw_spread">Brent-WTI spread</option>
+      <option value="transits_24h">24h transit count</option>
+      <option value="gfw_encounters">GFW encounters</option>
+      <option value="gfw_loitering">GFW loitering</option>
+      <option value="bdti">BDTI</option>
+      <option value="dark_pct">Dark traffic %</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Range</span>
+    <select id="range">
+      <option value="24h">Last 24 hours</option>
+      <option value="3d">Last 3 days</option>
+      <option value="7d" selected>Last 7 days</option>
+      <option value="30d">Last 30 days</option>
+      <option value="90d">Last 90 days</option>
+    </select>
+  </div>
+  <button class="run-btn" onclick="run()">Run</button>
+</div>
+
+<div id="results"></div>
+
+<div class="foot">
+© 2026 Aniket Kulkarni · <a href="/methodology">Methodology</a> · <a href="/terms">Terms</a> · <a href="/health">Health</a>
+</div>
+</div>
+
+<script>
+function fmt(v){
+  if (v === null || v === undefined) return "—";
+  if (Math.abs(v) >= 1000) return Math.round(v).toLocaleString();
+  if (Math.abs(v) >= 100) return v.toFixed(1);
+  if (Math.abs(v) >= 1) return v.toFixed(2);
+  return v.toFixed(3);
+}
+
+async function run() {
+  var metric = document.getElementById("metric").value;
+  var range  = document.getElementById("range").value;
+  var resultsEl = document.getElementById("results");
+  resultsEl.innerHTML = '<div class="empty-state"><p>Loading...</p></div>';
+
+  try {
+    var r = await fetch("/api/history?metric=" + metric + "&range=" + range);
+    var data = await r.json();
+    if (!data.points || !data.points.length) {
+      resultsEl.innerHTML = '<div class="empty-state">'
+        + '<h3>No historical data yet for this range</h3>'
+        + '<p>The historical store began collecting hourly snapshots on 2026-05-11. As days pass, longer ranges fill in. Try <code>24h</code> for the most recent data, or check back tomorrow for <code>3d</code>.</p>'
+        + '<p class="diagnostic">Endpoint returned ' + (data.count || 0) + ' points for metric: ' + metric + ' range: ' + range + '</p>'
+        + '</div>';
+      return;
+    }
+    renderResults(data, metric, range);
+  } catch (e) {
+    resultsEl.innerHTML = '<div class="empty-state"><h3>Query failed</h3><p>' + e.message + '</p></div>';
+  }
+}
+
+function renderResults(data, metric, range) {
+  var vs = data.points.map(p => p.v).filter(v => v !== null && Number.isFinite(v));
+  if (!vs.length) {
+    document.getElementById("results").innerHTML = '<div class="empty-state"><h3>No valid values yet</h3><p>Snapshots exist but the column ' + metric + ' is null for this period. Likely the underlying source was offline when snapshots ran. Try another metric.</p></div>';
+    return;
+  }
+  var min = Math.min.apply(null, vs);
+  var max = Math.max.apply(null, vs);
+  var avg = vs.reduce((a,b) => a+b, 0) / vs.length;
+  var first = vs[0];
+  var last = vs[vs.length-1];
+  var pctChange = first ? ((last - first) / first * 100) : 0;
+  var range_v = max - min;
+  // stddev
+  var variance = vs.reduce((s,v) => s + (v-avg)*(v-avg), 0) / vs.length;
+  var stddev = Math.sqrt(variance);
+
+  var html = '<div class="grid">'
+    + '<div class="card"><div class="card-title">First</div><div class="card-val">' + fmt(first) + '</div><div class="card-sub">' + new Date(data.points[0].ts * 1000).toLocaleString() + '</div></div>'
+    + '<div class="card"><div class="card-title">Last</div><div class="card-val">' + fmt(last) + '</div><div class="card-sub">' + new Date(data.points[data.points.length-1].ts * 1000).toLocaleString() + '</div></div>'
+    + '<div class="card"><div class="card-title">Change</div><div class="card-val" style="color:' + (pctChange >= 0 ? "var(--green)" : "var(--red)") + '">' + (pctChange >= 0 ? "▲" : "▼") + ' ' + Math.abs(pctChange).toFixed(2) + '%</div></div>'
+    + '<div class="card"><div class="card-title">Min · Max</div><div class="card-val">' + fmt(min) + ' · ' + fmt(max) + '</div><div class="card-sub">range ' + fmt(range_v) + '</div></div>'
+    + '<div class="card"><div class="card-title">Avg · σ</div><div class="card-val">' + fmt(avg) + '</div><div class="card-sub">±' + fmt(stddev) + ' σ</div></div>'
+    + '<div class="card"><div class="card-title">Data points</div><div class="card-val">' + data.points.length + '</div><div class="card-sub">over ' + range + '</div></div>'
+    + '</div>'
+    + '<div class="chart-wrap"><div class="chart-title">' + metric + ' · ' + range + '</div><canvas id="chart"></canvas></div>';
+  document.getElementById("results").innerHTML = html;
+  drawChart(data.points);
+}
+
+function drawChart(points) {
+  var c = document.getElementById("chart");
+  var dpr = window.devicePixelRatio || 1;
+  var w = c.clientWidth, h = 260;
+  c.width = w * dpr; c.height = h * dpr;
+  var ctx = c.getContext("2d");
+  ctx.scale(dpr, dpr);
+  // Margins
+  var ml = 50, mr = 14, mt = 8, mb = 28;
+  var iw = w - ml - mr, ih = h - mt - mb;
+  // Axes
+  var vs = points.map(p => p.v).filter(v => v !== null && Number.isFinite(v));
+  var mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs);
+  var pad = (mx - mn) * 0.1 || 1;
+  mn -= pad; mx += pad;
+  var ts0 = points[0].ts, ts1 = points[points.length-1].ts;
+  // grid
+  ctx.strokeStyle = "#18202e"; ctx.lineWidth = 1;
+  ctx.fillStyle = "#8099b3"; ctx.font = "10px JetBrains Mono";
+  for (var i = 0; i <= 4; i++) {
+    var y = mt + (ih * i / 4);
+    var val = mx - (mx - mn) * i / 4;
+    ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml + iw, y); ctx.stroke();
+    ctx.fillText(fmt(val), 2, y + 4);
+  }
+  // line
+  ctx.strokeStyle = "#f09014"; ctx.lineWidth = 2; ctx.lineJoin = "round";
+  ctx.beginPath();
+  var started = false;
+  points.forEach((p, i) => {
+    if (p.v === null || !Number.isFinite(p.v)) return;
+    var x = ml + ((p.ts - ts0) / (ts1 - ts0)) * iw;
+    var y = mt + (1 - (p.v - mn) / (mx - mn)) * ih;
+    if (!started) { ctx.moveTo(x, y); started = true; }
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  // fill
+  ctx.lineTo(ml + iw, mt + ih); ctx.lineTo(ml, mt + ih); ctx.closePath();
+  ctx.fillStyle = "rgba(240,144,20,0.08)"; ctx.fill();
+  // x-axis time labels
+  ctx.fillStyle = "#627a95"; ctx.font = "9px JetBrains Mono";
+  ctx.fillText(new Date(ts0 * 1000).toLocaleDateString(), ml, h - 6);
+  var endLabel = new Date(ts1 * 1000).toLocaleDateString();
+  ctx.fillText(endLabel, w - mr - 60, h - 6);
+}
+
+run();
+</script>
+</body>
+</html>
