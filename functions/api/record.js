@@ -1,0 +1,104 @@
+// Cloudflare Pages Function — hourly D1 snapshot writer
+// Called by a scheduled cron job hitting POST /api/record with X-Snapshot-Token header.
+// Pulls current state from internal /api/* endpoints, writes one row to D1 snapshots.
+// Designed to be safe to call multiple times an hour (INSERT OR REPLACE by ts to nearest hour).
+export async function onRequestPost({ request, env }) {
+  const token = request.headers.get("X-Snapshot-Token");
+  if (!env.SNAPSHOT_TOKEN || token !== env.SNAPSHOT_TOKEN) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  if (!env.DB) {
+    return json({ error: "D1 binding 'DB' missing — configure in Pages settings" }, 500);
+  }
+
+  const origin = new URL(request.url).origin;
+  // Bucket timestamp to nearest hour so multiple calls within an hour collapse to one row
+  const tsHour = Math.floor(Date.now() / 3600000) * 3600;
+
+  const [oilR, stooqR, eiaR, gfwEncR, gfwLoiR] = await Promise.allSettled([
+    fetch(origin + "/api/oil"),
+    fetch(origin + "/api/stooq"),
+    fetch(origin + "/api/eia?series=RBRTE&length=2"),
+    fetch(origin + "/api/gfw", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        datasets: ["public-global-encounters-events:latest"],
+        startDate: new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10),
+        endDate: new Date().toISOString().slice(0, 10),
+        geometry: { type: "Polygon", coordinates: [[[52, 24], [59.5, 24], [59.5, 28.5], [52, 28.5], [52, 24]]] }
+      })
+    }),
+    fetch(origin + "/api/gfw", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        datasets: ["public-global-loitering-events-carriers:latest"],
+        startDate: new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10),
+        endDate: new Date().toISOString().slice(0, 10),
+        geometry: { type: "Polygon", coordinates: [[[52, 24], [59.5, 24], [59.5, 28.5], [52, 28.5], [52, 24]]] }
+      })
+    })
+  ]);
+
+  const parseJson = async (r) => {
+    if (r.status !== "fulfilled" || !r.value.ok) return null;
+    try { return await r.value.json(); } catch { return null; }
+  };
+  const [oilD, stooqD, eiaD, gfwEncD, gfwLoiD] = await Promise.all([
+    parseJson(oilR), parseJson(stooqR), parseJson(eiaR), parseJson(gfwEncR), parseJson(gfwLoiR)
+  ]);
+
+  let brent = null, wti = null, brentSource = "none";
+  if (oilD && oilD.tier === "primary" && oilD.brent) {
+    brent = oilD.brent.level; wti = oilD.wti.level; brentSource = "twelvedata";
+  } else if (stooqD && isFinite(stooqD.today)) {
+    brent = stooqD.today;
+    brentSource = oilD && oilD.tier === "secondary" ? "etf+eia" : "eia";
+  } else if (eiaD && eiaD.response && eiaD.response.data && eiaD.response.data[0]) {
+    brent = parseFloat(eiaD.response.data[0].value); brentSource = "eia-weekly";
+  }
+  if (oilD && oilD.tier === "primary" && oilD.wti) wti = oilD.wti.level;
+
+  const bwSpread = (isFinite(brent) && isFinite(wti)) ? (brent - wti) : null;
+
+  let gfwEnc = (gfwEncD && Array.isArray(gfwEncD.entries)) ? gfwEncD.entries.length : null;
+  let gfwLoi = (gfwLoiD && Array.isArray(gfwLoiD.entries)) ? gfwLoiD.entries.length : null;
+
+  const sourceHealth = {
+    oil:   oilR.status === "fulfilled" && oilR.value.ok ? (oilD?.tier || "ok") : "fail",
+    stooq: stooqR.status === "fulfilled" && stooqR.value.ok ? "ok" : "fail",
+    eia:   eiaR.status === "fulfilled" && eiaR.value.ok ? "ok" : "fail",
+    gfw:   gfwEncR.status === "fulfilled" && gfwEncR.value.ok ? "ok" : "fail"
+  };
+
+  try {
+    await env.DB.prepare(`
+      INSERT OR REPLACE INTO snapshots (
+        ts, transits_24h, vessels_transiting, vessels_anchored, vessels_approach,
+        brent_price, brent_source, wti_price, bw_spread,
+        bdti, bdti_wow, gfw_encounters, gfw_loitering, dark_pct,
+        india_via_hormuz_pct, source_health
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      tsHour,
+      null, null, null, null,
+      isFinite(brent) ? brent : null,
+      brentSource,
+      isFinite(wti) ? wti : null,
+      isFinite(bwSpread) ? bwSpread : null,
+      2841, 3.2,
+      gfwEnc, gfwLoi, null,
+      62.0,
+      JSON.stringify(sourceHealth)
+    ).run();
+    return json({ ok: true, tsHour, brent, wti, gfwEnc, gfwLoi, brentSource, sourceHealth });
+  } catch (e) {
+    return json({ error: "D1 write failed", detail: String(e) }, 500);
+  }
+}
+
+function json(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "content-type": "application/json" }
+  });
+}

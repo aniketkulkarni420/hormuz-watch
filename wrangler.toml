@@ -1,0 +1,8 @@
+name = "hormuz-watch"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hormuz-watch-data"
+database_id = "cdd305ca-3113-4124-96c3-f0ffd3532fd3"
