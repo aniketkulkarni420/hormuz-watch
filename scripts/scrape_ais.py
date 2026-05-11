@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""Listen to AISStream for 60 seconds, capture vessel positions, detect gate crossings.
+
+Each run reads previous state from KV (vesselState, transits24h), listens for
+60 seconds, updates state in-memory with any new positions, detects crossings
+against previous longitude, then writes everything back. Designed for GHA's
+short-lived execution model — no persistent connection needed.
+
+Why GHA instead of Cloudflare Worker: free-tier Workers get evicted from memory
+after idle periods, breaking persistent WebSocket subscriptions. GHA runs
+short bursts every 10 minutes and persists state in KV between runs.
+"""
+import asyncio
+import json
+import os
+import sys
+import time
+import websockets
+import requests
+
+LISTEN_DURATION = 60          # seconds to listen each run
+GATE_LNG = 56.45
+GATE_LAT_MIN = 26.20
+GATE_LAT_MAX = 26.70
+CORRIDOR = {"latMin": 26.0, "latMax": 26.7, "lngMin": 55.5, "lngMax": 57.5}
+STATE_TTL_MS = 30 * 60 * 1000
+TRANSIT_WINDOW_MS = 24 * 3600 * 1000
+BBOX = [[[24.0, 52.0], [28.5, 59.5]]]
+
+CF_ACCOUNT_ID = os.environ["CF_ACCOUNT_ID"]
+CF_API_TOKEN  = os.environ["CF_API_TOKEN"]
+KV_NS         = os.environ["CF_KV_NAMESPACE_ID"]
+AIS_KEY       = os.environ["AIS_KEY"]
+
+
+def kv_get(key):
+    url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/storage/kv/namespaces/{KV_NS}/values/{key}"
+    r = requests.get(url, headers={"Authorization": f"Bearer {CF_API_TOKEN}"}, timeout=20)
+    if r.status_code == 200:
+        try: return json.loads(r.text)
+        except Exception: return None
+    return None
+
+
+def kv_put(key, value):
+    url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/storage/kv/namespaces/{KV_NS}/values/{key}"
+    r = requests.put(url, headers={"Authorization": f"Bearer {CF_API_TOKEN}", "Content-Type": "text/plain"},
+                     data=value if isinstance(value, str) else json.dumps(value, separators=(",", ":")),
+                     timeout=30)
+    return r.status_code == 200
+
+
+def categorize(lat, lng, sog, heading):
+    if sog < 0.5:
+        return "anchored"
+    if (CORRIDOR["latMin"] <= lat <= CORRIDOR["latMax"] and
+        CORRIDOR["lngMin"] <= lng <= CORRIDOR["lngMax"] and sog >= 5 and
+        ((250 <= heading <= 320) or (70 <= heading <= 140))):
+        return "transit"
+    return "approach"
+
+
+async def listen_and_capture(state, transits):
+    """Returns updated state, transits, and message count."""
+    msg_count = 0
+    async with websockets.connect("wss://stream.aisstream.io/v0/stream", ping_interval=20) as ws:
+        await ws.send(json.dumps({
+            "APIKey": AIS_KEY,
+            "BoundingBoxes": BBOX,
+            "FilterMessageTypes": ["PositionReport", "ShipStaticData"]
+        }))
+        end_time = time.time() + LISTEN_DURATION
+        while time.time() < end_time:
+            remaining = end_time - time.time()
+            if remaining <= 0:
+                break
+            try:
+                raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
+            except asyncio.TimeoutError:
+                break
+            try:
+                msg = json.loads(raw)
+            except Exception:
+                continue
+            msg_count += 1
+            meta = msg.get("MetaData") or {}
+            mmsi = meta.get("MMSI")
+            if not mmsi:
+                continue
+            mmsi = str(mmsi)
+            name = (meta.get("ShipName") or "").strip()
+            mt = msg.get("MessageType")
+            if mt == "ShipStaticData":
+                sd = (msg.get("Message") or {}).get("ShipStaticData") or {}
+                if mmsi in state:
+                    if sd.get("Type"): state[mmsi]["type"] = sd["Type"]
+                    if sd.get("Destination"): state[mmsi]["dest"] = sd["Destination"].strip()
+                continue
+            if mt != "PositionReport":
+                continue
+            pos = (msg.get("Message") or {}).get("PositionReport") or {}
+            lat = meta.get("latitude"); lng = meta.get("longitude")
+            if not (lat and lng) or (lat == 0 and lng == 0):
+                continue
+            heading = pos.get("TrueHeading") or pos.get("Cog") or 0
+            if heading >= 360: heading = pos.get("Cog") or 0
+            sog = pos.get("Sog") or 0
+
+            # Gate crossing detection
+            prev = state.get(mmsi)
+            now_ms = int(time.time() * 1000)
+            if prev and GATE_LAT_MIN <= lat <= GATE_LAT_MAX:
+                prev_side = "east" if prev["lng"] > GATE_LNG else "west"
+                curr_side = "east" if lng > GATE_LNG else "west"
+                if prev_side != curr_side:
+                    transits.append({
+                        "mmsi": mmsi,
+                        "name": name or prev.get("name") or f"MMSI {mmsi}",
+                        "dir": "eastbound" if curr_side == "east" else "westbound",
+                        "time": now_ms,
+                        "lat": lat, "lng": lng
+                    })
+
+            state[mmsi] = {
+                **(prev or {}),
+                "lat": lat, "lng": lng, "sog": sog, "heading": heading,
+                "category": categorize(lat, lng, sog, heading),
+                "lastSeen": now_ms,
+                "name": name or (prev and prev.get("name")) or f"MMSI {mmsi}",
+            }
+    return state, transits, msg_count
+
+
+def prune(state, transits):
+    now_ms = int(time.time() * 1000)
+    transits = [t for t in transits if (now_ms - t["time"]) < TRANSIT_WINDOW_MS]
+    state = {m: v for m, v in state.items() if (now_ms - v.get("lastSeen", 0)) < STATE_TTL_MS}
+    return state, transits
+
+
+def main():
+    print(f"=== AIS scrape at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
+    # Load previous state
+    prev_blob = kv_get("ais_state") or {}
+    state = prev_blob.get("vesselState") or {}
+    transits = prev_blob.get("transits24h") or []
+    print(f"  Loaded: {len(state)} vessels, {len(transits)} transits in last 24h")
+    # Listen + capture
+    state, transits, msg_count = asyncio.run(listen_and_capture(state, transits))
+    # Prune
+    state, transits = prune(state, transits)
+    # Categorize counts
+    cats = {"transit": 0, "anchored": 0, "approach": 0}
+    for v in state.values():
+        c = v.get("category")
+        if c in cats: cats[c] += 1
+    east = sum(1 for t in transits if t["dir"] == "eastbound")
+    west = sum(1 for t in transits if t["dir"] == "westbound")
+    # Write back
+    payload = {
+        "fetchedAt": int(time.time()),
+        "vesselState": state,
+        "transits24h": transits,
+        "summary": {
+            "transits24h": len(transits),
+            "eastbound24h": east,
+            "westbound24h": west,
+            "categories": cats,
+            "vesselCount": len(state),
+            "lastListenSec": LISTEN_DURATION,
+            "messagesProcessed": msg_count,
+        }
+    }
+    body = json.dumps(payload, separators=(",", ":"))
+    if not kv_put("ais_state", body):
+        print("  KV write FAILED"); sys.exit(1)
+    print(f"  ✓ KV write OK ({len(body)} bytes, {msg_count} messages, {len(state)} vessels, {len(transits)} transits, cats={cats})")
+
+
+if __name__ == "__main__":
+    main()

@@ -53,3 +53,41 @@ CREATE TABLE IF NOT EXISTS health_checks (
 );
 
 CREATE INDEX IF NOT EXISTS idx_health_checks_source_ts ON health_checks(source, ts);
+
+-- ─── Analyst commentary (Tier 2.4) ────────────────────────
+CREATE TABLE IF NOT EXISTS commentary (
+  ts            INTEGER PRIMARY KEY,                  -- unix seconds when posted
+  author        TEXT DEFAULT 'aniket',
+  title         TEXT,                                 -- optional one-line headline
+  body_md       TEXT NOT NULL,                        -- body (plain text / lightweight markdown)
+  signal_ctx    TEXT,                                 -- JSON of dashboard state at posting time (optional)
+  display_until INTEGER,                              -- when banner retires (NULL = always)
+  visibility    TEXT DEFAULT 'public'                 -- 'public' | 'subscriber' (gated later)
+);
+CREATE INDEX IF NOT EXISTS idx_commentary_ts ON commentary(ts);
+CREATE INDEX IF NOT EXISTS idx_commentary_display_until ON commentary(display_until);
+
+-- ─── Email digest subscribers (Tier 2.2) ──────────────────
+CREATE TABLE IF NOT EXISTS subscribers (
+  email           TEXT PRIMARY KEY,
+  joined_ts       INTEGER NOT NULL,
+  confirmed       INTEGER DEFAULT 0,                  -- 0 = unconfirmed, 1 = confirmed
+  confirm_token   TEXT,
+  segment         TEXT DEFAULT 'free',                -- 'free' | 'pro' | 'institutional'
+  unsubscribed_ts INTEGER,
+  source          TEXT                                -- where they signed up from (e.g. 'footer-form')
+);
+CREATE INDEX IF NOT EXISTS idx_subscribers_confirmed ON subscribers(confirmed);
+
+-- Digest run history
+CREATE TABLE IF NOT EXISTS digest_runs (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts              INTEGER NOT NULL,                   -- when generated
+  week_starting   TEXT,                               -- YYYY-MM-DD
+  preview_html    TEXT,
+  reviewed        INTEGER DEFAULT 0,
+  sent_ts         INTEGER,
+  sent_count      INTEGER DEFAULT 0,
+  status          TEXT DEFAULT 'draft'                -- 'draft' | 'reviewed' | 'sent' | 'failed'
+);
+CREATE INDEX IF NOT EXISTS idx_digest_runs_ts ON digest_runs(ts);

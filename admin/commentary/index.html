@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Commentary · Hormuz Watch</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;padding:0;min-height:100vh}
+.wrap{max-width:780px;margin:0 auto;padding:40px 24px}
+.back{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;margin-bottom:18px}
+.back:hover{color:var(--amber)}
+h1{font-size:28px;font-weight:900;letter-spacing:-.005em;margin-bottom:6px}
+.sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em;margin-bottom:32px}
+.token-row{margin-bottom:20px;padding:14px 16px;background:var(--panel);border:1px solid var(--border);border-radius:6px;display:flex;gap:10px;align-items:center}
+.token-row label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;flex-shrink:0}
+.token-row input{flex:1;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:4px;font-family:var(--mono);font-size:11px}
+.token-row button{background:transparent;border:1px solid var(--amber);color:var(--amber);padding:7px 12px;border-radius:4px;font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
+.token-row button:hover{background:var(--amber);color:#000}
+.token-status{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.token-status.ok{color:var(--green)}
+.token-status.err{color:var(--red)}
+form{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:30px}
+.field{margin-bottom:18px}
+.field label{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;font-weight:700}
+input[type="text"],textarea,select{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:5px;font-family:var(--mono);font-size:12px;font-family:var(--sans)}
+textarea{font-family:var(--sans);font-size:13px;line-height:1.55;min-height:160px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--amber)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.helper{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:4px;line-height:1.5}
+.submit{margin-top:12px;display:flex;gap:12px;align-items:center}
+.submit button{background:var(--amber);color:#000;border:0;padding:11px 22px;border-radius:5px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.submit button:disabled{opacity:.4;cursor:not-allowed}
+.submit button:hover:not(:disabled){filter:brightness(1.1)}
+.status{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+.status.ok{color:var(--green)}.status.err{color:var(--red)}
+h2{font-size:18px;font-weight:700;margin:24px 0 14px;color:var(--amber)}
+.recent{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px}
+.entry{padding:12px 0;border-bottom:1px solid var(--border)}
+.entry:last-child{border-bottom:none}
+.entry-meta{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-bottom:5px;letter-spacing:.06em;text-transform:uppercase}
+.entry-title{font-weight:700;font-size:14px;margin-bottom:4px}
+.entry-body{font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.6;white-space:pre-wrap}
+.foot{margin-top:30px;font-family:var(--mono);font-size:10px;color:var(--muted2);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="/">← Back to dashboard</a>
+<h1>Commentary admin</h1>
+<div class="sub">Post your analyst reads · token-gated · no public login UI</div>
+
+<div class="token-row">
+  <label>Admin token</label>
+  <input id="tok" type="password" placeholder="Paste your ADMIN_TOKEN here" autocomplete="off">
+  <button onclick="saveToken()">Save</button>
+  <span class="token-status" id="tokStatus">Not saved</span>
+</div>
+
+<form onsubmit="postCommentary(event)">
+  <div class="field">
+    <label>Title (optional)</label>
+    <input type="text" id="title" placeholder="Optional one-line headline">
+    <div class="helper">If left blank, just the body shows in the dashboard banner.</div>
+  </div>
+  <div class="field">
+    <label>Commentary *</label>
+    <textarea id="body" placeholder="Your analyst read. Plain text. 2-3 sentences works best." required></textarea>
+    <div class="helper">Keep it punchy. Visible to all dashboard users.</div>
+  </div>
+  <div class="row2">
+    <div class="field">
+      <label>Display duration (hours)</label>
+      <select id="display_hours">
+        <option value="">No expiry (always shown until next post)</option>
+        <option value="6">6 hours</option>
+        <option value="12">12 hours</option>
+        <option value="24" selected>24 hours (default)</option>
+        <option value="48">48 hours</option>
+        <option value="168">1 week</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Visibility</label>
+      <select id="visibility">
+        <option value="public" selected>Public (all dashboard visitors)</option>
+        <option value="subscriber" disabled>Subscriber-only (Tier 2 — not active yet)</option>
+      </select>
+    </div>
+  </div>
+  <div class="submit">
+    <button id="submitBtn" type="submit">Post commentary</button>
+    <span class="status" id="submitStatus"></span>
+  </div>
+</form>
+
+<h2>Recent posts</h2>
+<div class="recent" id="recent">Loading...</div>
+
+<div class="foot">© 2026 Aniket Kulkarni · admin · noindex · token-gated</div>
+</div>
+
+<script>
+function getToken(){ return sessionStorage.getItem("hormuz_admin_token") || ""; }
+function saveToken(){
+  const t = document.getElementById("tok").value.trim();
+  if (!t) return;
+  sessionStorage.setItem("hormuz_admin_token", t);
+  document.getElementById("tokStatus").textContent = "Saved this session";
+  document.getElementById("tokStatus").className = "token-status ok";
+  loadRecent();
+}
+// Populate input on load if saved
+window.addEventListener("DOMContentLoaded", () => {
+  if (getToken()) {
+    document.getElementById("tok").value = getToken();
+    document.getElementById("tokStatus").textContent = "Saved this session";
+    document.getElementById("tokStatus").className = "token-status ok";
+  }
+  loadRecent();
+});
+
+async function loadRecent(){
+  const el = document.getElementById("recent");
+  try {
+    const r = await fetch("/api/commentary?limit=10");
+    const d = await r.json();
+    if (!d.items || !d.items.length) {
+      el.innerHTML = '<div class="entry"><div class="entry-meta">No posts yet</div><div class="entry-body">First post = your dashboard banner.</div></div>';
+      return;
+    }
+    el.innerHTML = d.items.map(item => {
+      const dt = new Date(item.ts * 1000).toLocaleString();
+      const active = item.activeBanner ? '<span style="color:var(--green)">· active banner</span>' : '';
+      return '<div class="entry">'
+        + '<div class="entry-meta">' + dt + ' · by ' + item.author + ' ' + active + '</div>'
+        + (item.title ? '<div class="entry-title">' + escapeHtml(item.title) + '</div>' : '')
+        + '<div class="entry-body">' + escapeHtml(item.body) + '</div>'
+        + '</div>';
+    }).join("");
+  } catch (e) {
+    el.innerHTML = '<div class="entry-body" style="color:var(--red)">Failed to load: ' + e.message + '</div>';
+  }
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+async function postCommentary(e){
+  e.preventDefault();
+  const token = getToken();
+  if (!token) { alert("Save your admin token first"); return; }
+  const btn = document.getElementById("submitBtn");
+  const status = document.getElementById("submitStatus");
+  btn.disabled = true; status.textContent = "Posting..."; status.className = "status";
+  const payload = {
+    title: document.getElementById("title").value.trim() || null,
+    body_md: document.getElementById("body").value.trim(),
+    display_hours: document.getElementById("display_hours").value || null,
+    visibility: document.getElementById("visibility").value,
+  };
+  try {
+    const r = await fetch("/api/commentary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": token },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      status.textContent = "✓ Posted"; status.className = "status ok";
+      document.getElementById("title").value = "";
+      document.getElementById("body").value = "";
+      loadRecent();
+    } else {
+      status.textContent = "✗ " + (d.error || "failed"); status.className = "status err";
+    }
+  } catch (err) {
+    status.textContent = "✗ " + err.message; status.className = "status err";
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

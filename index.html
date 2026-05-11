@@ -326,6 +326,37 @@ header{
 .health-copy{font-family:var(--mono);font-size:8px;color:var(--muted2);letter-spacing:.06em;padding-left:16px;border-left:1px solid var(--border);margin-left:6px}
 .health-copy a{color:var(--muted);text-decoration:none}
 .health-copy a:hover{color:var(--amber)}
+.subscribe-bar{display:flex;align-items:center;gap:8px;padding:6px 14px;border-top:1px solid var(--border);background:rgba(7,9,14,.92);font-family:var(--mono);font-size:9px;color:var(--muted)}
+.subscribe-bar input{background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:5px 9px;border-radius:3px;font-family:var(--mono);font-size:9px;min-width:180px}
+.subscribe-bar button{background:var(--amber);color:#000;border:0;padding:5px 11px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.subscribe-bar button:hover{filter:brightness(1.1)}
+.subscribe-bar button:disabled{opacity:.5;cursor:not-allowed}
+.subscribe-msg{font-size:9px;color:var(--muted)}
+.subscribe-msg.ok{color:var(--green)}
+.subscribe-msg.err{color:var(--red)}
+@media(max-width:640px){.subscribe-bar{flex-wrap:wrap;font-size:9px}}
+
+/* ═══════════════════════════════════════════════════
+   COMMENTARY BANNER (Tier 2.4) — analyst read at top of dashboard
+   ═══════════════════════════════════════════════════ */
+.cmt-banner{
+  display:none;flex-shrink:0;
+  background:linear-gradient(90deg, rgba(240,144,20,.08) 0%, rgba(240,144,20,.02) 80%);
+  border-bottom:1px solid rgba(240,144,20,.3);
+  padding:9px 16px;font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.5;
+  position:relative;
+}
+.cmt-banner.show{display:flex;align-items:flex-start;gap:11px}
+.cmt-icon{flex-shrink:0;width:18px;height:18px;border-radius:50%;background:rgba(240,144,20,.2);border:1px solid rgba(240,144,20,.5);color:var(--amber);font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;margin-top:1px}
+.cmt-body{flex:1;min-width:0}
+.cmt-meta{font-size:9px;color:var(--amber);letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-bottom:2px}
+.cmt-title{font-weight:700;color:var(--text);margin-bottom:2px}
+.cmt-text{color:var(--text);white-space:pre-wrap}
+.cmt-text.collapsed{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cmt-expand{font-size:9px;color:var(--muted);cursor:pointer;letter-spacing:.06em;margin-left:4px;background:none;border:0;padding:0;font-family:inherit;text-transform:uppercase}
+.cmt-expand:hover{color:var(--amber)}
+.cmt-close{flex-shrink:0;background:none;border:0;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px}
+.cmt-close:hover{color:var(--amber)}
 
 /* inline tile age timestamp */
 .tile-age{display:block;font-family:var(--mono);font-size:8px;color:var(--muted2);margin-top:2px;letter-spacing:.04em}
@@ -486,6 +517,18 @@ header{
 </style>
 </head>
 <body>
+
+<!-- Analyst commentary banner (Tier 2.4) — shows latest active commentary -->
+<div class="cmt-banner" id="cmtBanner">
+  <div class="cmt-icon">A</div>
+  <div class="cmt-body">
+    <div class="cmt-meta" id="cmtMeta">Aniket's read</div>
+    <div class="cmt-title" id="cmtTitle"></div>
+    <div class="cmt-text collapsed" id="cmtText"></div>
+    <button class="cmt-expand" id="cmtExpand" onclick="toggleCmt()">Read more →</button>
+  </div>
+  <button class="cmt-close" onclick="dismissCmt()" title="Dismiss for this session">✕</button>
+</div>
 
 <header>
   <div class="hlogo">
@@ -2661,6 +2704,56 @@ function updateVolRow(){
 setInterval(updateVolRow, 30000);
 
 // ═══════════════════════════════════════════════════
+// COMMENTARY BANNER (Tier 2.4) — fetch latest active read + render
+// ═══════════════════════════════════════════════════
+var _cmtExpanded = false;
+function toggleCmt(){
+  _cmtExpanded = !_cmtExpanded;
+  var t = document.getElementById("cmtText");
+  var b = document.getElementById("cmtExpand");
+  if (!t || !b) return;
+  if (_cmtExpanded) { t.classList.remove("collapsed"); b.textContent = "Collapse"; }
+  else { t.classList.add("collapsed"); b.textContent = "Read more →"; }
+}
+function dismissCmt(){
+  var banner = document.getElementById("cmtBanner");
+  if (banner) banner.classList.remove("show");
+  // Remember dismissal for this session (per-post, by ts)
+  try {
+    var ts = banner && banner.dataset.ts;
+    if (ts) sessionStorage.setItem("hormuz_cmt_dismiss_" + ts, "1");
+  } catch (e) {}
+}
+function loadCommentary(){
+  fetch("/api/commentary?limit=1")
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (!d || !d.items || !d.items.length) return;
+      var item = d.items[0];
+      if (!item.activeBanner) return; // expired
+      var banner = document.getElementById("cmtBanner");
+      if (!banner) return;
+      // Skip if user already dismissed THIS post in this session
+      try { if (sessionStorage.getItem("hormuz_cmt_dismiss_" + item.ts) === "1") return; } catch (e) {}
+      banner.dataset.ts = item.ts;
+      var dt = new Date(item.ts * 1000);
+      var meta = "Aniket's read · " + dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      document.getElementById("cmtMeta").textContent = meta;
+      var titleEl = document.getElementById("cmtTitle");
+      if (item.title) { titleEl.textContent = item.title; titleEl.style.display = ""; }
+      else { titleEl.style.display = "none"; }
+      document.getElementById("cmtText").textContent = item.body;
+      // Hide "Read more" if body is short
+      var btn = document.getElementById("cmtExpand");
+      if (btn) btn.style.display = (item.body.length > 140) ? "" : "none";
+      banner.classList.add("show");
+    })
+    .catch(function(){ /* silent */ });
+}
+setTimeout(loadCommentary, 1200);
+setInterval(loadCommentary, 5 * 60 * 1000); // every 5 min
+
+// ═══════════════════════════════════════════════════
 // ONBOARDING OVERLAY — first-visit only (localStorage flag)
 // ═══════════════════════════════════════════════════
 function initOnboarding(){
@@ -2803,8 +2896,47 @@ if(document.readyState === "loading"){
   </div>
 </div>
 
+<!-- Email digest subscription bar (Tier 2.2 scaffold) -->
+<div class="subscribe-bar" id="subscribeBar">
+  <span>📧 Weekly Hormuz digest:</span>
+  <input type="email" id="subEmail" placeholder="your@email.com" />
+  <button id="subBtn" onclick="submitSubscribe()">Subscribe</button>
+  <span class="subscribe-msg" id="subMsg">Free · one Monday email · unsubscribe anytime</span>
+</div>
+
 <!-- Data freshness health bar — shows per-source last-fetch status -->
 <div class="health-bar" id="healthBar" aria-label="Data source freshness"></div>
+
+<script>
+async function submitSubscribe(){
+  var email = document.getElementById("subEmail").value.trim();
+  var msg = document.getElementById("subMsg");
+  var btn = document.getElementById("subBtn");
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    msg.textContent = "Enter a valid email"; msg.className = "subscribe-msg err";
+    return;
+  }
+  btn.disabled = true; msg.textContent = "Sending..."; msg.className = "subscribe-msg";
+  try {
+    var r = await fetch("/api/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, source: "footer-form" }),
+    });
+    var d = await r.json();
+    if (r.ok && d.ok) {
+      msg.textContent = d.message || "✓ Subscribed"; msg.className = "subscribe-msg ok";
+      document.getElementById("subEmail").value = "";
+    } else {
+      msg.textContent = "✗ " + (d.error || "Failed"); msg.className = "subscribe-msg err";
+    }
+  } catch (e) {
+    msg.textContent = "✗ " + e.message; msg.className = "subscribe-msg err";
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
 
 <!-- Cloudflare Web Analytics auto-injects when enabled in Pages dashboard (no code needed) -->
 
