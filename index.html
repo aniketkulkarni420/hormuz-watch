@@ -298,6 +298,36 @@ header{
 .sig-tooltip{transition:opacity .18s ease,transform .18s ease}
 
 /* ═══════════════════════════════════════════════════
+   DATA FRESHNESS BAR — bottom of page, per-source health
+   ═══════════════════════════════════════════════════ */
+.health-bar{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 20px;
+  background:rgba(7,9,14,.85);backdrop-filter:blur(10px);
+  border-top:1px solid var(--border);padding:7px 14px;
+  font-family:var(--mono);font-size:9px;color:var(--muted2);
+  position:relative;z-index:50;
+}
+.health-item{display:flex;align-items:center;gap:6px;letter-spacing:.04em}
+.health-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.health-dot.fresh{background:#1dd47e;box-shadow:0 0 5px #1dd47e}
+.health-dot.aging{background:#f09014;box-shadow:0 0 5px #f09014}
+.health-dot.stale{background:#ff3e52;box-shadow:0 0 5px #ff3e52}
+.health-dot.pending{background:#627a95}
+.health-dot.error{background:#ff3e52;animation:blink 1s infinite}
+.health-dot.connecting{background:#f09014;animation:blink 0.8s infinite}
+.health-dot.disabled{background:#3a4a5a}
+.health-dot.manual{background:#38aaff}
+.health-name{color:var(--muted)}
+.health-age{color:var(--text);font-weight:700}
+.health-age.aging{color:#f09014}
+.health-age.stale{color:#ff3e52}
+
+/* inline tile age timestamp */
+.tile-age{display:block;font-family:var(--mono);font-size:8px;color:var(--muted2);margin-top:2px;letter-spacing:.04em}
+.tile-age.aging{color:var(--amber)}
+.tile-age.stale{color:var(--red)}
+
+/* ═══════════════════════════════════════════════════
    MOBILE LAYOUT — bottom tabs, stacked sections
    Activates on viewports ≤ 768px wide
    ═══════════════════════════════════════════════════ */
@@ -473,7 +503,7 @@ header{
       <span class="sig-dir" id="sigVesselsDir" style="color:var(--muted)"></span>
     </div>
     <div class="sig-bot">
-      <span class="sig-label">Vessels live</span>
+      <span class="sig-label">Transits / 24h</span>
       <span class="sig-src src-live">AIS LIVE</span>
     </div>
     <div class="sig-tooltip" id="ttipVessels"></div>
@@ -942,6 +972,73 @@ document.addEventListener("click", function(e){
 // ═══════════════════════════════════════════════════
 // CLOCK + CARGO TICKER
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// DATA RECENCY FRAMEWORK — per-source freshness tracking
+// Records last successful fetch time + expected refresh window for each source.
+// UI auto-flags stale data (amber/red) and footer health bar surfaces all states.
+// ═══════════════════════════════════════════════════
+var dataAge = {
+  ais:   { name:"AIS (vessel positions)",      lastFetch:null, fresh:30*1000,     stale:5*60*1000,  status:"connecting", src:"AISStream.io" },
+  eia:   { name:"EIA weekly Brent + WTI",      lastFetch:null, fresh:6*3600*1000,  stale:24*3600*1000, status:"pending",  src:"EIA v2" },
+  daily: { name:"EIA daily Brent (DoD)",       lastFetch:null, fresh:30*60*1000,   stale:6*3600*1000,  status:"pending",  src:"EIA v2 daily" },
+  gfw:   { name:"GFW dark vessel events",      lastFetch:null, fresh:4*3600*1000,  stale:24*3600*1000, status:"pending",  src:"Global Fishing Watch" },
+  bdti:  { name:"BDTI freight index",          lastFetch:null, fresh:7*86400*1000, stale:14*86400*1000,status:"manual",   src:"Baltic Exchange (manual weekly)" },
+  acled: { name:"ACLED conflict events",       lastFetch:null, fresh:0,            stale:0,            status:"disabled", src:"ACLED (pending API access)" }
+};
+function markFetched(key){ if(dataAge[key]){ dataAge[key].lastFetch = Date.now(); dataAge[key].status = "live"; updateHealthBar(); } }
+function markFailed(key){ if(dataAge[key]){ dataAge[key].status = "error"; updateHealthBar(); } }
+function freshness(key){
+  var d = dataAge[key]; if (!d || !d.lastFetch) return "pending";
+  var age = Date.now() - d.lastFetch;
+  if (age < d.fresh) return "fresh";
+  if (age < d.stale) return "aging";
+  return "stale";
+}
+function fmtAge(ms){
+  if (ms < 60*1000) return Math.round(ms/1000)+"s";
+  if (ms < 3600*1000) return Math.round(ms/60000)+"m";
+  if (ms < 86400*1000) return Math.round(ms/3600000)+"h";
+  return Math.round(ms/86400000)+"d";
+}
+function ageLabel(key){
+  var d = dataAge[key]; if (!d || !d.lastFetch) return "—";
+  return fmtAge(Date.now() - d.lastFetch) + " ago";
+}
+
+// Render the footer health bar with per-source freshness
+function updateHealthBar(){
+  var bar = document.getElementById("healthBar");
+  if (!bar) return;
+  var order = ["ais","eia","daily","gfw","bdti","acled"];
+  var labels = {ais:"AIS", eia:"EIA wk", daily:"EIA day", gfw:"GFW", bdti:"BDTI", acled:"ACLED"};
+  var html = "";
+  order.forEach(function(k){
+    var d = dataAge[k]; if (!d) return;
+    var fresh = freshness(k);
+    var statusClass = d.status === "disabled" ? "disabled"
+                    : d.status === "error" ? "error"
+                    : d.status === "connecting" ? "connecting"
+                    : d.status === "manual" ? "manual"
+                    : !d.lastFetch ? "pending" : fresh;
+    var age = d.status === "disabled" ? "pending" : ageLabel(k);
+    var ageClass = fresh === "aging" ? "aging" : fresh === "stale" ? "stale" : "";
+    html += '<div class="health-item" title="'+d.name+' · '+d.src+'">'
+          + '<div class="health-dot '+statusClass+'"></div>'
+          + '<span class="health-name">'+labels[k]+'</span>'
+          + '<span class="health-age '+ageClass+'">'+age+'</span>'
+          + '</div>';
+  });
+  bar.innerHTML = html;
+}
+// Refresh health bar every 10s so timestamps stay current
+setInterval(updateHealthBar, 10000);
+// Initial render after DOM ready
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", updateHealthBar);
+} else {
+  setTimeout(updateHealthBar, 0);
+}
+
 var DOLLARS_PER_SEC = (21000000 * 80) / 86400;
 var _brentPrice = 80;         // updated by EIA
 var _yesterdayDollars = null; // derived from DOLLARS_PER_SEC at yesterday's close (86400s)
@@ -976,10 +1073,21 @@ var PRECRISIS_BRENT  = 80;
   document.getElementById("clock").textContent=p(n.getUTCHours())+":"+p(n.getUTCMinutes())+":"+p(n.getUTCSeconds())+" UTC";
   var secs=n.getUTCHours()*3600+n.getUTCMinutes()*60+n.getUTCSeconds();
 
-  // Live traffic counts (TREND_DATA[3]=today, [2]=yesterday). Recompute every tick.
-  var todayVess = (typeof TREND_DATA!=="undefined" && TREND_DATA[3] && TREND_DATA[3].val!=null) ? TREND_DATA[3].val : 0;
+  // Cargo flow now uses ACTUAL gate-crossing transit count from B+ engine
+  // (replaces snapshot vessel-count which counted anchored/loitering ships).
+  // todayVess = transits across the gate line in the elapsed portion of today
+  var todayVess = 0;
+  if (typeof transits24h !== "undefined") {
+    var midnightUTC = new Date();
+    midnightUTC.setUTCHours(0,0,0,0);
+    todayVess = transits24h.filter(function(t){ return t.time >= midnightUTC.getTime(); }).length;
+  }
+  // Yesterday = full prior day from localStorage tally (saved by daily storage hook)
   var yestVess  = (typeof TREND_DATA!=="undefined" && TREND_DATA[2] && TREND_DATA[2].val!=null) ? TREND_DATA[2].val : 0;
-  var todayRatio = todayVess / BASELINE_VESSELS;
+  // Project today's full-day total based on elapsed share of day
+  var dayElapsed = ((new Date()) - midnightUTC) / 86400000; // 0-1
+  var projectedToday = dayElapsed > 0.04 ? todayVess / dayElapsed : 0; // require >1h elapsed
+  var todayRatio = projectedToday / BASELINE_VESSELS;
   var yestRatio  = yestVess  / BASELINE_VESSELS;
 
   // Today's flow rate, traffic-adjusted
@@ -1478,7 +1586,9 @@ function updateTypeBars(){
   document.getElementById("inboundCount").textContent=inb;
   document.getElementById("outboundCount").textContent=outb;
 
-  var cnt = loggedVessels.length;
+  // Use 24h transit count from B+ engine as the "live" trend bar
+  // (was loggedVessels.length, which was a snapshot inflated by anchored vessels).
+  var cnt = (typeof transits24h !== "undefined") ? transits24h.length : loggedVessels.length;
   saveTodayCount(cnt);
   renderTrend(cnt);
   renderXV(cnt);
@@ -1524,6 +1634,129 @@ TANKERS.forEach(function(s){
 var AIS_KEY = "ec404228905084491fe9a87039c57bc4c67b8af4";
 var aisWs=null, aisConnected=false, reconnectTimer=null;
 var realVesselMarkers={}, vesselTypeCache={}, vesselDestCache={}, realCount=0;
+
+// ═══════════════════════════════════════════════════
+// VESSEL STATE ENGINE — B+ classification + gate-crossing transit counter
+// Tracks each vessel's category (Transit/Anchored/Approach) and detects
+// gate-line crossings at the strait's narrowest point for accurate flow.
+// ═══════════════════════════════════════════════════
+var GATE_LNG = 56.45;          // longitude of the narrowest point — crossing this counts a transit
+var GATE_LAT_MIN = 26.20;       // band where crossings are valid (north of Musandam)
+var GATE_LAT_MAX = 26.70;       // (south of Qeshm)
+var STRAIT_CORRIDOR = { latMin:26.0, latMax:26.7, lngMin:55.5, lngMax:57.5 };
+
+// Per-vessel state: last known position + last known side of gate
+var vesselState = {}; // {mmsi: {lat,lng,sog,heading,side,lastSeen,category}}
+var vesselCategoryCount = { transit:0, anchored:0, approach:0 };
+
+// Gate-crossing counter, persisted in localStorage with 24h rolling window
+var transitsKey = "hormuz_transits_v1";
+function loadTransits(){
+  try {
+    var raw = JSON.parse(localStorage.getItem(transitsKey)||"[]");
+    var cutoff = Date.now() - 24*3600*1000;
+    return raw.filter(function(t){ return t.time > cutoff; });
+  } catch(e){ return []; }
+}
+function saveTransits(arr){
+  try { localStorage.setItem(transitsKey, JSON.stringify(arr)); } catch(e){}
+}
+var transits24h = loadTransits();
+
+// BDTI is manually refreshed weekly via cron — anchor freshness to the constant
+// (BDTI_LAST_UPDATE updated each time the weekly job edits the value)
+var BDTI_LAST_UPDATE = "2026-05-05T00:00:00Z";
+dataAge.bdti.lastFetch = new Date(BDTI_LAST_UPDATE).getTime();
+dataAge.bdti.status = "manual";
+
+function categorizeVessel(lat, lng, sog, heading){
+  var inCorridor = lat>=STRAIT_CORRIDOR.latMin && lat<=STRAIT_CORRIDOR.latMax
+                && lng>=STRAIT_CORRIDOR.lngMin && lng<=STRAIT_CORRIDOR.lngMax;
+  // Anchored: very low speed regardless of position
+  if (sog < 0.5) return "anchored";
+  // Transiting: in strait corridor, moving meaningfully, heading aligned with TSS
+  if (inCorridor && sog >= 5) {
+    // Westbound lane heading ~250-320° (into Persian Gulf)
+    // Eastbound lane heading ~70-140° (into Gulf of Oman)
+    if ((heading>=250 && heading<=320) || (heading>=70 && heading<=140)) {
+      return "transit";
+    }
+  }
+  // Everything else moving but not classified as full transit
+  return "approach";
+}
+
+function recordGateCrossing(mmsi, name, lat, lng, prevLng){
+  // Did the vessel cross GATE_LNG between previous and current position?
+  // Only within the valid gate band (between Musandam and Qeshm)
+  if (lat < GATE_LAT_MIN || lat > GATE_LAT_MAX) return false;
+  var prevSide = prevLng > GATE_LNG ? "east" : "west";
+  var currSide = lng > GATE_LNG ? "east" : "west";
+  if (prevSide === currSide) return false;
+  // Crossing detected
+  var direction = currSide === "east" ? "eastbound" : "westbound";
+  transits24h.push({ mmsi:mmsi, name:name||"MMSI "+mmsi, dir:direction, time:Date.now() });
+  // Prune to 24h
+  var cutoff = Date.now() - 24*3600*1000;
+  transits24h = transits24h.filter(function(t){ return t.time > cutoff; });
+  saveTransits(transits24h);
+  return true;
+}
+
+function updateVesselState(mmsi, name, lat, lng, sog, heading){
+  var prev = vesselState[mmsi];
+  // Detect gate crossing using previous longitude
+  if (prev) {
+    recordGateCrossing(mmsi, name, lat, lng, prev.lng);
+  }
+  var category = categorizeVessel(lat, lng, sog, heading);
+  vesselState[mmsi] = {
+    lat:lat, lng:lng, sog:sog, heading:heading,
+    side: lng > GATE_LNG ? "east" : "west",
+    lastSeen: Date.now(),
+    category: category
+  };
+  recountCategories();
+}
+
+function recountCategories(){
+  vesselCategoryCount = { transit:0, anchored:0, approach:0 };
+  var staleCutoff = Date.now() - 5*60*1000; // 5min stale → drop from snapshot
+  Object.keys(vesselState).forEach(function(mmsi){
+    var v = vesselState[mmsi];
+    if (v.lastSeen < staleCutoff) return;
+    vesselCategoryCount[v.category]++;
+  });
+}
+
+// Periodic prune of stale vessel state + transit log
+setInterval(function(){
+  var staleCutoff = Date.now() - 30*60*1000; // 30min → fully drop
+  Object.keys(vesselState).forEach(function(m){
+    if (vesselState[m].lastSeen < staleCutoff) delete vesselState[m];
+  });
+  var transitCutoff = Date.now() - 24*3600*1000;
+  transits24h = transits24h.filter(function(t){ return t.time > transitCutoff; });
+  saveTransits(transits24h);
+  recountCategories();
+  updateVesselUI();
+}, 30*1000);
+
+// UI updater — keeps the sigVessels tile and Ships sub-text in sync
+function updateVesselUI(){
+  var t = vesselCategoryCount.transit;
+  var a = vesselCategoryCount.anchored;
+  var ap = vesselCategoryCount.approach;
+  var total24h = transits24h.length;
+  var sigEl = document.getElementById("sigVessels");
+  var dirEl = document.getElementById("sigVesselsDir");
+  if (sigEl) sigEl.textContent = total24h;
+  if (dirEl) {
+    dirEl.textContent = t+" now";
+    dirEl.style.color = "var(--muted)";
+    dirEl.style.fontSize = "9px";
+  }
+}
 
 // Destination whitelist — only display when AIS-reported destination string matches a known port.
 // Per "only certain" rule, ambiguous entries (FOR ORDERS, TBN, etc.) → silent.
@@ -1610,6 +1843,7 @@ function connectAIS(){
       aisWs.send(JSON.stringify({APIKey:AIS_KEY,BoundingBoxes:[[[24.0,52.0],[28.5,59.5]]],FilterMessageTypes:["PositionReport","ShipStaticData"]}));
       aisConnected=true;realCount=0;
       setAISBadge("live","Live AIS connected \u2014 real vessels loading\u2026");
+      markFetched("ais");
     };
     aisWs.onmessage=function(evt){
       try{
@@ -1632,7 +1866,12 @@ function connectAIS(){
         var lat=meta.latitude,lng=meta.longitude;
         if(!lat||!lng||(lat===0&&lng===0))return;
         var heading=(pos.TrueHeading&&pos.TrueHeading<360)?pos.TrueHeading:(pos.Cog||0);
-        var spd=(pos.Sog||0).toFixed(1);
+        var sogNum=(pos.Sog||0);
+        var spd=sogNum.toFixed(1);
+        // ── B+ engine: classify + detect gate crossing
+        updateVesselState(mmsi, name, lat, lng, sogNum, heading);
+        updateVesselUI();
+        markFetched("ais");
         var typeCode=vesselTypeCache[mmsi]||80;
         var color=typeColor(typeCode,name);
         var dname=name||("MMSI "+mmsi);
@@ -1757,16 +1996,26 @@ function renderEIA() {
   var noteEl = document.getElementById("brentNote");
   if(noteEl) {
     var sixWkChg = brentOld ? ((brent-brentOld)/brentOld*100).toFixed(1) : null;
+    // DoD source date (if Stooq/EIA-daily loaded) shows recency clearly
+    var dodSrc = _stooqDoD && _stooqDoD.todayDate ? (" \u00b7 DoD as of " + _stooqDoD.todayDate) : "";
     noteEl.textContent = "Week of " + period + " \u00b7 EIA weekly spot"
-      + (sixWkChg ? " \u00b7 6-wk: "+(parseFloat(sixWkChg)>=0?"+":"")+sixWkChg+"%" : "");
+      + (sixWkChg ? " \u00b7 6-wk: "+(parseFloat(sixWkChg)>=0?"+":"")+sixWkChg+"%" : "")
+      + dodSrc;
   }
 
+  // Tag reflects freshness state — EIA LIVE / AGING / STALE based on dataAge
   var pulseTag = document.getElementById("eiaPulseTag");
-  if(pulseTag){ pulseTag.textContent="EIA LIVE"; pulseTag.style.color="var(--green)"; pulseTag.style.background="rgba(29,212,126,.1)"; pulseTag.style.borderColor="rgba(29,212,126,.2)"; }
+  var f = freshness("eia");
+  if(pulseTag){
+    if (f === "fresh")      { pulseTag.textContent="EIA LIVE";  pulseTag.style.color="var(--green)";  pulseTag.style.background="rgba(29,212,126,.1)"; pulseTag.style.borderColor="rgba(29,212,126,.2)"; }
+    else if (f === "aging") { pulseTag.textContent="EIA AGING"; pulseTag.style.color="var(--amber)";  pulseTag.style.background="rgba(240,144,20,.1)"; pulseTag.style.borderColor="rgba(240,144,20,.3)"; }
+    else                    { pulseTag.textContent="EIA STALE"; pulseTag.style.color="var(--red)";    pulseTag.style.background="rgba(255,62,82,.1)";  pulseTag.style.borderColor="rgba(255,62,82,.3)"; }
+  }
   var sigEia = document.querySelector(".sig:last-child .sig-src");
   if(sigEia){ sigEia.textContent="EIA LIVE"; sigEia.className="sig-src src-live"; }
 
   eiaState.loaded = true;
+  markFetched("eia");
 }
 
 function drawSparkline(data, svgId, H) {
@@ -1825,6 +2074,7 @@ function fetchStooq(){
     .then(function(d){
       if(d && isFinite(d.today) && isFinite(d.yesterday)){
         _stooqDoD = d;
+        markFetched("daily");
         // Re-render market pulse with DoD if EIA already loaded
         if(eiaState.loaded) renderEIA();
         renderConclusions();
@@ -1915,6 +2165,7 @@ function renderGFW(){
     lc.appendChild(btn);
   } else if(ex){ex.querySelector(".lbname").textContent="GFW Events ("+total+")";}
   gfwState.loaded=true;
+  markFetched("gfw");
   console.log("GFW: "+enc+" encounters, "+lor+" loitering in Hormuz");
 }
 fetchGFW();
@@ -2207,6 +2458,9 @@ if(document.readyState === "loading"){
 }
 
 </script>
+<!-- Data freshness health bar — shows per-source last-fetch status -->
+<div class="health-bar" id="healthBar" aria-label="Data source freshness"></div>
+
 <!-- Mobile bottom tabs — only visible on ≤768px viewports -->
 <nav class="mobile-tabs" role="tablist" aria-label="Sections">
   <button class="mtab active" data-tab="map" type="button">
