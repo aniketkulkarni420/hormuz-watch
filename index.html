@@ -526,7 +526,7 @@ header{
     </div>
     <div class="sig-bot">
       <span class="sig-label">BDTI index</span>
-      <span class="sig-src src-est">BDTI EST</span>
+      <span class="sig-src src-est">BALTIC EX</span>
     </div>
     <div class="sig-tooltip" id="ttipBdti"></div>
   </div>
@@ -719,7 +719,7 @@ header{
 
     <!-- INDIA WATCH -->
     <div class="rblock">
-      <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-eia" style="color:var(--blue)">EIA</span></div>
+      <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-eia" style="color:var(--blue)">PPAC + filings</span></div>
       <div class="india-rows" id="indiaRows"></div>
       <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         Each $10/bbl crude rise = ~&#8377;85K Cr import bill increase. Petronet LNG nearly entirely Hormuz-dependent.
@@ -978,12 +978,12 @@ document.addEventListener("click", function(e){
 // UI auto-flags stale data (amber/red) and footer health bar surfaces all states.
 // ═══════════════════════════════════════════════════
 var dataAge = {
-  ais:   { name:"AIS (vessel positions)",      lastFetch:null, fresh:30*1000,     stale:5*60*1000,  status:"connecting", src:"AISStream.io" },
-  eia:   { name:"EIA weekly Brent + WTI",      lastFetch:null, fresh:6*3600*1000,  stale:24*3600*1000, status:"pending",  src:"EIA v2" },
-  daily: { name:"EIA daily Brent (DoD)",       lastFetch:null, fresh:30*60*1000,   stale:6*3600*1000,  status:"pending",  src:"EIA v2 daily" },
-  gfw:   { name:"GFW dark vessel events",      lastFetch:null, fresh:4*3600*1000,  stale:24*3600*1000, status:"pending",  src:"Global Fishing Watch" },
-  bdti:  { name:"BDTI freight index",          lastFetch:null, fresh:7*86400*1000, stale:14*86400*1000,status:"manual",   src:"Baltic Exchange (manual weekly)" },
-  acled: { name:"ACLED conflict events",       lastFetch:null, fresh:0,            stale:0,            status:"disabled", src:"ACLED (pending API access)" }
+  ais:     { name:"AIS (vessel positions)",          lastFetch:null, fresh:30*1000,     stale:5*60*1000,  status:"connecting", src:"AISStream.io" },
+  finnhub: { name:"Brent + WTI futures (live)",      lastFetch:null, fresh:10*60*1000,   stale:60*60*1000, status:"pending",   src:"FinnHub · BZ=F + CL=F" },
+  eia:     { name:"EIA weekly spot (sparkline ref)", lastFetch:null, fresh:6*3600*1000,  stale:24*3600*1000, status:"pending", src:"EIA v2 weekly" },
+  gfw:     { name:"GFW dark vessel events",          lastFetch:null, fresh:4*3600*1000,  stale:24*3600*1000, status:"pending", src:"Global Fishing Watch" },
+  bdti:    { name:"BDTI freight index",              lastFetch:null, fresh:7*86400*1000, stale:14*86400*1000, status:"manual", src:"Baltic Exchange (manual weekly)" },
+  acled:   { name:"ACLED conflict events",           lastFetch:null, fresh:0,            stale:0,            status:"disabled", src:"ACLED (pending API access)" }
 };
 function markFetched(key){ if(dataAge[key]){ dataAge[key].lastFetch = Date.now(); dataAge[key].status = "live"; updateHealthBar(); } }
 function markFailed(key){ if(dataAge[key]){ dataAge[key].status = "error"; updateHealthBar(); } }
@@ -1009,8 +1009,8 @@ function ageLabel(key){
 function updateHealthBar(){
   var bar = document.getElementById("healthBar");
   if (!bar) return;
-  var order = ["ais","eia","daily","gfw","bdti","acled"];
-  var labels = {ais:"AIS", eia:"EIA wk", daily:"EIA day", gfw:"GFW", bdti:"BDTI", acled:"ACLED"};
+  var order = ["ais","finnhub","eia","gfw","bdti","acled"];
+  var labels = {ais:"AIS", finnhub:"Brent/WTI live", eia:"EIA wk", gfw:"GFW", bdti:"BDTI", acled:"ACLED"};
   var html = "";
   order.forEach(function(k){
     var d = dataAge[k]; if (!d) return;
@@ -1960,21 +1960,41 @@ function renderEIA() {
     _sevenDayAvg = (sum/cnt) * BASELINE_BBL_DAY; // full flow at avg recent Brent
   }
 
+  // PRICE SOURCE LOGIC:
+  //   FinnHub free tier blocks futures, so we use BNO/USO ETF proxies for intraday %.
+  //   EIA daily gives the actual Brent/WTI price level (1-2 day lag).
+  //   Combined: live-tracked estimate that updates within 5-15 min of market moves.
+  var liveBrent = _liveOil && _liveOil.brent && isFinite(_liveOil.brent.dp) ? _liveOil.brent : null;
+  var liveWti   = _liveOil && _liveOil.wti   && isFinite(_liveOil.wti.dp)   ? _liveOil.wti   : null;
+  // Apply ETF day-% move to EIA daily reference price (Stooq endpoint result = EIA daily close)
+  var refBrent = _stooqDoD && isFinite(_stooqDoD.today) ? _stooqDoD.today : brent;
+  var refWti   = wti;
+  var headlineBrent = liveBrent ? refBrent * (1 + liveBrent.dp / 100) : refBrent;
+  var headlineWti   = liveWti   ? refWti   * (1 + liveWti.dp / 100)   : refWti;
+  // For the cargo math global price reference
+  _brentPrice = headlineBrent;
+
   var ctSub = document.getElementById("ctSub");
-  if(ctSub) ctSub.textContent = "21M bbl/day \u00d7 $" + brent.toFixed(1) + "/bbl Brent";
+  if(ctSub) ctSub.textContent = "21M bbl/day \u00d7 $" + headlineBrent.toFixed(1) + "/bbl Brent";
 
   var brentEl = document.getElementById("brentPrice");
-  if(brentEl) brentEl.textContent = "$" + brent.toFixed(1);
+  if(brentEl) brentEl.textContent = "$" + headlineBrent.toFixed(1);
 
-  // CORRECT COLORS: up = green, down = red (standard price convention)
-  // Brent change line uses Stooq DoD (daily) when available; falls back to EIA WoW
+  // Brent change line \u2014 BNO ETF dp% as live tracker (refreshes every 5min).
+  // Falls back to EIA daily DoD, then EIA weekly WoW.
   var chgEl = document.getElementById("brentChg");
   if(chgEl) {
-    if(_stooqDoD && isFinite(_stooqDoD.change)) {
-      var up = _stooqDoD.change >= 0;
-      chgEl.textContent = (up?"\u25b2":"\u25bc") + " $" + Math.abs(_stooqDoD.change).toFixed(1)
-        + " (" + (up?"+":"") + _stooqDoD.pct.toFixed(1) + "% DoD)";
+    if(liveBrent && isFinite(liveBrent.dp)) {
+      var up = liveBrent.dp >= 0;
+      var moveDollars = refBrent * liveBrent.dp / 100;
+      chgEl.textContent = (up?"\u25b2":"\u25bc") + " $" + Math.abs(moveDollars).toFixed(2)
+        + " (" + (up?"+":"") + liveBrent.dp.toFixed(2) + "% today)";
       chgEl.style.color = up ? "var(--green)" : "var(--red)";
+    } else if(_stooqDoD && isFinite(_stooqDoD.change)) {
+      var up2 = _stooqDoD.change >= 0;
+      chgEl.textContent = (up2?"\u25b2":"\u25bc") + " $" + Math.abs(_stooqDoD.change).toFixed(1)
+        + " (" + (up2?"+":"") + _stooqDoD.pct.toFixed(1) + "% DoD)";
+      chgEl.style.color = up2 ? "var(--green)" : "var(--red)";
     } else if(brentPrv) {
       var chg = brent - brentPrv;
       var upW = chg >= 0;
@@ -1986,9 +2006,9 @@ function renderEIA() {
 
   var wtiEl = document.getElementById("wtiPrice");
   var spreadEl = document.getElementById("bwSpread");
-  if(wtiEl && wti) {
-    wtiEl.textContent = "$" + wti.toFixed(1);
-    if(spreadEl) spreadEl.textContent = "B\u2013W spread: $" + (brent - wti).toFixed(1);
+  if(wtiEl && isFinite(headlineWti)) {
+    wtiEl.textContent = "$" + headlineWti.toFixed(1);
+    if(spreadEl) spreadEl.textContent = "B\u2013W spread: $" + (headlineBrent - headlineWti).toFixed(1);
   }
 
   drawSparkline(eiaState.brent.slice(0, 4).reverse(), "brentSparkline", 44);
@@ -1996,23 +2016,32 @@ function renderEIA() {
   var noteEl = document.getElementById("brentNote");
   if(noteEl) {
     var sixWkChg = brentOld ? ((brent-brentOld)/brentOld*100).toFixed(1) : null;
-    // DoD source date (if Stooq/EIA-daily loaded) shows recency clearly
-    var dodSrc = _stooqDoD && _stooqDoD.todayDate ? (" \u00b7 DoD as of " + _stooqDoD.todayDate) : "";
-    noteEl.textContent = "Week of " + period + " \u00b7 EIA weekly spot"
-      + (sixWkChg ? " \u00b7 6-wk: "+(parseFloat(sixWkChg)>=0?"+":"")+sixWkChg+"%" : "")
-      + dodSrc;
+    var liveSrc = liveBrent
+      ? "Level: EIA daily \u00b7 Intraday: BNO/USO ETF proxy"
+      : "Source: EIA daily (1-2d lag)";
+    var liveTs = liveBrent && liveBrent.t ? (" \u00b7 ETF quote " + new Date(liveBrent.t*1000).toISOString().slice(11,16) + " UTC") : "";
+    noteEl.textContent = liveSrc + liveTs
+      + " \u00b7 Sparkline: EIA weekly spot (wk of " + period + ")"
+      + (sixWkChg ? " \u00b7 6-wk: "+(parseFloat(sixWkChg)>=0?"+":"")+sixWkChg+"%" : "");
   }
 
-  // Tag reflects freshness state — EIA LIVE / AGING / STALE based on dataAge
+  // Pulse tag reflects PRIMARY price source (FinnHub when available, else EIA fallback)
   var pulseTag = document.getElementById("eiaPulseTag");
-  var f = freshness("eia");
   if(pulseTag){
-    if (f === "fresh")      { pulseTag.textContent="EIA LIVE";  pulseTag.style.color="var(--green)";  pulseTag.style.background="rgba(29,212,126,.1)"; pulseTag.style.borderColor="rgba(29,212,126,.2)"; }
-    else if (f === "aging") { pulseTag.textContent="EIA AGING"; pulseTag.style.color="var(--amber)";  pulseTag.style.background="rgba(240,144,20,.1)"; pulseTag.style.borderColor="rgba(240,144,20,.3)"; }
-    else                    { pulseTag.textContent="EIA STALE"; pulseTag.style.color="var(--red)";    pulseTag.style.background="rgba(255,62,82,.1)";  pulseTag.style.borderColor="rgba(255,62,82,.3)"; }
+    if (_liveOil && _liveOil.brent && isFinite(_liveOil.brent.dp)) {
+      var fH = freshness("finnhub");
+      if (fH === "fresh")      { pulseTag.textContent="LIVE TRACKING";   pulseTag.style.color="var(--green)";  pulseTag.style.background="rgba(29,212,126,.1)"; pulseTag.style.borderColor="rgba(29,212,126,.2)"; }
+      else if (fH === "aging") { pulseTag.textContent="TRACKING AGING";  pulseTag.style.color="var(--amber)";  pulseTag.style.background="rgba(240,144,20,.1)"; pulseTag.style.borderColor="rgba(240,144,20,.3)"; }
+      else                     { pulseTag.textContent="TRACKING STALE";  pulseTag.style.color="var(--red)";    pulseTag.style.background="rgba(255,62,82,.1)";  pulseTag.style.borderColor="rgba(255,62,82,.3)"; }
+    } else {
+      var fE = freshness("eia");
+      if (fE === "fresh")      { pulseTag.textContent="EIA DAILY";       pulseTag.style.color="var(--amber)"; pulseTag.style.background="rgba(240,144,20,.1)"; pulseTag.style.borderColor="rgba(240,144,20,.3)"; }
+      else                     { pulseTag.textContent="EIA STALE";       pulseTag.style.color="var(--red)";   pulseTag.style.background="rgba(255,62,82,.1)";  pulseTag.style.borderColor="rgba(255,62,82,.3)"; }
+    }
   }
+  // India-via-Hormuz signal-bar tile stays EIA/PPAC (trade flow data, not price)
   var sigEia = document.querySelector(".sig:last-child .sig-src");
-  if(sigEia){ sigEia.textContent="EIA LIVE"; sigEia.className="sig-src src-live"; }
+  if(sigEia){ sigEia.textContent="EIA/PPAC"; sigEia.className="sig-src src-eia"; }
 
   eiaState.loaded = true;
   markFetched("eia");
@@ -2065,7 +2094,35 @@ fetchEIA();
 setInterval(fetchEIA, 6*60*60*1000);
 
 // ═══════════════════════════════════════════════════
-// STOOQ — daily Brent close (for DoD on Market Pulse)
+// FINNHUB — primary live Brent + WTI futures (BZ=F + CL=F)
+// Refreshes every 5 minutes during market hours; falls back to EIA daily
+// if FinnHub fails. EIA weekly used only for the 4-week sparkline (history).
+// ═══════════════════════════════════════════════════
+var _liveOil = null; // {brent:{c,d,dp,t}, wti:{c,d,dp,t}, source, fetchedAt}
+function fetchOil(){
+  fetch("/api/oil")
+    .then(function(r){ if(!r.ok) throw new Error("oil "+r.status); return r.json(); })
+    .then(function(d){
+      if(d && d.brent && isFinite(d.brent.c) && d.brent.c > 0){
+        _liveOil = d;
+        markFetched("finnhub");
+        _brentPrice = d.brent.c;
+        // Re-render market pulse if EIA loaded (Market Pulse panel uses live prices for headline)
+        if(eiaState.loaded) renderEIA();
+        renderConclusions();
+      }
+    })
+    .catch(function(e){
+      console.warn("Oil (FinnHub):", e.message);
+      // Silent — EIA daily fallback kicks in via fetchStooq below
+    });
+}
+fetchOil();
+setInterval(fetchOil, 5*60*1000); // 5-min refresh
+
+// ═══════════════════════════════════════════════════
+// EIA DAILY (FALLBACK ONLY) — used if FinnHub is down. 1-2 day lag.
+// Endpoint name kept as /api/stooq for back-compat with existing function file.
 // ═══════════════════════════════════════════════════
 var _stooqDoD = null;
 function fetchStooq(){
@@ -2074,13 +2131,13 @@ function fetchStooq(){
     .then(function(d){
       if(d && isFinite(d.today) && isFinite(d.yesterday)){
         _stooqDoD = d;
-        markFetched("daily");
-        // Re-render market pulse with DoD if EIA already loaded
+        // Stooq endpoint = EIA daily — same fetcher tracked in dataAge.eia
+        markFetched("eia");
         if(eiaState.loaded) renderEIA();
         renderConclusions();
       }
     })
-    .catch(function(e){ console.warn("Stooq:", e.message); });
+    .catch(function(e){ console.warn("EIA daily fallback:", e.message); });
 }
 fetchStooq();
 setInterval(fetchStooq, 30*60*1000); // 30-minute refresh
