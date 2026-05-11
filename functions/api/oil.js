@@ -18,7 +18,7 @@ export async function onRequestGet({ env }) {
           const b = data.symbols.brent;
           const w = data.symbols.wti;
           return json({
-            source: "GitHub Actions · yfinance (BZ=F + CL=F)",
+            source: "Live commodity feed",
             tier: "primary",
             brent: { level: b.c, change: b.d, changePct: b.dp, open: b.o, prevClose: b.pc, high: b.h, low: b.l, t: b.t },
             wti:   { level: w.c, change: w.d, changePct: w.dp, open: w.o, prevClose: w.pc, high: w.h, low: w.l, t: w.t },

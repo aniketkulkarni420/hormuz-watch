@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+Allow: /methodology
+Allow: /terms
+Disallow: /api/
+
+# AI / LLM scrapers — not allowed without permission
+User-agent: GPTBot
+Disallow: /
+User-agent: ClaudeBot
+Disallow: /
+User-agent: anthropic-ai
+Disallow: /
+User-agent: CCBot
+Disallow: /
+User-agent: Google-Extended
+Disallow: /
+User-agent: PerplexityBot
+Disallow: /
+User-agent: cohere-ai
+Disallow: /
+
+Sitemap: https://hormuz-watch-7cd.pages.dev/sitemap.xml

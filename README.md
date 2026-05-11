@@ -1,29 +1,19 @@
 # Hormuz Watch
 
-A single-file dashboard monitoring the Strait of Hormuz with five live data signals — vessel traffic, dark-ship detection, freight rates, conflict events, and India crude exposure.
+Single-page dashboard combining live vessel-tracking data, satellite signals, oil prices, and freight indices for the Strait of Hormuz. Built for equity analysts watching Indian oil & gas, tanker stocks, and Middle East tension as a macro signal.
 
 **Live:** https://hormuz-watch-7cd.pages.dev
 **Methodology:** https://hormuz-watch-7cd.pages.dev/methodology
+**Terms:** https://hormuz-watch-7cd.pages.dev/terms
 
-## Stack
+## Architecture (high-level)
 
-- `index.html` — self-contained dashboard (Leaflet + vanilla JS, no build)
-- `functions/api/*.js` — Cloudflare Pages Functions (API proxies for EIA, GFW, FinnHub, Twelve Data, oil aggregator)
-- `functions/api/record.js` + `history.js` — D1 historical snapshot writer + reader
-- `scripts/scrape_oil.py` — GitHub Actions Python scraper for live Brent/WTI/tanker stocks via yfinance → Cloudflare KV
-- AISStream WebSocket — vessel positions
-
-## Data sources
-
-| Signal | Source | Refresh |
-|---|---|---|
-| Vessel positions | AISStream.io WebSocket | real-time |
-| Brent + WTI (live futures) | yfinance (BZ=F, CL=F) via GitHub Action → Cloudflare KV | 15 min |
-| Brent + WTI (fallback) | EIA daily | 1-2 day lag |
-| Dark ships / loitering | Global Fishing Watch v3 | 4 h |
-| Tanker freight (BDTI) | Baltic Exchange (manual weekly) | weekly |
-| Conflict events (ACLED) | pending API access | — |
-| Equity exposure | PPAC + company filings | quarterly review |
+- `index.html` — single-file dashboard (Leaflet + vanilla JS)
+- `functions/api/*` — Cloudflare Pages Functions (server-side data proxies)
+- `methodology/` — public methodology page
+- `terms/` — terms of use page
+- `scripts/` — scheduled data collection
+- Backend: Cloudflare D1 (historical snapshots) + KV (live cache)
 
 ## Local development
 
@@ -31,20 +21,16 @@ A single-file dashboard monitoring the Strait of Hormuz with five live data sign
 npx wrangler pages dev .
 ```
 
-Create `.dev.vars` (gitignored) from the example:
+Requires `.dev.vars` with environment variables (see deployment configuration).
 
-```
-cp .dev.vars.example .dev.vars
-# fill in: EIA_KEY, GFW_TOKEN, FINNHUB_KEY, TWELVE_KEY, SNAPSHOT_TOKEN
-```
+## License & Use
 
-## Deploy
+© 2026 Aniket Kulkarni. All rights reserved.
 
-Auto-deploys on push to `main` via Cloudflare Pages. Required env vars in Pages production settings:
-- `EIA_KEY`, `GFW_TOKEN`, `FINNHUB_KEY`, `TWELVE_KEY`, `SNAPSHOT_TOKEN`
+The dashboard interface is open for viewing and personal research use. The methodology, verdict logic, threshold values, port classifications, and OMC exposure analysis are proprietary research products. Commercial replication of the dashboard's analytical framework requires written permission.
 
-D1 + KV bindings configured in `wrangler.toml`.
+See [/terms](https://hormuz-watch-7cd.pages.dev/terms) for full terms of use.
 
 ## Author
 
-Built by [Aniket Kulkarni](https://www.linkedin.com/in/aniket-kulkarni-equity-research/).
+[Aniket Kulkarni](https://www.linkedin.com/in/aniket-kulkarni-equity-research/)

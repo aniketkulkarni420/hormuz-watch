@@ -323,6 +323,9 @@ header{
 .health-age{color:var(--text);font-weight:700}
 .health-age.aging{color:#f09014}
 .health-age.stale{color:#ff3e52}
+.health-copy{font-family:var(--mono);font-size:8px;color:var(--muted2);letter-spacing:.06em;padding-left:16px;border-left:1px solid var(--border);margin-left:6px}
+.health-copy a{color:var(--muted);text-decoration:none}
+.health-copy a:hover{color:var(--amber)}
 
 /* inline tile age timestamp */
 .tile-age{display:block;font-family:var(--mono);font-size:8px;color:var(--muted2);margin-top:2px;letter-spacing:.04em}
@@ -550,7 +553,7 @@ header{
     </div>
     <div class="sig-bot">
       <span class="sig-label">Transits / 24h</span>
-      <span class="sig-src src-live">AIS LIVE</span>
+      <span class="sig-src src-live">LIVE FEED</span>
     </div>
     <div class="sig-tooltip" id="ttipVessels"></div>
   </div>
@@ -561,7 +564,7 @@ header{
     </div>
     <div class="sig-bot">
       <span class="sig-label">Dark / suspect</span>
-      <span class="sig-src src-est" id="gfwBadge">GFW loading</span>
+      <span class="sig-src src-est" id="gfwBadge">SATELLITE</span>
     </div>
     <div class="sig-tooltip" id="ttipDark"></div>
   </div>
@@ -572,7 +575,7 @@ header{
     </div>
     <div class="sig-bot">
       <span class="sig-label">BDTI index</span>
-      <span class="sig-src src-est">BALTIC EX</span>
+      <span class="sig-src src-est">FREIGHT</span>
     </div>
     <div class="sig-tooltip" id="ttipBdti"></div>
   </div>
@@ -585,7 +588,7 @@ header{
     </div>
     <div class="sig-bot">
       <span class="sig-label">Incidents / 30d</span>
-      <span class="sig-src src-est">ACLED PENDING</span>
+      <span class="sig-src src-est">EVENTS PENDING</span>
     </div>
     <div class="sig-tooltip" id="ttipIncidents"></div>
   </div>
@@ -596,7 +599,7 @@ header{
     </div>
     <div class="sig-bot">
       <span class="sig-label">India via Hormuz</span>
-      <span class="sig-src src-eia">EIA/PPAC</span>
+      <span class="sig-src src-eia">OFFICIAL STATS</span>
     </div>
   </div>
 </div>
@@ -660,7 +663,7 @@ header{
     <div class="rblock">
       <div class="rhead">
         Flag state flow today
-        <span class="rhead-src src-live" style="color:var(--green)">AIS LIVE</span>
+        <span class="rhead-src src-live" style="color:var(--green)">LIVE FEED</span>
       </div>
       <div class="flag-rows" id="flagRows">
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Populating from live AIS&hellip;</div>
@@ -674,7 +677,7 @@ header{
     <div class="rblock">
       <div class="rhead">
         Vessel traffic trend
-        <span class="rhead-src src-eia" style="color:var(--blue)">AIS+EIA</span>
+        <span class="rhead-src src-eia" style="color:var(--blue)">TRAFFIC FEED</span>
       </div>
       <div id="trendBars" class="trend-bars"></div>
       <div class="trend-legend" id="trendLegend"></div>
@@ -750,7 +753,7 @@ header{
 
     <!-- LIVE TRAFFIC MIX -->
     <div class="rblock">
-      <div class="rhead">Vessel type mix <span class="rhead-src src-live" style="color:var(--green)">AIS LIVE</span></div>
+      <div class="rhead">Vessel type mix <span class="rhead-src src-live" style="color:var(--green)">LIVE FEED</span></div>
       <div class="traffic-grid">
         <div class="tcard"><div class="tc-val" id="inboundCount" style="color:var(--blue)">0</div><div class="tc-lbl">Inbound<br>vessels</div></div>
         <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber)">0</div><div class="tc-lbl">Outbound<br>vessels</div></div>
@@ -770,7 +773,7 @@ header{
 
     <!-- INDIA WATCH -->
     <div class="rblock">
-      <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-eia" style="color:var(--blue)">PPAC + filings</span></div>
+      <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-eia" style="color:var(--blue)">EQUITY DATA</span></div>
       <div class="india-rows" id="indiaRows"></div>
       <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         Each $10/bbl crude rise = ~&#8377;85K Cr import bill increase. Petronet LNG nearly entirely Hormuz-dependent.
@@ -1080,6 +1083,7 @@ function updateHealthBar(){
           + '<span class="health-age '+ageClass+'">'+age+'</span>'
           + '</div>';
   });
+  html += '<div class="health-copy">© 2026 Aniket Kulkarni · <a href="/methodology">Methodology</a> · <a href="/terms">Terms</a></div>';
   bar.innerHTML = html;
 }
 // Refresh health bar every 10s so timestamps stay current
@@ -2108,9 +2112,9 @@ function renderEIA() {
       else                     { pulseTag.textContent = "EIA STALE";   pulseTag.style.color = "var(--red)";   pulseTag.style.background = "rgba(255,62,82,.1)";  pulseTag.style.borderColor = "rgba(255,62,82,.3)"; }
     }
   }
-  // India-via-Hormuz signal-bar tile stays EIA/PPAC (trade flow data, not price)
+  // India-via-Hormuz signal-bar tile stays OFFICIAL STATS (trade flow data, not price)
   var sigEia = document.querySelector(".sig:last-child .sig-src");
-  if(sigEia){ sigEia.textContent="EIA/PPAC"; sigEia.className="sig-src src-eia"; }
+  if(sigEia){ sigEia.textContent="OFFICIAL STATS"; sigEia.className="sig-src src-eia"; }
 
   eiaState.loaded = true;
   markFetched("eia");
@@ -2249,7 +2253,7 @@ function gfwPost(type, cb){
 
 function fetchGFW(){
   var badge=document.getElementById("gfwBadge");
-  if(badge){badge.textContent="GFW...";badge.className="sig-src src-est";}
+  if(badge){badge.textContent="SATELLITE...";badge.className="sig-src src-est";}
   var done=0;
   function check(){if(++done>=2)renderGFW();}
   gfwPost("public-global-encounters-events:latest",function(err,rows){gfwState.encounters=err?[]:rows;check();});
@@ -2268,7 +2272,7 @@ function renderGFW(){
   var darkEl=document.getElementById("sigDark"), dirEl=document.getElementById("sigDarkDir"), badge=document.getElementById("gfwBadge");
   if(darkEl) darkEl.textContent=total>0?total:"0";
   if(dirEl){dirEl.textContent="";} // 4enc/0loi removed — info in hover tooltip instead
-  if(badge){badge.textContent="GFW LIVE";badge.className="sig-src src-live";}
+  if(badge){badge.textContent="SATELLITE";badge.className="sig-src src-live";}
   gfwMarkers.forEach(function(m){try{map.removeLayer(m);}catch(e){}});
   gfwMarkers=[];
   function addM(lat,lon,color,label){
@@ -2649,23 +2653,23 @@ if(document.readyState === "loading"){
     <div class="onboard-list">
       <div class="onboard-item">
         <div class="onboard-icon">🚢</div>
-        <div class="onboard-item-text"><b>Transits / 24h</b> — actual gate-line crossings tracked from live AIS, not anchored vessels</div>
+        <div class="onboard-item-text"><b>Transits / 24h</b> — actual gate-line crossings from live vessel-tracking data, not parked ships</div>
       </div>
       <div class="onboard-item">
         <div class="onboard-icon">💵</div>
-        <div class="onboard-item-text"><b>Brent + WTI</b> — live futures via GitHub Action scraper, EIA daily as fallback (lag clearly labeled)</div>
+        <div class="onboard-item-text"><b>Brent + WTI</b> — multi-source live futures with daily reference fallback. Lag clearly labeled when degraded.</div>
       </div>
       <div class="onboard-item">
         <div class="onboard-icon">🛰</div>
-        <div class="onboard-item-text"><b>Dark traffic</b> — Global Fishing Watch satellite SAR encounters + loitering events</div>
+        <div class="onboard-item-text"><b>Dark traffic</b> — satellite-detected vessels operating without standard maritime broadcasts</div>
       </div>
       <div class="onboard-item">
         <div class="onboard-icon">📊</div>
-        <div class="onboard-item-text"><b>Conclusions</b> — verdict badges on every panel (NORMAL · ELEVATED · HIGH · CRITICAL) with data-backed thresholds</div>
+        <div class="onboard-item-text"><b>Conclusions</b> — verdict badges on every panel (NORMAL · ELEVATED · HIGH · CRITICAL) using research-backed thresholds</div>
       </div>
       <div class="onboard-item">
         <div class="onboard-icon">⚡</div>
-        <div class="onboard-item-text"><b>Health bar at the bottom</b> shows freshness of every source. Click any badge to verify currency.</div>
+        <div class="onboard-item-text"><b>Health bar at the bottom</b> shows freshness of every signal. Real data, not stale numbers dressed as live.</div>
       </div>
     </div>
     <div class="onboard-cta">
