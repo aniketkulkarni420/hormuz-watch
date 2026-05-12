@@ -7,7 +7,7 @@ Paste this entire file into a new Claude session to resume work with zero contex
 
 ## 1. WHAT IT IS
 
-A single-page dashboard at **https://hormuz-watch-7cd.pages.dev** for monitoring the Strait of Hormuz with live multi-signal intelligence. Built for equity analysts watching Indian oil & gas, tanker stocks, and Middle East tension. Free, no login, public.
+A single-page dashboard at **https://hormuz-watch-2.pages.dev** for monitoring the Strait of Hormuz with live multi-signal intelligence. Built for equity analysts watching Indian oil & gas, tanker stocks, and Middle East tension. Free, no login, public.
 
 **Owner:** Aniket Kulkarni (personal product — NOT KamayaKya branded, NOT SEBI RA branded).
 
@@ -105,7 +105,7 @@ These are the ONLY secrets CF Pages Functions need. AIS_KEY is NOT used here —
 | `AIS_KEY` | AISStream.io API key — ONLY here, not in CF | YES | set (verify validity) |
 | `EIA_KEY` | Same value as CF Pages env | YES | set |
 | `SNAPSHOT_TOKEN` | Same value as CF Pages env — scraper POSTs to /api/record, watchdog GETs /api/diag | YES | **MISSING** |
-| `SITE_URL` | `https://hormuz-watch-7cd.pages.dev` | Optional (default works) | missing OK |
+| `SITE_URL` | `https://hormuz-watch-2.pages.dev` | Optional (default works) | missing OK |
 | `RESEND_KEY` | Same value as CF Pages env — watchdog uses for alert emails | YES for alerts | **MISSING** |
 | `ALERT_EMAIL` | Email address to receive watchdog stale-feed alerts | YES for alerts | **MISSING** |
 
@@ -347,8 +347,8 @@ CREATE TABLE health_checks (ts, source, status, latency_ms, http_status, error);
 
 ### Step 1 — Verify production
 ```bash
-curl -s https://hormuz-watch-7cd.pages.dev/health | grep -o 'overall'
-curl -s https://hormuz-watch-7cd.pages.dev/api/oil | head -c 200
+curl -s https://hormuz-watch-2.pages.dev/health | grep -o 'overall'
+curl -s https://hormuz-watch-2.pages.dev/api/oil | head -c 200
 ```
 Should both return 200 with JSON.
 
@@ -624,7 +624,7 @@ watchdog itself is also down. Belt-and-suspenders: add an external monitor.
 3. Settings:
    - Monitor Type: **Keyword**
    - Friendly Name: `Hormuz Watch · diag healthy`
-   - URL: `https://hormuz-watch-7cd.pages.dev/api/diag?token=<YOUR_SNAPSHOT_TOKEN>`
+   - URL: `https://hormuz-watch-2.pages.dev/api/diag?token=<YOUR_SNAPSHOT_TOKEN>`
    - Keyword Type: **Should exist** (alert if missing)
    - Keyword Value: `"healthy":true`
    - Monitoring Interval: **5 minutes**

@@ -30,7 +30,7 @@ HEADERS = {
 }
 
 SNAPSHOT_TOKEN = os.environ.get("SNAPSHOT_TOKEN", "")
-SITE_URL = os.environ.get("SITE_URL", "https://hormuz-watch-7cd.pages.dev")
+SITE_URL = os.environ.get("SITE_URL", "https://hormuz-watch-2.pages.dev")
 
 # BDTI sanity bounds — anything outside this range is almost certainly a misread
 BDTI_MIN = 400

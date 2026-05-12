@@ -290,7 +290,7 @@ def get_kv(key):
 def maybe_snapshot(last_snapshot_ts):
     """Call /api/record if >55 min since last snapshot. FORCE_SNAPSHOT=1 bypasses guard."""
     SNAPSHOT_TOKEN = os.environ.get("SNAPSHOT_TOKEN", "")
-    SITE_URL = os.environ.get("SITE_URL", "https://hormuz-watch-7cd.pages.dev")
+    SITE_URL = os.environ.get("SITE_URL", "https://hormuz-watch-2.pages.dev")
     if not SNAPSHOT_TOKEN:
         print("  SNAPSHOT_TOKEN not set — skipping D1 snapshot")
         return

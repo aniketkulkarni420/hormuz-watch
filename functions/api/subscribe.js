@@ -72,7 +72,7 @@ async function _handleSubscribePost({ request, env }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: env.RESEND_FROM || "Hormuz Watch <hello@hormuz-watch-7cd.pages.dev>",
+          from: env.RESEND_FROM || "Hormuz Watch <hello@hormuz-watch-2.pages.dev>",
           to: [email],
           subject: "Confirm your Hormuz Watch subscription",
           html:
@@ -81,7 +81,7 @@ async function _handleSubscribePost({ request, env }) {
             '<p>You signed up for the Hormuz Watch weekly digest. Click below to confirm — takes 5 seconds.</p>' +
             '<p style="margin:22px 0"><a href="' + confirmUrl + '" style="background:#f09014;color:#000;padding:12px 22px;text-decoration:none;border-radius:5px;font-weight:700">Confirm subscription</a></p>' +
             '<p style="font-size:12px;color:#666">If you didn\'t sign up, ignore this email. No further messages will be sent.</p>' +
-            '<p style="font-size:11px;color:#999;margin-top:30px">Hormuz Watch · by Aniket Kulkarni · <a href="https://hormuz-watch-7cd.pages.dev" style="color:#999">hormuz-watch-7cd.pages.dev</a></p>' +
+            '<p style="font-size:11px;color:#999;margin-top:30px">Hormuz Watch · by Aniket Kulkarni · <a href="https://hormuz-watch-2.pages.dev" style="color:#999">hormuz-watch-2.pages.dev</a></p>' +
             '</div>',
         }),
       });
