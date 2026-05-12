@@ -1,5 +1,6 @@
 // Cloudflare Pages Function — Global Fishing Watch v3 proxy
 // Holds GFW_TOKEN (JWT) server-side. Client POSTs JSON body, we forward + add auth.
+// KV caching: GFW satellite data updates every 4-12h, so we cache for 4h per unique query.
 export async function onRequestPost({ request, env }) {
   if (!env.GFW_TOKEN) {
     return json({ error: "GFW_TOKEN not configured" }, 500);
@@ -21,6 +22,36 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "dataset not allowed" }, 400);
   }
 
+  // ── KV cache check ────────────────────────────────────────────────────────
+  const cacheKey = "gfw_" + btoa(JSON.stringify({
+    start: body.startDate,
+    end: body.endDate,
+    dataset: body.datasets?.[0]
+  })).slice(0, 20);
+
+  const FOUR_HOURS = 4 * 3600 * 1000;
+
+  if (env.OIL_KV) {
+    try {
+      const cached = await env.OIL_KV.get(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.cachedAt && (Date.now() - parsed.cachedAt) < FOUR_HOURS) {
+          return new Response(JSON.stringify(parsed.data), {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "cache-control": "public, max-age=14400",
+              "access-control-allow-origin": "*",
+              "X-Cache": "HIT"
+            }
+          });
+        }
+      }
+    } catch { /* fall through to live fetch */ }
+  }
+
+  // ── Live GFW fetch ────────────────────────────────────────────────────────
   const url = "https://gateway.api.globalfishingwatch.org/v3/events?limit=200&offset=0";
   try {
     const r = await fetch(url, {
@@ -33,12 +64,25 @@ export async function onRequestPost({ request, env }) {
       cf: { cacheTtl: 1800, cacheEverything: true }
     });
     const text = await r.text();
+
+    // Store in KV on success
+    if (r.ok && env.OIL_KV) {
+      try {
+        let parsed;
+        try { parsed = JSON.parse(text); } catch { parsed = text; }
+        await env.OIL_KV.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), data: parsed }),
+          { expirationTtl: 86400 }  // auto-expire after 24h as safety net
+        );
+      } catch { /* non-fatal */ }
+    }
+
     return new Response(text, {
       status: r.status,
       headers: {
         "content-type": "application/json",
-        "cache-control": "public, max-age=1800",
-        "access-control-allow-origin": "*"
+        "cache-control": "public, max-age=14400",
+        "access-control-allow-origin": "*",
+        "X-Cache": "MISS"
       }
     });
   } catch (e) {

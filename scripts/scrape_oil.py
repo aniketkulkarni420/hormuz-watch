@@ -194,11 +194,45 @@ def eia(series):
         return None
 
 
-def fetch_commodity(name, yahoo_sym, stooq_sym, fred_id, eia_sym):
-    """Try each source in order. First success wins."""
+SANITY_RANGES = {
+    "brent":          (30, 300),   # $/bbl — hard outer bounds
+    "wti":            (20, 290),
+    "brent_official": (30, 300),
+    "wti_official":   (20, 290),
+}
+
+def sanity_check(sym, q):
+    """Returns True if price is within plausible range."""
+    if not q or not isinstance(q.get("c"), (int, float)):
+        return False
+    lo, hi = SANITY_RANGES.get(sym, (0, 99999))
+    if not (lo <= q["c"] <= hi):
+        print(f"  SANITY FAIL {sym}: ${q['c']:.2f} outside [{lo}, {hi}] — discarding")
+        return False
+    return True
+
+
+def cross_verify(results):
+    """Compare live estimate vs official reference. Log divergence > 15%."""
+    b_live = results.get("brent", {}).get("c")
+    b_off  = results.get("brent_official", {}).get("c")
+    if b_live and b_off and b_off > 0:
+        pct_diff = abs(b_live - b_off) / b_off * 100
+        results["brent_divergence_pct"] = round(pct_diff, 2)
+        if pct_diff > 15:
+            print(f"  WARN: Brent live ${b_live:.2f} vs official ${b_off:.2f} = {pct_diff:.1f}% gap — possible demo data")
+            results["brent_live_suspect"] = True
+        else:
+            results["brent_live_suspect"] = False
+    return results
+
+
+def fetch_commodity(name, yahoo_sym, fred_id, eia_sym):
+    """Try each source in order. Stooq commodity CSVs (cb.f, cl.f) have been
+    broken since 2021 — omitted here. Stooq is still used for equities/ETFs
+    via fetch_stock(). Chain: yahoo → fred → eia."""
     for fn_name, fn in [
         ("yahoo", lambda: yahoo_chart(yahoo_sym)),
-        ("stooq", lambda: stooq(stooq_sym)),
         ("fred",  lambda: fred(fred_id) if fred_id else None),
         ("eia",   lambda: eia(eia_sym)),
     ]:
@@ -230,9 +264,52 @@ def put_kv(key, value):
     return True
 
 
+def get_kv(key):
+    url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/storage/kv/namespaces/{KV_NS}/values/{key}"
+    try:
+        r = requests.get(url, headers={"Authorization": f"Bearer {CF_API_TOKEN}"}, timeout=15)
+        if r.status_code == 200:
+            return json.loads(r.text)
+    except Exception:
+        pass
+    return None
+
+
+def maybe_snapshot(last_snapshot_ts):
+    """Call /api/record if >55 min since last snapshot."""
+    SNAPSHOT_TOKEN = os.environ.get("SNAPSHOT_TOKEN", "")
+    SITE_URL = os.environ.get("SITE_URL", "https://hormuz-watch-7cd.pages.dev")
+    if not SNAPSHOT_TOKEN:
+        print("  SNAPSHOT_TOKEN not set — skipping D1 snapshot")
+        return
+    now = int(time.time())
+    if last_snapshot_ts and (now - last_snapshot_ts) < 3300:  # 55 min
+        print(f"  D1 snapshot: skipping (last was {(now - last_snapshot_ts) // 60}m ago)")
+        return
+    try:
+        r = requests.post(
+            SITE_URL + "/api/record",
+            headers={"X-Snapshot-Token": SNAPSHOT_TOKEN, "Content-Type": "application/json"},
+            json={"source": "gha-oil-cron"},
+            timeout=30
+        )
+        print(f"  D1 snapshot: {'✓' if r.ok else '✗'} HTTP {r.status_code}")
+        if r.ok:
+            put_kv("last_snapshot_ts", str(now))
+    except Exception as e:
+        print(f"  D1 snapshot error: {e}")
+
+
 def main():
     print(f"=== {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
     results = {}
+
+    # Read last D1 snapshot timestamp from KV before fetching (need it later)
+    try:
+        last_snap_raw = get_kv("last_snapshot_ts")
+        last_snapshot_ts = int(last_snap_raw) if last_snap_raw else None
+    except Exception:
+        last_snapshot_ts = None
 
     # ── LIVE PRICE TRACK ──────────────────────────────────────────────────────
     # Try OilPriceAPI demo first (unauthenticated, 5-min fresh). If it fails,
@@ -240,35 +317,46 @@ def main():
     b_live, w_live = oilpriceapi_demo()
 
     if b_live and w_live:
-        results["brent"] = b_live
-        results["wti"]   = w_live
+        if sanity_check("brent", b_live): results["brent"] = b_live
+        else: print("  ✗ brent  live failed sanity check — discarded")
+        if sanity_check("wti", w_live):   results["wti"]   = w_live
+        else: print("  ✗ wti    live failed sanity check — discarded")
     else:
-        print("  oilpriceapi_demo failed — falling back to Yahoo/Stooq chain")
-        brent = fetch_commodity("brent", "BZ=F", "cb.f", None, None)  # skip EIA/FRED — those are official track
-        if brent: results["brent"] = brent; print(f"  ✓ brent  via {brent['src']:10s}: ${brent['c']:>8.2f} ({brent['dp']:+.2f}%)")
-        else:     print("  ✗ brent  live track all failed")
+        print("  oilpriceapi_demo failed — falling back to Yahoo chain")
+        brent = fetch_commodity("brent", "BZ=F", None, None)  # skip EIA/FRED — those are official track
+        if brent and sanity_check("brent", brent):
+            results["brent"] = brent
+            print(f"  ✓ brent  via {brent['src']:10s}: ${brent['c']:>8.2f} ({brent['dp']:+.2f}%)")
+        else:
+            print("  ✗ brent  live track all failed")
 
-        wti = fetch_commodity("wti", "CL=F", "cl.f", None, None)
-        if wti: results["wti"] = wti; print(f"  ✓ wti    via {wti['src']:10s}: ${wti['c']:>8.2f} ({wti['dp']:+.2f}%)")
-        else:   print("  ✗ wti    live track all failed")
+        wti = fetch_commodity("wti", "CL=F", None, None)
+        if wti and sanity_check("wti", wti):
+            results["wti"] = wti
+            print(f"  ✓ wti    via {wti['src']:10s}: ${wti['c']:>8.2f} ({wti['dp']:+.2f}%)")
+        else:
+            print("  ✗ wti    live track all failed")
 
     # ── OFFICIAL REFERENCE TRACK ──────────────────────────────────────────────
     # Always fetch EIA/FRED daily spot regardless of live track status.
     # These have an explicit publish date — shown in frontend as "EIA spot · as of <date>".
     print("  -- official reference (EIA/FRED daily) --")
     brent_off = eia("RBRTE") or fred("DCOILBRENTEU")
-    if brent_off:
+    if brent_off and sanity_check("brent_official", brent_off):
         results["brent_official"] = brent_off
         print(f"  ✓ brent_official via {brent_off['src']:12s}: ${brent_off['c']:>8.2f} (as of {brent_off.get('date','?')})")
     else:
         print("  ✗ brent_official EIA + FRED both failed")
 
     wti_off = eia("RWTC") or fred("DCOILWTICO")
-    if wti_off:
+    if wti_off and sanity_check("wti_official", wti_off):
         results["wti_official"] = wti_off
         print(f"  ✓ wti_official   via {wti_off['src']:12s}: ${wti_off['c']:>8.2f} (as of {wti_off.get('date','?')})")
     else:
         print("  ✗ wti_official   EIA + FRED both failed")
+
+    # ── Cross-verify live vs official Brent ───────────────────────────────────
+    results = cross_verify(results)
 
     # Stocks (Yahoo → Stooq)
     for key, sym in [("fro","FRO"),("stng","STNG"),("tnk","TNK"),("dht","DHT"),("nat","NAT"),("insw","INSW")]:
@@ -297,6 +385,9 @@ def main():
     if not ok:
         sys.exit(1)
     print(f"✓ KV write OK ({len(body)}B, {len(results)} symbols)")
+
+    # ── D1 hourly snapshot (GHA-driven, replaces Claude scheduled task) ───────
+    maybe_snapshot(last_snapshot_ts)
 
 
 if __name__ == "__main__":

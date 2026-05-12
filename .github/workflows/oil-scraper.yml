@@ -24,4 +24,6 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
           EIA_KEY: ${{ secrets.EIA_KEY }}
+          SNAPSHOT_TOKEN: ${{ secrets.SNAPSHOT_TOKEN }}
+          SITE_URL: ${{ secrets.SITE_URL }}
         run: python scripts/scrape_oil.py

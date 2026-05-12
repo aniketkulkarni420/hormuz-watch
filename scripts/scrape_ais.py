@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Listen to AISStream for 60 seconds, capture vessel positions, detect gate crossings.
+"""Listen to AISStream for 90 seconds, capture vessel positions, detect gate crossings.
 
-Each run reads previous state from KV (vesselState, transits24h), listens for
-60 seconds, updates state in-memory with any new positions, detects crossings
-against previous longitude, then writes everything back. Designed for GHA's
-short-lived execution model — no persistent connection needed.
+Each run reads previous state from KV (vesselState, transits24h, crossing_imos_24h), listens
+for 90 seconds, updates state in-memory with any new positions, detects crossings against
+previous longitude, then writes everything back. Designed for GHA's short-lived execution
+model — no persistent connection needed.
 
-Why GHA instead of Cloudflare Worker: free-tier Workers get evicted from memory
-after idle periods, breaking persistent WebSocket subscriptions. GHA runs
-short bursts every 10 minutes and persists state in KV between runs.
+Cumulative IMO tracking: we maintain a set of IMO numbers seen crossing the gate in the
+last 24h in KV. On each scrape we load the existing set, merge new crossings, and prune
+IMOs older than 24h. This prevents both double-counting and missed-scrape undercounting.
+
+Why GHA instead of Cloudflare Worker: free-tier Workers get evicted from memory after idle
+periods, breaking persistent WebSocket subscriptions. GHA runs short bursts every 5 minutes
+and persists state in KV between runs.
 """
 import asyncio
 import json
@@ -18,7 +22,7 @@ import time
 import websockets
 import requests
 
-LISTEN_DURATION = 60          # seconds to listen each run
+LISTEN_DURATION = 90          # seconds to listen each run (was 60 — more coverage per burst)
 GATE_LNG = 56.45
 GATE_LAT_MIN = 26.20
 GATE_LAT_MAX = 26.70
@@ -60,9 +64,14 @@ def categorize(lat, lng, sog, heading):
     return "approach"
 
 
-async def listen_and_capture(state, transits):
-    """Returns updated state, transits, and message count."""
+async def listen_and_capture(state, transits, crossing_imos):
+    """Returns updated state, transits, crossing_imos, and message count.
+    crossing_imos is a list of {imo, time} dicts for the 24h window.
+    """
     msg_count = 0
+    # Build quick-lookup set of already-seen IMOs this window (by mmsi as proxy for IMO here)
+    existing_mmsi_crossings = {entry["mmsi"] for entry in crossing_imos if "mmsi" in entry}
+
     async with websockets.connect("wss://stream.aisstream.io/v0/stream", ping_interval=20) as ws:
         await ws.send(json.dumps({
             "APIKey": AIS_KEY,
@@ -113,13 +122,18 @@ async def listen_and_capture(state, transits):
                 prev_side = "east" if prev["lng"] > GATE_LNG else "west"
                 curr_side = "east" if lng > GATE_LNG else "west"
                 if prev_side != curr_side:
-                    transits.append({
+                    crossing = {
                         "mmsi": mmsi,
                         "name": name or prev.get("name") or f"MMSI {mmsi}",
                         "dir": "eastbound" if curr_side == "east" else "westbound",
                         "time": now_ms,
                         "lat": lat, "lng": lng
-                    })
+                    }
+                    transits.append(crossing)
+                    # Cumulative IMO tracking: only add if not already seen in 24h window
+                    if mmsi not in existing_mmsi_crossings:
+                        crossing_imos.append({"mmsi": mmsi, "time": now_ms})
+                        existing_mmsi_crossings.add(mmsi)
 
             state[mmsi] = {
                 **(prev or {}),
@@ -128,14 +142,15 @@ async def listen_and_capture(state, transits):
                 "lastSeen": now_ms,
                 "name": name or (prev and prev.get("name")) or f"MMSI {mmsi}",
             }
-    return state, transits, msg_count
+    return state, transits, crossing_imos, msg_count
 
 
-def prune(state, transits):
+def prune(state, transits, crossing_imos):
     now_ms = int(time.time() * 1000)
     transits = [t for t in transits if (now_ms - t["time"]) < TRANSIT_WINDOW_MS]
+    crossing_imos = [c for c in crossing_imos if (now_ms - c["time"]) < TRANSIT_WINDOW_MS]
     state = {m: v for m, v in state.items() if (now_ms - v.get("lastSeen", 0)) < STATE_TTL_MS}
-    return state, transits
+    return state, transits, crossing_imos
 
 
 def main():
@@ -144,11 +159,12 @@ def main():
     prev_blob = kv_get("ais_state") or {}
     state = prev_blob.get("vesselState") or {}
     transits = prev_blob.get("transits24h") or []
-    print(f"  Loaded: {len(state)} vessels, {len(transits)} transits in last 24h")
+    crossing_imos = prev_blob.get("crossing_imos_24h") or []
+    print(f"  Loaded: {len(state)} vessels, {len(transits)} transits in last 24h, {len(crossing_imos)} unique IMOs crossing")
     # Listen + capture
-    state, transits, msg_count = asyncio.run(listen_and_capture(state, transits))
+    state, transits, crossing_imos, msg_count = asyncio.run(listen_and_capture(state, transits, crossing_imos))
     # Prune
-    state, transits = prune(state, transits)
+    state, transits, crossing_imos = prune(state, transits, crossing_imos)
     # Categorize counts
     cats = {"transit": 0, "anchored": 0, "approach": 0}
     for v in state.values():
@@ -161,8 +177,10 @@ def main():
         "fetchedAt": int(time.time()),
         "vesselState": state,
         "transits24h": transits,
+        "crossing_imos_24h": crossing_imos,
         "summary": {
             "transits24h": len(transits),
+            "uniqueImos24h": len(crossing_imos),
             "eastbound24h": east,
             "westbound24h": west,
             "categories": cats,
@@ -187,7 +205,7 @@ def main():
         print(f"  warn: scrape_status_ais write failed: {e}")
     if not ok:
         print("  KV write FAILED"); sys.exit(1)
-    print(f"  ✓ KV write OK ({len(body)} bytes, {msg_count} messages, {len(state)} vessels, {len(transits)} transits, cats={cats})")
+    print(f"  ✓ KV write OK ({len(body)} bytes, {msg_count} messages, {len(state)} vessels, {len(transits)} transits, {len(crossing_imos)} unique IMOs, cats={cats})")
 
 
 if __name__ == "__main__":

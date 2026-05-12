@@ -22,11 +22,12 @@ CREATE TABLE IF NOT EXISTS snapshots (
   -- macro
   india_via_hormuz_pct  REAL,                   -- static for now (62)
   -- system health
-  source_health         TEXT                    -- JSON: {ais: 'fresh', eia: 'fresh', ...}
+  source_health         TEXT,                   -- JSON: {ais: 'fresh', eia: 'fresh', ...}
+  verdict               TEXT                    -- computed risk verdict: NORMAL | ELEVATED | HIGH | CRITICAL
 );
 
--- Index for time-range queries
-CREATE INDEX IF NOT EXISTS idx_snapshots_ts ON snapshots(ts);
+-- Index for time-range queries (DESC for fastest recent-row lookups)
+CREATE INDEX IF NOT EXISTS idx_snapshots_ts ON snapshots(ts DESC);
 
 -- Event log: notable threshold breaches, source failures, etc. (for alerts in Tier 2)
 CREATE TABLE IF NOT EXISTS events (

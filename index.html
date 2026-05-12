@@ -339,25 +339,12 @@ header{
 .health-copy{font-family:var(--mono);font-size:8px;color:var(--muted2);letter-spacing:.06em;padding-left:16px;border-left:1px solid var(--border);margin-left:6px}
 .health-copy a{color:var(--muted);text-decoration:none}
 .health-copy a:hover{color:var(--amber)}
-.subscribe-bar{display:flex;align-items:center;gap:8px;padding:5px 14px;border-top:1px solid var(--border);background:rgba(7,9,14,.85);font-family:var(--mono);font-size:9px;color:var(--muted2);opacity:.85}
-.subscribe-bar:hover{opacity:1}
-.subscribe-bar input{background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:4px 9px;border-radius:3px;font-family:var(--mono);font-size:9px;min-width:170px}
-.subscribe-bar button{background:var(--panel2);color:var(--text);border:1px solid var(--border2);padding:4px 10px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
-.subscribe-bar button:hover{background:var(--amber);color:#000;border-color:var(--amber)}
-.subscribe-bar button:disabled{opacity:.5;cursor:not-allowed}
-.subscribe-bar .subscribe-dismiss{margin-left:auto;background:transparent;border:0;color:var(--muted2);padding:2px 6px;font-size:11px}
-.subscribe-bar .subscribe-dismiss:hover{color:var(--text);background:transparent;border:0}
-.subscribe-msg{font-size:9px;color:var(--muted)}
-.subscribe-msg.ok{color:var(--green)}
-.subscribe-msg.err{color:var(--red)}
-.subscribe-bar.hidden{display:none}
-@media(max-width:640px){.subscribe-bar{flex-wrap:wrap;font-size:9px;padding-bottom:8px}.dashboard,.main{padding-bottom:96px}}
 
 /* P3 — print stylesheet: white bg, black ink, hide chrome */
 @media print{
   body,html,.main,.dashboard{background:#fff !important;color:#000 !important}
   *{color:#000 !important;background:transparent !important;border-color:#999 !important;box-shadow:none !important}
-  header,.subscribe-bar,.mobile-tabs,.health-bar,.onboard-overlay,.cmt-banner,.live-badge,.cargo-ticker .ct-tooltip,.sig-tooltip,.ct-tooltip,nav{display:none !important}
+  header,.mobile-tabs,.health-bar,.onboard-overlay,.cmt-banner,.live-badge,.cargo-ticker .ct-tooltip,.sig-tooltip,.ct-tooltip,nav{display:none !important}
   .signal-bar,.rblock,.lpanel,.cpanel{break-inside:avoid;page-break-inside:avoid}
   a{color:#000 !important;text-decoration:underline}
   .gauge-level,.cv-badge,.sig-tt-verdict{border:1px solid #000 !important}
@@ -2289,7 +2276,7 @@ function renderEIA() {
   // primaryOil   = KV live estimate (OilPriceAPI demo or Yahoo futures, ~5-min lag)
   // secondaryEtf = FinnHub ETF proxy (NYSE hours only, % change only)
   // officialBrent/Wti = EIA/FRED daily spot included in same KV payload
-  var primaryOil   = (_liveOil && (_liveOil.tier === "primary" || _liveOil.tier === "primary-stale")
+  var primaryOil   = (_liveOil && (_liveOil.tier === "primary" || _liveOil.tier === "primary-stale" || _liveOil.tier === "primary-suspect")
                        && _liveOil.brent && isFinite(_liveOil.brent.level)) ? _liveOil : null;
   var secondaryEtf = (_liveOil && _liveOil.tier === "secondary"
                        && _liveOil.brent && isFinite(_liveOil.brent.proxyDp)) ? _liveOil : null;
@@ -2311,7 +2298,17 @@ function renderEIA() {
   if(ctSub) ctSub.textContent = "21M bbl/day × $" + headlineBrent.toFixed(1) + "/bbl Brent";
 
   var brentEl = document.getElementById("brentPrice");
-  if(brentEl) brentEl.textContent = "$" + headlineBrent.toFixed(1);
+  if(brentEl) {
+    var suspectFlag = (_liveOil && _liveOil.brentLiveSuspect);
+    brentEl.textContent = "$" + headlineBrent.toFixed(1) + (suspectFlag ? " ⚠" : "");
+    if(suspectFlag) {
+      brentEl.title = "Live price diverges significantly from official reference — showing as estimate only.";
+      brentEl.style.color = "var(--amber)";
+    } else {
+      brentEl.title = "";
+      brentEl.style.color = "";
+    }
+  }
 
   // ── Official EIA reference row ────────────────────────────────────────────
   // Show only when a live estimate exists — two-row layout is meaningful then.
@@ -3033,14 +3030,6 @@ if(document.readyState === "loading"){
   </div>
 </div>
 
-<!-- Email subscription bar (Tier 2.2 scaffold — digest not yet shipped) -->
-<div class="subscribe-bar" id="subscribeBar">
-  <span>Notify me when the weekly digest launches:</span>
-  <input type="email" id="subEmail" placeholder="your@email.com" />
-  <button id="subBtn" onclick="submitSubscribe()">Notify me</button>
-  <span class="subscribe-msg" id="subMsg">Pre-launch list · one email when live · unsubscribe anytime</span>
-  <button class="subscribe-dismiss" onclick="dismissSubscribe()" title="Hide for this session" aria-label="Dismiss">✕</button>
-</div>
 
 <!-- Footer disclaimer (S4) — not investment advice, plus copyright -->
 <div class="foot-discl" style="padding:6px 14px;border-top:1px solid var(--border);background:rgba(7,9,14,.85);font-family:var(--mono);font-size:9px;color:var(--muted2);letter-spacing:.04em;display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between">
@@ -3051,42 +3040,6 @@ if(document.readyState === "loading"){
 <!-- Data freshness health bar — shows per-source last-fetch status -->
 <div class="health-bar" id="healthBar" aria-label="Data source freshness"></div>
 
-<script>
-// Hide subscribe bar if user dismissed in this session
-try { if (sessionStorage.getItem("hw_sub_dismiss") === "1") { var sb=document.getElementById("subscribeBar"); if(sb) sb.classList.add("hidden"); } } catch(e){}
-function dismissSubscribe(){
-  try { sessionStorage.setItem("hw_sub_dismiss", "1"); } catch(e){}
-  var sb=document.getElementById("subscribeBar"); if(sb) sb.classList.add("hidden");
-}
-async function submitSubscribe(){
-  var email = document.getElementById("subEmail").value.trim();
-  var msg = document.getElementById("subMsg");
-  var btn = document.getElementById("subBtn");
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    msg.textContent = "Enter a valid email"; msg.className = "subscribe-msg err";
-    return;
-  }
-  btn.disabled = true; msg.textContent = "Sending..."; msg.className = "subscribe-msg";
-  try {
-    var r = await fetch("/api/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email, source: "footer-form" }),
-    });
-    var d = await r.json();
-    if (r.ok && d.ok) {
-      msg.textContent = d.message || "Subscribed"; msg.className = "subscribe-msg ok";
-      document.getElementById("subEmail").value = "";
-    } else {
-      msg.textContent = (d.error || "Failed"); msg.className = "subscribe-msg err";
-    }
-  } catch (e) {
-    msg.textContent = e.message; msg.className = "subscribe-msg err";
-  } finally {
-    btn.disabled = false;
-  }
-}
-</script>
 
 <!-- Cloudflare Web Analytics auto-injects when enabled in Pages dashboard (no code needed) -->
 

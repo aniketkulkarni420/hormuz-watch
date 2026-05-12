@@ -2,6 +2,31 @@
 // Called by a scheduled cron job hitting POST /api/record with X-Snapshot-Token header.
 // Pulls current state from internal /api/* endpoints, writes one row to D1 snapshots.
 // Designed to be safe to call multiple times an hour (INSERT OR REPLACE by ts to nearest hour).
+
+function computeVerdict(data) {
+  // data: { transits_24h, vessels_transiting, brent_price, gfw_encounters, dark_pct }
+  const t    = data.transits_24h || 0;
+  const dark = data.dark_pct || 0;
+  const enc  = data.gfw_encounters || 0;
+
+  let score = 0;
+  // Transit signal
+  if (t < 12)      score += 3;  // severely suppressed
+  else if (t < 18) score += 2;  // below normal
+  else if (t < 22) score += 1;  // slightly below
+  // Dark vessel signal
+  if (dark > 20)      score += 2;
+  else if (dark > 10) score += 1;
+  // GFW encounters
+  if (enc > 5)      score += 2;
+  else if (enc > 2) score += 1;
+
+  if (score >= 6)      return "CRITICAL";
+  else if (score >= 4) return "HIGH";
+  else if (score >= 2) return "ELEVATED";
+  else                 return "NORMAL";
+}
+
 export async function onRequestPost({ request, env }) {
   const token = request.headers.get("X-Snapshot-Token");
   if (!env.SNAPSHOT_TOKEN || token !== env.SNAPSHOT_TOKEN) {
@@ -79,14 +104,23 @@ export async function onRequestPost({ request, env }) {
     ais:   aisR.status === "fulfilled" && aisR.value.ok && vTransit24h != null ? "ok" : "fail"
   };
 
+  // Compute risk verdict server-side
+  const verdict = computeVerdict({
+    transits_24h:     vTransit24h,
+    vessels_transiting: vTransiting,
+    brent_price:      brent,
+    gfw_encounters:   gfwEnc,
+    dark_pct:         null
+  });
+
   try {
     await env.DB.prepare(`
       INSERT OR REPLACE INTO snapshots (
         ts, transits_24h, vessels_transiting, vessels_anchored, vessels_approach,
         brent_price, brent_source, wti_price, bw_spread,
         bdti, bdti_wow, gfw_encounters, gfw_loitering, dark_pct,
-        india_via_hormuz_pct, source_health
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        india_via_hormuz_pct, source_health, verdict
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       tsHour,
       vTransit24h, vTransiting, vAnchored, vApproach,
@@ -97,9 +131,16 @@ export async function onRequestPost({ request, env }) {
       2841, 3.2,
       gfwEnc, gfwLoi, null,
       62.0,
-      JSON.stringify(sourceHealth)
+      JSON.stringify(sourceHealth),
+      verdict
     ).run();
-    return json({ ok: true, tsHour, brent, wti, gfwEnc, gfwLoi, brentSource, sourceHealth, vTransit24h, vTransiting, vAnchored, vApproach });
+
+    // Write latest verdict to KV for fast access by frontend
+    if (env.OIL_KV) {
+      await env.OIL_KV.put("verdict_latest", JSON.stringify({ verdict, ts: Math.floor(Date.now() / 1000) }));
+    }
+
+    return json({ ok: true, tsHour, brent, wti, gfwEnc, gfwLoi, brentSource, sourceHealth, vTransit24h, vTransiting, vAnchored, vApproach, verdict });
   } catch (e) {
     return json({ error: "D1 write failed", detail: String(e) }, 500);
   }
