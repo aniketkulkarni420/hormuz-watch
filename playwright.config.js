@@ -9,7 +9,7 @@ module.exports = defineConfig({
   retries: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'https://hormuz-watch-7cd.pages.dev/',
+    baseURL: 'https://hormuz-watch-2.pages.dev/',
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },

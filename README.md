@@ -2,9 +2,9 @@
 
 Single-page dashboard combining live vessel-tracking data, satellite signals, oil prices, and freight indices for the Strait of Hormuz. Built for equity analysts watching Indian oil & gas, tanker stocks, and Middle East tension as a macro signal.
 
-**Live:** https://hormuz-watch-7cd.pages.dev
-**Methodology:** https://hormuz-watch-7cd.pages.dev/methodology
-**Terms:** https://hormuz-watch-7cd.pages.dev/terms
+**Live:** https://hormuz-watch-2.pages.dev
+**Methodology:** https://hormuz-watch-2.pages.dev/methodology
+**Terms:** https://hormuz-watch-2.pages.dev/terms
 
 ## Architecture (high-level)
 
@@ -29,7 +29,7 @@ Requires `.dev.vars` with environment variables (see deployment configuration).
 
 The dashboard interface is open for viewing and personal research use. The methodology, verdict logic, threshold values, port classifications, and OMC exposure analysis are proprietary research products. Commercial replication of the dashboard's analytical framework requires written permission.
 
-See [/terms](https://hormuz-watch-7cd.pages.dev/terms) for full terms of use.
+See [/terms](https://hormuz-watch-2.pages.dev/terms) for full terms of use.
 
 ## Author
 
