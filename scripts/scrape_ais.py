@@ -256,6 +256,40 @@ def prune(state, transits, crossing_imos):
     return state, transits, crossing_imos
 
 
+def send_recovery_email(msg_count, vessel_count):
+    """One-shot email when AIS transitions from broken (0 msgs) to working (>0 msgs).
+    Requires RESEND_KEY + ALERT_EMAIL env vars (passed from GHA workflow secrets)."""
+    RESEND_KEY = os.environ.get("RESEND_KEY", "")
+    ALERT_EMAIL = os.environ.get("ALERT_EMAIL", "")
+    if not (RESEND_KEY and ALERT_EMAIL):
+        print(f"  (recovery email skipped — RESEND_KEY or ALERT_EMAIL not set)")
+        return
+    try:
+        r = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_KEY}", "Content-Type": "application/json"},
+            json={
+                "from": "Hormuz Watch <onboarding@resend.dev>",
+                "to": [ALERT_EMAIL],
+                "subject": "Hormuz Watch — AISStream RECOVERED",
+                "text": (
+                    f"AIS data is flowing again.\n\n"
+                    f"Latest scrape: {msg_count} messages, {vessel_count} vessels captured "
+                    f"at {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}.\n\n"
+                    f"Dashboard will populate fully within ~10 min once 24h transit count accumulates.\n"
+                    f"https://hormuz-watch-2.pages.dev"
+                ),
+            },
+            timeout=15,
+        )
+        if r.ok:
+            print(f"  ✉ Recovery email sent to {ALERT_EMAIL}")
+        else:
+            print(f"  ✗ Recovery email failed: HTTP {r.status_code} {r.text[:120]}")
+    except Exception as e:
+        print(f"  recovery email exception: {e}")
+
+
 def main():
     print(f"=== AIS scrape at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
     # Load previous state
@@ -263,7 +297,11 @@ def main():
     state = prev_blob.get("vesselState") or {}
     transits = prev_blob.get("transits24h") or []
     crossing_imos = prev_blob.get("crossing_imos_24h") or []
+    # Track recovery: was the previous scrape broken (0 messages)?
+    prev_status = kv_get("scrape_status_ais") or {}
+    prev_was_broken = (not prev_status.get("ok")) or (prev_status.get("messageCount", 0) == 0)
     print(f"  Loaded: {len(state)} vessels, {len(transits)} transits in last 24h, {len(crossing_imos)} unique IMOs crossing")
+    print(f"  Prev state: {'BROKEN (0 msgs)' if prev_was_broken else 'OK'}")
     # Listen + capture
     state, transits, crossing_imos, msg_count = asyncio.run(listen_and_capture(state, transits, crossing_imos))
     # Prune
@@ -329,6 +367,15 @@ def main():
     if not ok:
         print("  KV write FAILED"); sys.exit(1)
     print(f"  ✓ KV write OK ({len(body)} bytes, {msg_count} messages, {len(state)} vessels, {len(transits)} transits, {len(crossing_imos)} unique IMOs, cats={cats})")
+
+    # Recovery detection: if AIS was previously broken AND now has data → notify
+    if prev_was_broken and msg_count > 0:
+        print(f"  ★ AIS RECOVERED — was broken, now receiving data")
+        kv_put("ais_last_recovery_ts", str(int(time.time())))
+        send_recovery_email(msg_count, len(state))
+    elif msg_count > 0:
+        # Working normally — refresh "last success" timestamp for diag
+        kv_put("ais_last_success_ts", str(int(time.time())))
 
 
 if __name__ == "__main__":

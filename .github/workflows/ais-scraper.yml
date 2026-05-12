@@ -24,6 +24,8 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
           AIS_KEY: ${{ secrets.AIS_KEY }}
+          RESEND_KEY: ${{ secrets.RESEND_KEY }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: python scripts/scrape_ais.py 2>&1 | tee /tmp/scrape.log
       - name: Upload log
         if: always()

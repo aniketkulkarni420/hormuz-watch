@@ -13,6 +13,8 @@ export async function onRequestGet({ request, env }) {
 
   // KV reads — for each key, return age + small payload preview
   // bdti_latest has a different "stale" threshold (weekly publish vs continuous)
+  // ais_last_success_ts + ais_last_recovery_ts are excluded from staleness rules — they're
+  // markers, not feeds. Surfaced separately below.
   const kvKeys = ["latest", "ais_state", "scrape_status_oil", "scrape_status_ais", "verdict_latest", "bdti_latest"];
   for (const k of kvKeys) {
     try {
@@ -80,6 +82,25 @@ export async function onRequestGet({ request, env }) {
     }
   } catch { /* AIS state already covered by feeds.ais_state */ }
 
+  // ── AIS recovery markers (last working timestamp + last recovery event) ──
+  // These let dashboard show "AIS last working: <date>" when currently broken.
+  // Written by scrape_ais.py when messagesProcessed > 0.
+  out.aisLastSuccessTs = null;
+  out.aisLastSuccessAgo = null;
+  out.aisLastRecoveryTs = null;
+  try {
+    const lastSucc = await env.OIL_KV.get("ais_last_success_ts");
+    if (lastSucc) {
+      const ts = parseInt(lastSucc, 10);
+      if (ts) {
+        out.aisLastSuccessTs = ts;
+        out.aisLastSuccessAgo = formatAgo(now - ts);
+      }
+    }
+    const lastRec = await env.OIL_KV.get("ais_last_recovery_ts");
+    if (lastRec) out.aisLastRecoveryTs = parseInt(lastRec, 10);
+  } catch { /* keys may not exist yet */ }
+
   // ── Secret rotation tracking ────────────────────────────────────────────
   // SECRETS_LAST_ROTATED env var is YYYY-MM-DD format, set manually in CF Pages
   // when secrets are rotated. Watchdog alerts if >90 days.
@@ -103,4 +124,14 @@ export async function onRequestGet({ request, env }) {
   return new Response(JSON.stringify(out, null, 2), {
     headers: { "content-type": "application/json", "cache-control": "no-store" }
   });
+}
+
+function formatAgo(seconds) {
+  if (!seconds || seconds < 0) return null;
+  const m = Math.floor(seconds / 60);
+  if (m < 60) return m + "m";
+  const h = Math.floor(m / 60);
+  if (h < 48) return h + "h";
+  const d = Math.floor(h / 24);
+  return d + "d";
 }
