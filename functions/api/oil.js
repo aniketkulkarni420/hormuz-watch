@@ -1,10 +1,16 @@
-// Cloudflare Pages Function — Brent + WTI live prices
-// PRIORITY: read from OIL_KV (populated by GitHub Action with yfinance — actual futures BZ=F/CL=F).
+// Cloudflare Pages Function — Brent + WTI dual-track price feed
+//
+// DUAL TRACK ARCHITECTURE (set by GHA scraper):
+//   symbols.brent / symbols.wti          → live estimate (~5-min lag, OilPriceAPI demo)
+//   symbols.brent_official / wti_official → EIA/FRED daily spot with explicit publish date
+//
+// Response shape:
+//   brent        { level, change, changePct, t, src, updatedAt }  ← live estimate
+//   wti          { level, change, changePct, t, src, updatedAt }
+//   brentOfficial{ level, change, changePct, asOf, src }           ← EIA official spot
+//   wtiOfficial  { level, asOf, src }
+//
 // Falls back through legacy tiers if KV empty or stale.
-//   1. KV (GHA scraper) → real futures, 15-min refresh, the authoritative source
-//   2. Twelve Data BRENT/WTI (Pro+ only — free tier 404s)
-//   3. FinnHub BNO/USO ETF (proxy, NYSE hours only)
-//   4. EIA daily (always-on fallback, 1-2 day lag)
 export async function onRequestGet({ env }) {
   // Tier 1: KV (GitHub Action scraper)
   if (env.OIL_KV) {
@@ -13,23 +19,51 @@ export async function onRequestGet({ env }) {
       if (raw) {
         const data = JSON.parse(raw);
         const ageMin = (Date.now() / 1000 - data.fetchedAt) / 60;
-        const stale = ageMin > 60; // 60 min = "stale" flag; > 6h falls through to live API tiers
+        const stale = ageMin > 60;
         const veryStale = ageMin > 360;
         const staleMin = stale ? Math.round(ageMin) : 0;
         if (!veryStale && data.symbols && data.symbols.brent && data.symbols.wti) {
-          const b = data.symbols.brent;
-          const w = data.symbols.wti;
-          // I5 — return KV value even when stale, but flag staleness so the frontend can degrade the badge
-          return json({
-            source: "Live commodity feed",
-            tier: stale ? "primary-stale" : "primary",
-            stale: stale,
-            staleMin: staleMin,
-            brent: { level: b.c, change: b.d, changePct: b.dp, open: b.o, prevClose: b.pc, high: b.h, low: b.l, t: b.t },
-            wti:   { level: w.c, change: w.d, changePct: w.dp, open: w.o, prevClose: w.pc, high: w.h, low: w.l, t: w.t },
+          const b  = data.symbols.brent;
+          const w  = data.symbols.wti;
+          const bo = data.symbols.brent_official;
+          const wo = data.symbols.wti_official;
+
+          const resp = {
+            source:   "Live commodity feed",
+            tier:     stale ? "primary-stale" : "primary",
+            stale,
+            staleMin,
+            brent: {
+              level: b.c, change: b.d, changePct: b.dp,
+              open: b.o, prevClose: b.pc, high: b.h, low: b.l,
+              t: b.t, src: b.src,
+              ...(b.updatedAt ? { updatedAt: b.updatedAt } : {})
+            },
+            wti: {
+              level: w.c, change: w.d, changePct: w.dp,
+              open: w.o, prevClose: w.pc, high: w.h, low: w.l,
+              t: w.t, src: w.src,
+              ...(w.updatedAt ? { updatedAt: w.updatedAt } : {})
+            },
             fetchedAt: data.fetchedAt * 1000,
-            ageMin: Math.round(ageMin * 10) / 10
-          });
+            ageMin: Math.round(ageMin * 10) / 10,
+          };
+
+          // Official EIA/FRED reference — always included when available
+          if (bo) {
+            resp.brentOfficial = {
+              level: bo.c, change: bo.d, changePct: bo.dp,
+              asOf: bo.date || null, src: bo.src
+            };
+          }
+          if (wo) {
+            resp.wtiOfficial = {
+              level: wo.c, change: wo.d, changePct: wo.dp,
+              asOf: wo.date || null, src: wo.src
+            };
+          }
+
+          return json(resp);
         }
       }
     } catch (e) { /* fall through */ }

@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
-"""Resilient oil + tanker stock scraper with 4-source fallback chain.
+"""Resilient oil + tanker stock scraper — dual-track architecture.
 
-For each commodity (Brent, WTI), tries sources in order:
-  1. Yahoo chart API (browser-like headers — most up-to-date when it works)
-  2. Stooq CSV (works some days)
-  3. FRED CSV (St Louis Fed — Brent only, very reliable)
-  4. EIA API (our own key — always works, daily lag)
+LIVE PRICE TRACK (5-min fresh):
+  1. OilPriceAPI demo — unauthenticated, 20 req/hr, Brent + WTI, ~5-min lag
+  2. Yahoo chart API (BZ=F / CL=F) — browser-like headers, works when rate limits allow
+  3. Stooq CSV (equities fine; commodity CSV unreliable but kept as fallback)
 
-For tanker stocks, tries Yahoo chart API only (others don't have these tickers).
-Script succeeds as long as Brent + WTI come back from any source.
+OFFICIAL REFERENCE TRACK (daily EIA spot, explicit publish date):
+  4. EIA v2 API (RBRTE / RWTC) — authoritative, 5-7 day lag
+  5. FRED CSV (DCOILBRENTEU / DCOILWTICO) — same underlying data, slightly different timing
+
+Results stored as:
+  symbols.brent        → live estimate (most recent source)
+  symbols.wti          → live estimate
+  symbols.brent_official → EIA/FRED daily spot with publish date (always fetched)
+  symbols.wti_official   → same for WTI
+
+Frontend displays both: live estimate with freshness + official EIA spot with "as of <date>".
+Difference between them is itself a signal for analysts.
 """
 
 import os
@@ -38,16 +47,60 @@ if not all([CF_ACCOUNT_ID, CF_API_TOKEN, KV_NS]):
     print("ERROR: Missing CF env vars"); sys.exit(1)
 
 
-def _quote(c, pc, o=None, h=None, l=None, src="?", date=None):
+def _quote(c, pc, o=None, h=None, l=None, src="?", date=None, updated_at=None):
     """Build standard quote dict."""
     d = c - pc if pc else 0
     dp = (d / pc * 100) if pc else 0
-    return {
+    q = {
         "c": round(c, 4), "pc": round(pc, 4),
         "d": round(d, 4), "dp": round(dp, 4),
         "o": round(o or c, 4), "h": round(h or c, 4), "l": round(l or c, 4),
         "t": int(time.time()), "src": src, **({"date": date} if date else {})
     }
+    if updated_at:
+        q["updatedAt"] = updated_at
+    return q
+
+
+# ─── OilPriceAPI demo (no auth, 20/hr, Brent + WTI, 5-min fresh) ────────────
+def oilpriceapi_demo():
+    """Returns (brent_quote, wti_quote) or (None, None) on failure.
+    Uses the unauthenticated /v1/demo/prices endpoint.
+    change_24h in the response is a percentage value (e.g. -0.45 = -0.45%).
+    """
+    url = "https://api.oilpriceapi.com/v1/demo/prices"
+    try:
+        r = requests.get(url, timeout=15, headers={"User-Agent": UA})
+        if r.status_code != 200:
+            print(f"  oilpriceapi_demo HTTP {r.status_code}")
+            return None, None
+        data = r.json()
+        prices = data.get("data", {}).get("prices", [])
+        meta   = data.get("data", {}).get("meta", {})
+        demo_mode = meta.get("demo_mode", False)
+        b_raw = next((p for p in prices if p.get("code") == "BRENT_CRUDE_USD"), None)
+        w_raw = next((p for p in prices if p.get("code") == "WTI_USD"), None)
+        if not b_raw or not w_raw:
+            print("  oilpriceapi_demo: missing Brent or WTI in payload")
+            return None, None
+
+        def build(raw, sym):
+            c  = float(raw["price"])
+            dp = float(raw.get("change_24h", 0))   # already a percentage
+            d  = round(c * dp / 100, 4)
+            pc = round(c - d, 4)
+            return _quote(c, pc, src="oilpriceapi-demo" + ("-demodata" if demo_mode else ""),
+                          updated_at=raw.get("updated_at"))
+
+        b = build(b_raw, "BRENT_CRUDE_USD")
+        w = build(w_raw, "WTI_USD")
+        flag = " [DEMO DATA]" if demo_mode else ""
+        print(f"  ✓ brent  via oilpriceapi-demo{flag}: ${b['c']:>8.2f} ({b['dp']:+.2f}%)")
+        print(f"  ✓ wti    via oilpriceapi-demo{flag}: ${w['c']:>8.2f} ({w['dp']:+.2f}%)")
+        return b, w
+    except Exception as e:
+        print(f"  oilpriceapi_demo exception: {str(e)[:120]}")
+        return None, None
 
 
 # ─── Yahoo chart API ───────────────────────────────────────
@@ -181,14 +234,41 @@ def main():
     print(f"=== {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
     results = {}
 
-    # Commodities (4-source fallback)
-    brent = fetch_commodity("brent", "BZ=F", "cb.f", "DCOILBRENTEU", "RBRTE")
-    if brent: results["brent"] = brent; print(f"  ✓ brent  via {brent['src']:10s}: ${brent['c']:>8.2f} ({brent['dp']:+.2f}%)")
-    else:     print(f"  ✗ brent  all sources failed")
+    # ── LIVE PRICE TRACK ──────────────────────────────────────────────────────
+    # Try OilPriceAPI demo first (unauthenticated, 5-min fresh). If it fails,
+    # fall back to Yahoo (BZ=F / CL=F futures) → existing chain.
+    b_live, w_live = oilpriceapi_demo()
 
-    wti = fetch_commodity("wti", "CL=F", "cl.f", "DCOILWTICO", "RWTC")
-    if wti: results["wti"] = wti; print(f"  ✓ wti    via {wti['src']:10s}: ${wti['c']:>8.2f} ({wti['dp']:+.2f}%)")
-    else:   print(f"  ✗ wti    all sources failed")
+    if b_live and w_live:
+        results["brent"] = b_live
+        results["wti"]   = w_live
+    else:
+        print("  oilpriceapi_demo failed — falling back to Yahoo/Stooq chain")
+        brent = fetch_commodity("brent", "BZ=F", "cb.f", None, None)  # skip EIA/FRED — those are official track
+        if brent: results["brent"] = brent; print(f"  ✓ brent  via {brent['src']:10s}: ${brent['c']:>8.2f} ({brent['dp']:+.2f}%)")
+        else:     print("  ✗ brent  live track all failed")
+
+        wti = fetch_commodity("wti", "CL=F", "cl.f", None, None)
+        if wti: results["wti"] = wti; print(f"  ✓ wti    via {wti['src']:10s}: ${wti['c']:>8.2f} ({wti['dp']:+.2f}%)")
+        else:   print("  ✗ wti    live track all failed")
+
+    # ── OFFICIAL REFERENCE TRACK ──────────────────────────────────────────────
+    # Always fetch EIA/FRED daily spot regardless of live track status.
+    # These have an explicit publish date — shown in frontend as "EIA spot · as of <date>".
+    print("  -- official reference (EIA/FRED daily) --")
+    brent_off = eia("RBRTE") or fred("DCOILBRENTEU")
+    if brent_off:
+        results["brent_official"] = brent_off
+        print(f"  ✓ brent_official via {brent_off['src']:12s}: ${brent_off['c']:>8.2f} (as of {brent_off.get('date','?')})")
+    else:
+        print("  ✗ brent_official EIA + FRED both failed")
+
+    wti_off = eia("RWTC") or fred("DCOILWTICO")
+    if wti_off:
+        results["wti_official"] = wti_off
+        print(f"  ✓ wti_official   via {wti_off['src']:12s}: ${wti_off['c']:>8.2f} (as of {wti_off.get('date','?')})")
+    else:
+        print("  ✗ wti_official   EIA + FRED both failed")
 
     # Stocks (Yahoo → Stooq)
     for key, sym in [("fro","FRO"),("stng","STNG"),("tnk","TNK"),("dht","DHT"),("nat","NAT"),("insw","INSW")]:
