@@ -69,16 +69,24 @@ async def listen_and_capture(state, transits, crossing_imos):
     crossing_imos is a list of {imo, time} dicts for the 24h window.
     """
     msg_count = 0
+    other_msgs = 0          # non-position, non-static messages (e.g. errors, status frames)
+    error_samples = []      # first few non-routine messages — surface AISStream auth failures
     # Build quick-lookup set of already-seen IMOs this window (by mmsi as proxy for IMO here)
     existing_mmsi_crossings = {entry["mmsi"] for entry in crossing_imos if "mmsi" in entry}
 
+    print(f"  AIS_KEY present: {bool(AIS_KEY)} (len {len(AIS_KEY) if AIS_KEY else 0})")
+    print(f"  Connecting to AISStream WebSocket, bbox={BBOX}, listen={LISTEN_DURATION}s")
+
     async with websockets.connect("wss://stream.aisstream.io/v0/stream", ping_interval=20) as ws:
-        await ws.send(json.dumps({
+        sub_payload = {
             "APIKey": AIS_KEY,
             "BoundingBoxes": BBOX,
             "FilterMessageTypes": ["PositionReport", "ShipStaticData"]
-        }))
+        }
+        await ws.send(json.dumps(sub_payload))
+        print(f"  Subscription sent. Listening...")
         end_time = time.time() + LISTEN_DURATION
+        first_msg_logged = False
         while time.time() < end_time:
             remaining = end_time - time.time()
             if remaining <= 0:
@@ -90,11 +98,26 @@ async def listen_and_capture(state, transits, crossing_imos):
             try:
                 msg = json.loads(raw)
             except Exception:
+                # Raw non-JSON message — log first 200 chars
+                if len(error_samples) < 3:
+                    error_samples.append(f"non-JSON: {str(raw)[:200]}")
                 continue
+
+            # Log first received message regardless of type — confirms connection works
+            if not first_msg_logged:
+                print(f"  First message received: type={msg.get('MessageType','?')}, keys={list(msg.keys())[:6]}")
+                first_msg_logged = True
+
             msg_count += 1
             meta = msg.get("MetaData") or {}
             mmsi = meta.get("MMSI")
             if not mmsi:
+                # AISStream sends error/status frames without MMSI — capture them
+                other_msgs += 1
+                if len(error_samples) < 3:
+                    # Trim payload to avoid printing key
+                    sample = {k: v for k, v in msg.items() if k.lower() not in ("apikey", "api_key")}
+                    error_samples.append(f"no-MMSI: {json.dumps(sample)[:250]}")
                 continue
             mmsi = str(mmsi)
             name = (meta.get("ShipName") or "").strip()
@@ -142,6 +165,14 @@ async def listen_and_capture(state, transits, crossing_imos):
                 "lastSeen": now_ms,
                 "name": name or (prev and prev.get("name")) or f"MMSI {mmsi}",
             }
+    # Print diagnostics before returning — surface auth/subscription issues
+    if msg_count == 0 and other_msgs == 0:
+        print(f"  ⚠ ZERO messages received in {LISTEN_DURATION}s. Likely: (1) AIS_KEY rejected silently, "
+              f"(2) AISStream rate-limited, (3) no broadcasts in bbox (unlikely for Persian Gulf).")
+    if other_msgs > 0:
+        print(f"  ⚠ Received {other_msgs} non-position frames (possible errors). Samples:")
+        for s in error_samples:
+            print(f"     {s}")
     return state, transits, crossing_imos, msg_count
 
 
