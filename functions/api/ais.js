@@ -8,9 +8,20 @@ export async function onRequestGet({ env }) {
     if (!raw) return json({ error: "no state yet", summary: null }, 200);
     const data = JSON.parse(raw);
     const ageSec = Math.floor(Date.now() / 1000) - data.fetchedAt;
+    const summary = data.summary || {};
+    // Pull typeBreakdown / currentInbound / currentOutbound from top-level OR summary
+    // (top-level set by new scraper; summary used as fallback for backward compat)
+    const typeBreakdown = data.typeBreakdown || summary.typeBreakdown || null;
+    const currentInbound = (data.currentInbound != null) ? data.currentInbound
+                          : (summary.currentInbound != null ? summary.currentInbound : null);
+    const currentOutbound = (data.currentOutbound != null) ? data.currentOutbound
+                           : (summary.currentOutbound != null ? summary.currentOutbound : null);
     return json({
       ageSec,
-      summary: data.summary || {},
+      summary,
+      typeBreakdown,
+      currentInbound,
+      currentOutbound,
       // Don't return full vesselState/transits arrays by default — they're heavy
       hasState: !!(data.vesselState && Object.keys(data.vesselState).length),
       source: "GHA AIS aggregator",

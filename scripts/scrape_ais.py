@@ -54,6 +54,50 @@ def kv_put(key, value):
     return r.status_code == 200
 
 
+def classify_ship_class(type_code, length_m):
+    """Classify by AIS type + length. Returns canonical label."""
+    if type_code is None:
+        return "Unknown"
+    try:
+        t = int(type_code)
+    except (TypeError, ValueError):
+        return "Unknown"
+    if 80 <= t <= 89:
+        # Tanker — classify by length
+        if length_m >= 300:    return "VLCC"
+        elif length_m >= 270:  return "Suezmax"
+        elif length_m >= 240:  return "Aframax"
+        elif length_m >= 180:  return "Panamax tanker"
+        elif length_m > 0:     return "Small tanker"
+        else:                  return "Tanker"
+    if 70 <= t <= 79:          return "Cargo"
+    if 60 <= t <= 69:          return "Passenger"
+    if t == 30 or t == 31 or t == 32:  return "Fishing"
+    if 35 <= t <= 39:          return "Military"
+    if 40 <= t <= 49:          return "High-speed"
+    if t == 50 or t == 51 or t == 52: return "Service"
+    if 90 <= t <= 99:          return "Other"
+    return "Other"
+
+
+def aggregate_state(state):
+    """Compute typeBreakdown, currentInbound, currentOutbound from vessel state."""
+    type_counts = {}
+    inbound = 0
+    outbound = 0
+    for mmsi, v in state.items():
+        label = classify_ship_class(v.get("type"), v.get("length_m", 0))
+        type_counts[label] = type_counts.get(label, 0) + 1
+        # Direction by heading: 250-320 = entering Persian Gulf (westbound/inbound)
+        #                       70-140 = exiting toward Indian Ocean (eastbound/outbound)
+        h = v.get("heading", 0) or 0
+        cat = v.get("category", "")
+        if cat == "transit":
+            if 250 <= h <= 320: inbound += 1
+            elif 70 <= h <= 140: outbound += 1
+    return type_counts, inbound, outbound
+
+
 def categorize(lat, lng, sog, heading):
     if sog < 0.5:
         return "anchored"
@@ -127,6 +171,10 @@ async def listen_and_capture(state, transits, crossing_imos):
                 if mmsi in state:
                     if sd.get("Type"): state[mmsi]["type"] = sd["Type"]
                     if sd.get("Destination"): state[mmsi]["dest"] = sd["Destination"].strip()
+                    bow = sd.get("ToBow", 0) or 0
+                    stern = sd.get("ToStern", 0) or 0
+                    if bow or stern:
+                        state[mmsi]["length_m"] = bow + stern
                 continue
             if mt != "PositionReport":
                 continue
@@ -203,12 +251,17 @@ def main():
         if c in cats: cats[c] += 1
     east = sum(1 for t in transits if t["dir"] == "eastbound")
     west = sum(1 for t in transits if t["dir"] == "westbound")
+    # Real-time aggregate: ship class breakdown + directional snapshot from current state
+    type_counts, inbound_now, outbound_now = aggregate_state(state)
     # Write back
     payload = {
         "fetchedAt": int(time.time()),
         "vesselState": state,
         "transits24h": transits,
         "crossing_imos_24h": crossing_imos,
+        "typeBreakdown": type_counts,          # { "VLCC": 5, "Suezmax": 3, ... }
+        "currentInbound": inbound_now,         # snapshot count, not 24h
+        "currentOutbound": outbound_now,
         "summary": {
             "transits24h": len(transits),
             "uniqueImos24h": len(crossing_imos),
@@ -218,6 +271,9 @@ def main():
             "vesselCount": len(state),
             "lastListenSec": LISTEN_DURATION,
             "messagesProcessed": msg_count,
+            "typeBreakdown": type_counts,
+            "currentInbound": inbound_now,
+            "currentOutbound": outbound_now,
         }
     }
     body = json.dumps(payload, separators=(",", ":"))
@@ -225,7 +281,14 @@ def main():
     #   { fetchedAt: unix_seconds, lastListenSec: int, messagesProcessed: int,
     #     vesselCount: int, transits24h: int, eastbound24h: int, westbound24h: int,
     #     categories: {transit: int, anchored: int, approach: int},
-    #     crossing_imos_24h: [str], hasState: bool }
+    #     crossing_imos_24h: [str], hasState: bool,
+    #     typeBreakdown: { "VLCC": int, "Suezmax": int, "Aframax": int,
+    #                      "Panamax tanker": int, "Small tanker": int, "Tanker": int,
+    #                      "Cargo": int, "Passenger": int, "Fishing": int,
+    #                      "Military": int, "High-speed": int, "Service": int,
+    #                      "Other": int, "Unknown": int },
+    #     currentInbound: int (transit vessels heading 250-320, westbound),
+    #     currentOutbound: int (transit vessels heading 70-140, eastbound) }
     ok = kv_put("ais_state", body)
     # P8 — surface scrape status for /health
     try:

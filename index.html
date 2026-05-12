@@ -621,7 +621,7 @@ header{
       <span class="sig-dir" id="sigDarkDir" style="color:var(--muted)"></span>
     </div>
     <div class="sig-bot">
-      <span class="sig-label">Dark / suspect</span>
+      <span class="sig-label" title="Vessels broadcasting no AIS signal — possible sanctions evasion or technical failure">Dark / suspect</span>
       <span class="sig-src src-est" id="gfwBadge">SATELLITE</span>
     </div>
     <div class="sig-tooltip" id="ttipDark"></div>
@@ -632,7 +632,7 @@ header{
       <span class="sig-dir" style="color:var(--green)">&#9650;3.2%</span>
     </div>
     <div class="sig-bot">
-      <span class="sig-label">BDTI index <span id="sigBdtiAsOf" style="color:var(--muted2);font-weight:400">· as of —</span></span>
+      <span class="sig-label" title="Baltic Dirty Tanker Index — weekly freight rate index for crude oil tankers">BDTI index <span id="sigBdtiAsOf" style="color:var(--muted2);font-weight:400">· as of —</span></span>
       <span class="sig-src src-est" id="sigBdtiBadge">FREIGHT</span>
     </div>
     <div class="sig-tooltip" id="ttipBdti"></div>
@@ -762,6 +762,20 @@ header{
       </div>
     </div>
 
+    <!-- VESSEL TYPE MIX (moved up — supporting context after Market Pulse) -->
+    <div class="rblock" id="mixBlock">
+      <div class="rhead">
+        <abbr title="Live AIS-derived breakdown of vessel classes near Hormuz. Tanker classes split by ship length: VLCC (300m+), Suezmax (270-300m), Aframax (240-270m).">Vessel type mix</abbr>
+        <span class="rhead-src src-live" style="color:var(--green)" id="mixSrc">LIVE FEED</span>
+      </div>
+      <div class="traffic-grid" style="font-size:14px">
+        <div class="tcard"><div class="tc-val" id="inboundCount" style="color:var(--blue);font-size:14px">0</div><div class="tc-lbl">Inbound</div></div>
+        <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber);font-size:14px">0</div><div class="tc-lbl">Outbound</div></div>
+      </div>
+      <div class="type-bars" id="typeBars"></div>
+      <div class="conclusion" id="concMix" style="display:none"></div>
+    </div>
+
     <!-- VESSEL MOVEMENT — explicit transit/anchored/approach + east/west flow -->
     <div class="rblock">
       <div class="rhead">Vessel movement <span class="rhead-src src-live" style="color:var(--green)" id="moveSrc">LIVE FEED</span></div>
@@ -813,7 +827,7 @@ header{
     <div class="rblock">
       <div class="rhead">
         Vessel traffic trend
-        <span class="rhead-src src-eia" style="color:var(--blue)">TRAFFIC FEED</span>
+        <span class="rhead-src src-eia" style="color:var(--blue)" title="Historical: yesterday + today from browser session and historical store">HISTORICAL</span>
       </div>
       <div id="trendBars" class="trend-bars"></div>
       <div class="trend-legend" id="trendLegend"></div>
@@ -844,13 +858,13 @@ header{
           <line x1="60" y1="16" x2="60" y2="20" stroke="#354355" stroke-width="1.5"/>
           <line x1="95.4" y1="30.6" x2="92.5" y2="33.1" stroke="#354355" stroke-width="1.5"/>
           <line x1="110" y1="66" x2="106" y2="66" stroke="#354355" stroke-width="1.5"/>
-          <path d="M 10 66 A 50 50 0 0 1 60 16" fill="none" stroke="#f09014" stroke-width="8" stroke-linecap="round"/>
-          <circle cx="60" cy="16" r="4" fill="#f09014"/>
+          <path id="gaugeArc" d="M 10 66 A 50 50 0 0 1 60 16" fill="none" stroke="#f09014" stroke-width="8" stroke-linecap="round"/>
+          <circle id="gaugeDot" cx="60" cy="16" r="4" fill="#f09014"/>
           <text x="8" y="78" font-family="JetBrains Mono" font-size="6" fill="#627a95">LOW</text>
           <text x="82" y="78" font-family="JetBrains Mono" font-size="6" fill="#627a95">CRITICAL</text>
         </svg>
-        <div class="gauge-level" style="color:#f09014">ELEVATED</div>
-        <div class="gauge-desc">IRGCN patrols active.<br>Tanker seizure risk above baseline.</div>
+        <div class="gauge-level" id="gaugeLevel" style="color:#f09014">ELEVATED</div>
+        <div class="gauge-desc" id="gaugeDesc">Computing from live signals&hellip;</div>
       </div>
     </div>
 
@@ -880,23 +894,12 @@ header{
       <div class="rhead">Global tanker tension play</div>
       <div class="tanker-rows" id="tankerRows"></div>
       <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        BDTI leads tanker stocks by 2&ndash;3 days in escalation events. Watch for rate spikes while vessel count holds.
+        <abbr title="Baltic Dirty Tanker Index — weekly freight rate index for crude oil tankers">BDTI</abbr> leads tanker stocks by 2&ndash;3 days in escalation events. Watch for rate spikes while vessel count holds (<span title="Freight rates rising while vessel traffic holds — suggests pricing in risk, not actual disruption">fear premium</span>).
       </div>
     </div>
 
     <!-- ═══════════ SECTION 4: CONTEXT ═══════════ -->
     <div class="rsection">Context</div>
-
-    <!-- VESSEL TYPE MIX (moved to Context — slower-changing detail) -->
-    <div class="rblock">
-      <div class="rhead">Vessel type mix <span class="rhead-src src-live" style="color:var(--green)">LIVE FEED</span></div>
-      <div class="traffic-grid">
-        <div class="tcard"><div class="tc-val" id="inboundCount" style="color:var(--blue)">0</div><div class="tc-lbl">Inbound<br>vessels</div></div>
-        <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber)">0</div><div class="tc-lbl">Outbound<br>vessels</div></div>
-      </div>
-      <div class="type-bars" id="typeBars"></div>
-      <div class="conclusion" id="concMix" style="display:none"></div>
-    </div>
 
     <!-- FLAG FLOW (re-added in Context — slowest-moving signal) -->
     <div class="rblock">
@@ -908,7 +911,7 @@ header{
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Populating from live vessel feed&hellip;</div>
       </div>
       <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        Flag = ship registry. Liberia/Marshall Islands/Panama = flag of convenience, predominantly Gulf crude. Indian-flag = IOC/SCI/BPCL tankers direct.
+        Flag = ship registry. Liberia/Marshall Islands/Panama = <span title="Ship registered in a country other than its owner's — typically Liberia, Marshall Islands, Panama">flag of convenience</span>, predominantly Gulf crude. Indian-flag = IOC/SCI/BPCL tankers direct.
       </div>
     </div>
 
@@ -1497,49 +1500,151 @@ function trackFlag(mmsi, forceCode){
 }
 
 // ═══════════════════════════════════════════════════
-// CROSS-VERIFICATION
+// CROSS-VERIFICATION — async, fed by /api/snapshot + /api/bdti
+// Hardcoded eiaExpected/dark/BDTI removed; ACLED row hidden until live.
+// Source labels (e.g. "AIS + EIA") swapped for analytical labels.
 // ═══════════════════════════════════════════════════
-var XV_DEFS = [
-  {src:"AIS + EIA",   label:"Flow reconciliation",   id:"xv-flow",
-   compute:function(aisCount){
-     var eiaExpected = 38;
-     var diff = eiaExpected - aisCount;
-     if(aisCount === 0) return {status:"--",statusColor:"var(--muted)",body:"Waiting for AIS data. EIA baseline: ~38 vessels/day."};
-     if(Math.abs(diff) <= 4) return {status:"ALIGNED",statusColor:"var(--green)",body:"AIS count ("+aisCount+") reconciles with EIA weekly Gulf exports. No anomaly."};
-     if(diff > 4) return {status:"GAP DETECTED",statusColor:"var(--amber)",body:diff+" more vessels expected from EIA data than visible on AIS. Possible dark ships or delayed feed."};
-     return {status:"ABOVE BASELINE",statusColor:"var(--blue)",body:"AIS showing "+(-diff)+" more vessels than EIA baseline. Possible inventory build or data lead."};
-   }},
-  {src:"AIS + GFW",   label:"Dark vessel gap",        id:"xv-dark",
-   compute:function(aisCount){
-     var dark = 8;
-     var pct = aisCount > 0 ? Math.round(dark/(aisCount+dark)*100) : 0;
-     var color = pct > 15 ? "var(--red)" : pct > 8 ? "var(--amber)" : "var(--green)";
-     return {status:pct+"%",statusColor:color,body:"Est. "+dark+" dark vessels (GFW SAR, simulated). "+pct+"% of total traffic running without AIS near Hormuz. Above 15% = elevated sanctions/evasion risk."};
-   }},
-  {src:"ACLED + AIS", label:"Incident-traffic lag",   id:"xv-lag",
-   compute:function(aisCount){
-     return {status:"PENDING",statusColor:"var(--muted)",body:"Awaiting ACLED Research-tier API access (request submitted). Once live: real-time Hormuz region incidents + AIS traffic correlation lag analysis. Currently disabled \u2014 no placeholder data shown."};
-   }},
-  {src:"BDTI + AIS",  label:"Rate vs volume signal",  id:"xv-rate",
-   compute:function(aisCount){
-     return {status:"FEAR PREMIUM",statusColor:"var(--amber)",body:"BDTI +2.3% today. AIS count holding steady at "+aisCount+". Rates rising while traffic holds = fear premium only. Watch for traffic drop as the equity catalyst."};
-   }}
-];
+var _xvCache = { ts: 0, snapshot: null, bdti: null };
+var XV_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
-function renderXV(aisCount){
+async function _fetchXvData(){
+  var now = Date.now();
+  if(_xvCache.ts && (now - _xvCache.ts) < XV_CACHE_TTL_MS){
+    return { snapshot:_xvCache.snapshot, bdti:_xvCache.bdti };
+  }
+  var results = await Promise.all([
+    fetch("/api/snapshot").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+    fetch("/api/bdti").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+  ]);
+  _xvCache = { ts: now, snapshot: results[0], bdti: results[1] };
+  return { snapshot: results[0], bdti: results[1] };
+}
+
+function _computeXvRows(aisCount, snapshot, bdti){
+  var rows = [];
+  // Track most severe row for tension gauge fallback wiring
+  var sev = { rank: 0, level: "NORMAL", color: "var(--green)" };
+  function bump(rank, level, color){ if(rank > sev.rank){ sev = { rank: rank, level: level, color: color }; } }
+
+  // Row 1 — Flow reconciliation: AIS vs baseline_30d from /api/snapshot
+  var baseline = (snapshot && isFinite(snapshot.baseline_30d)) ? snapshot.baseline_30d : 140;
+  var flowRow;
+  if(!aisCount){
+    flowRow = { label:"Flow reconciliation", id:"xv-flow", status:"--", statusColor:"var(--muted)",
+                body:"Awaiting first AIS scrape. Baseline (30d rolling): "+baseline+" transits/day."};
+  } else {
+    var ratio = aisCount / baseline;
+    if(ratio >= 0.85 && ratio <= 1.15){
+      flowRow = { label:"Flow reconciliation", id:"xv-flow", status:"ALIGNED", statusColor:"var(--green)",
+                  body:"24h transits ("+aisCount+") within 15% of 30-day baseline ("+baseline+"). No flow anomaly."};
+    } else if(ratio < 0.85){
+      var dropPct = Math.round((1-ratio)*100);
+      flowRow = { label:"Flow reconciliation", id:"xv-flow", status:"BELOW NORMAL", statusColor:"var(--amber)",
+                  body:"24h transits ("+aisCount+") "+dropPct+"% below 30-day baseline ("+baseline+"). Possible disruption or self-policing."};
+      bump(2, "ELEVATED", "var(--amber)");
+    } else {
+      var upPct = Math.round((ratio-1)*100);
+      flowRow = { label:"Flow reconciliation", id:"xv-flow", status:"ABOVE NORMAL", statusColor:"var(--blue)",
+                  body:"24h transits ("+aisCount+") "+upPct+"% above 30-day baseline ("+baseline+"). Possible inventory build or front-loading."};
+    }
+  }
+  rows.push(flowRow);
+
+  // Row 2 — Dark traffic share: dark_vessels from /api/snapshot vs live AIS count
+  var dark = (snapshot && isFinite(snapshot.dark_vessels)) ? snapshot.dark_vessels : null;
+  if(dark == null){
+    rows.push({ label:"Dark traffic share", id:"xv-dark", status:"--", statusColor:"var(--muted)",
+                body:"Dark vessel estimate unavailable from /api/snapshot." });
+  } else {
+    var total = aisCount + dark;
+    var pct = total > 0 ? Math.round(dark/total*100) : 0;
+    var color, status;
+    if(pct > 15){ color = "var(--red)"; status = pct+"% · HIGH"; bump(3, "HIGH", "var(--red)"); }
+    else if(pct >= 8){ color = "var(--amber)"; status = pct+"% · ELEVATED"; bump(2, "ELEVATED", "var(--amber)"); }
+    else { color = "var(--green)"; status = pct+"% · NORMAL"; }
+    rows.push({ label:"Dark traffic share", id:"xv-dark", status:status, statusColor:color,
+                body:"Est. "+dark+" dark vessels vs "+aisCount+" live AIS = "+pct+"% running without AIS near Hormuz. >15% = elevated sanctions/evasion risk." });
+  }
+
+  // Row 3 — Rate-volume divergence: BDTI WoW vs AIS trend
+  if(!bdti || !isFinite(bdti.value)){
+    rows.push({ label:"Rate-volume divergence", id:"xv-rate", status:"--", statusColor:"var(--muted)",
+                body:"BDTI feed unavailable. Awaiting next weekly publish." });
+  } else {
+    var bdtiV = bdti.value;
+    var wow = isFinite(bdti.wow_pct) ? bdti.wow_pct : null;
+    var aisDirUp = baseline ? (aisCount > baseline * 1.05) : false;
+    var aisDirDown = baseline ? (aisCount < baseline * 0.85) : false;
+    var aisHolding = !aisDirUp && !aisDirDown;
+    var status, color, body;
+    var wowStr = (wow != null) ? ((wow >= 0 ? "+" : "") + wow.toFixed(1) + "%") : "WoW n/a";
+    if(wow != null && wow > 1.5 && aisHolding){
+      status = "FEAR PREMIUM"; color = "var(--amber)";
+      body = "BDTI "+wowStr+" WoW (value "+bdtiV+"). AIS transits holding near baseline. Rates rising while traffic steady = fear premium only — watch for traffic drop as equity catalyst.";
+      bump(2, "ELEVATED", "var(--amber)");
+    } else if(wow != null && wow > 1.5 && aisDirUp){
+      status = "REAL ESCALATION"; color = "var(--red)";
+      body = "BDTI "+wowStr+" WoW (value "+bdtiV+") AND AIS transits above baseline. Both rising = real demand/escalation, not just fear pricing.";
+      bump(3, "HIGH", "var(--red)");
+    } else if(wow != null && wow < -1.5 && aisHolding){
+      status = "CALM"; color = "var(--green)";
+      body = "BDTI "+wowStr+" WoW (value "+bdtiV+"). AIS transits holding. Rates softening while volume steady = market calming.";
+    } else if(aisDirDown){
+      status = "TRAFFIC DROP"; color = "var(--red)";
+      body = "AIS transits "+aisCount+" significantly below baseline "+baseline+". BDTI "+wowStr+" WoW. Volume contraction is the catalyst regardless of rate move.";
+      bump(3, "HIGH", "var(--red)");
+    } else {
+      status = "STABLE"; color = "var(--muted)";
+      body = "BDTI "+bdtiV+" ("+wowStr+" WoW). AIS transits "+aisCount+" vs baseline "+baseline+". No divergence detected.";
+    }
+    rows.push({ label:"Rate-volume divergence", id:"xv-rate", status:status, statusColor:color, body:body });
+  }
+
+  return { rows: rows, severity: sev };
+}
+
+function _wireTensionGauge(sev){
+  var levelEl = document.getElementById("gaugeLevel");
+  var descEl  = document.getElementById("gaugeDesc");
+  var arcEl   = document.getElementById("gaugeArc");
+  var dotEl   = document.getElementById("gaugeDot");
+  if(!levelEl || !arcEl) return;
+  // Severity → arc geometry. Arc endpoints chosen to span ~25/50/75/100% of the half-arc.
+  var map = {
+    "NORMAL":   { color:"#1dd47e", path:"M 10 66 A 50 50 0 0 1 35 24",  dot:[35,24],  desc:"Routine baseline traffic.<br>No escalation signal." },
+    "ELEVATED": { color:"#f09014", path:"M 10 66 A 50 50 0 0 1 60 16",  dot:[60,16],  desc:"Above baseline risk.<br>One signal flagged amber." },
+    "HIGH":     { color:"#ff6b35", path:"M 10 66 A 50 50 0 0 1 92 26",  dot:[92,26],  desc:"Multiple signals stressed.<br>Equity catalyst risk live." },
+    "CRITICAL": { color:"#ff3e52", path:"M 10 66 A 50 50 0 0 1 110 66", dot:[110,66], desc:"Severe disruption signal.<br>Closure / war premium active." }
+  };
+  var m = map[sev.level] || map["ELEVATED"];
+  levelEl.textContent = sev.level;
+  levelEl.style.color = m.color;
+  arcEl.setAttribute("d", m.path);
+  arcEl.setAttribute("stroke", m.color);
+  if(dotEl){
+    dotEl.setAttribute("cx", m.dot[0]); dotEl.setAttribute("cy", m.dot[1]);
+    dotEl.setAttribute("fill", m.color);
+  }
+  if(descEl) descEl.innerHTML = m.desc;
+}
+
+async function renderXV(aisCount){
   var xv = document.getElementById("xvRows");
+  if(!xv) return;
+  var data = await _fetchXvData();
+  var out = _computeXvRows(aisCount, data.snapshot, data.bdti);
   xv.innerHTML = "";
-  XV_DEFS.forEach(function(def){
-    var res = def.compute(aisCount);
+  out.rows.forEach(function(def){
     var row = document.createElement("div");
     row.className = "xv-row";
     row.id = def.id;
     row.innerHTML = '<div class="xv-top">'+
-      '<div class="xv-sources">'+def.src+'</div>'+
-      '<div class="xv-status" style="color:'+res.statusColor+'">'+res.status+'</div></div>'+
-      '<div class="xv-body">'+res.body+'</div>';
+      '<div class="xv-sources">'+def.label+'</div>'+
+      '<div class="xv-status" style="color:'+def.statusColor+'">'+def.status+'</div></div>'+
+      '<div class="xv-body">'+def.body+'</div>';
     xv.appendChild(row);
   });
+  _wireTensionGauge(out.severity);
 }
 renderXV(0);
 
@@ -1784,27 +1889,91 @@ toShow.forEach(function(v){addLogEntry(v,false);});
 var pending=TODAY_LOG.filter(function(v){return v.timeOffset>nowHour;});
 setInterval(function(){if(pending.length>0){var next=pending.shift();addLogEntry(next,true);}},22000);
 
+// Color palette for canonical ship-class labels from the AIS scraper.
+var SHIP_CLASS_COLORS = {
+  "VLCC":"#ff3e52", "Suezmax":"#f09014", "Aframax":"#f7c948",
+  "Panamax tanker":"#38aaff", "Small tanker":"#7dd3fc", "Tanker":"#f09014",
+  "Cargo":"#1dd47e", "Passenger":"#a78bfa", "Fishing":"#38bdf8",
+  "Military":"#ef4444", "High-speed":"#facc15", "Service":"#94a3b8",
+  "Other":"#64748b", "Unknown":"#475569"
+};
+
 function updateTypeBars(){
-  var counts={};var total=loggedVessels.length||1;
-  loggedVessels.forEach(function(v){
-    var si=getShipInfo(v.typeCode,v.name);
-    if(!counts[si.label]){counts[si.label]={count:0,color:si.color};}
-    counts[si.label].count++;
-  });
-  var tb=document.getElementById("typeBars");tb.innerHTML="";
-  var sorted=Object.keys(counts).sort(function(a,b){return counts[b].count-counts[a].count;});
-  sorted.forEach(function(label){
-    var pct=Math.round(counts[label].count/total*100);
-    var row=document.createElement("div");row.className="tbar-row";
-    row.innerHTML='<div class="tbar-label">'+label+'</div>'
-      +'<div class="tbar-track"><div class="tbar-fill" style="width:'+pct+'%;background:'+counts[label].color+'"></div></div>'
-      +'<div class="tbar-pct">'+pct+'%</div>';
-    tb.appendChild(row);
-  });
-  var inb=loggedVessels.filter(function(v){return v.lane==="in";}).length;
-  var outb=loggedVessels.filter(function(v){return v.lane==="out";}).length;
-  document.getElementById("inboundCount").textContent=inb;
-  document.getElementById("outboundCount").textContent=outb;
+  var tb = document.getElementById("typeBars"); if(!tb) return;
+  var inboundEl = document.getElementById("inboundCount");
+  var outboundEl = document.getElementById("outboundCount");
+  // Prefer real AIS server-side aggregation when present
+  var server = (typeof _aisServer === "object" && _aisServer) ? _aisServer : null;
+  var typeBreakdown = server && server.typeBreakdown ? server.typeBreakdown
+                    : (server && server.summary && server.summary.typeBreakdown) ? server.summary.typeBreakdown
+                    : null;
+  var realInbound  = server && (server.currentInbound != null ? server.currentInbound
+                    : (server.summary && server.summary.currentInbound != null ? server.summary.currentInbound : null));
+  var realOutbound = server && (server.currentOutbound != null ? server.currentOutbound
+                    : (server.summary && server.summary.currentOutbound != null ? server.summary.currentOutbound : null));
+
+  tb.innerHTML = "";
+  var simulated = false;
+
+  if(typeBreakdown && Object.keys(typeBreakdown).length){
+    // ── Real AIS path ──
+    tb.removeAttribute("data-simulated");
+    var entries = Object.keys(typeBreakdown).map(function(k){ return {label:k, count:typeBreakdown[k]}; });
+    var totalReal = entries.reduce(function(s,e){ return s + e.count; }, 0) || 1;
+    entries.sort(function(a,b){ return b.count - a.count; });
+    entries.forEach(function(e){
+      var pct = Math.round(e.count / totalReal * 100);
+      var color = SHIP_CLASS_COLORS[e.label] || "#64748b";
+      var row = document.createElement("div"); row.className="tbar-row";
+      row.innerHTML = '<div class="tbar-label">'+e.label+'</div>'
+        +'<div class="tbar-track"><div class="tbar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
+        +'<div class="tbar-pct">'+pct+'%</div>';
+      tb.appendChild(row);
+    });
+  } else {
+    // ── Fallback: legacy simulation array ──
+    simulated = true;
+    tb.setAttribute("data-simulated", "true");
+    var counts={}; var total=loggedVessels.length||1;
+    loggedVessels.forEach(function(v){
+      var si=getShipInfo(v.typeCode,v.name);
+      if(!counts[si.label]){counts[si.label]={count:0,color:si.color};}
+      counts[si.label].count++;
+    });
+    var sorted=Object.keys(counts).sort(function(a,b){return counts[b].count-counts[a].count;});
+    sorted.forEach(function(label){
+      var pct=Math.round(counts[label].count/total*100);
+      var row=document.createElement("div");row.className="tbar-row";
+      row.innerHTML='<div class="tbar-label">'+label+'</div>'
+        +'<div class="tbar-track"><div class="tbar-fill" style="width:'+pct+'%;background:'+counts[label].color+'"></div></div>'
+        +'<div class="tbar-pct">'+pct+'%</div>';
+      tb.appendChild(row);
+    });
+  }
+
+  // Inbound / outbound counts — real if available, else simulated
+  var inb, outb;
+  if(realInbound != null && realOutbound != null){
+    inb = realInbound; outb = realOutbound;
+  } else {
+    inb = loggedVessels.filter(function(v){return v.lane==="in";}).length;
+    outb = loggedVessels.filter(function(v){return v.lane==="out";}).length;
+  }
+  if(inboundEl)  inboundEl.textContent = inb;
+  if(outboundEl) outboundEl.textContent = outb;
+
+  // Flip the card's source badge based on whether we're real or simulated
+  var mixBlock = document.getElementById("mixBlock");
+  var mixBadge = document.getElementById("mixSrc");
+  if(mixBadge){
+    if(simulated){
+      mixBadge.textContent = "DATA PENDING";
+      mixBadge.style.color = "var(--muted)";
+    } else {
+      mixBadge.textContent = "LIVE FEED";
+      mixBadge.style.color = "var(--green)";
+    }
+  }
 
   // Use 24h transit count from B+ engine as the "live" trend bar
   // (was loggedVessels.length, which was a snapshot inflated by anchored vessels).
