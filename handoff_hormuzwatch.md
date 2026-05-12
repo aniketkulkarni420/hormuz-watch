@@ -591,7 +591,7 @@ All fixes shipped in commit **`527458a`** unless noted. Order matches §17 prior
 
 ## 19. OPERATIONAL TOOLING
 
-- /api/_diag?token=SNAPSHOT_TOKEN — full system state JSON in one call
+- /api/diag?token=SNAPSHOT_TOKEN — full system state JSON in one call
 - GHA workflows:
   - smoke-test — runs on every push, verifies endpoints after deploy
   - watchdog — hourly, alerts via Resend if any feed >30 min stale

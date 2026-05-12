@@ -14,7 +14,7 @@ jobs:
           RESEND_KEY: ${{ secrets.RESEND_KEY }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: |
-          DIAG=$(curl -sf "https://hormuz-watch-7cd.pages.dev/api/_diag?token=$SNAPSHOT_TOKEN")
+          DIAG=$(curl -sf "https://hormuz-watch-7cd.pages.dev/api/diag?token=$SNAPSHOT_TOKEN")
           echo "$DIAG" | python3 -m json.tool || (echo "diag failed to parse"; exit 1)
           HEALTHY=$(echo "$DIAG" | python3 -c "import sys,json; print(json.load(sys.stdin).get('healthy', False))")
           if [ "$HEALTHY" != "True" ]; then
