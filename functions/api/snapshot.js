@@ -3,33 +3,66 @@
 // India Risk Monitor (https://india-risk-monitor.pages.dev) polls this
 // endpoint each cron tick to populate the `hormuz_throughput` metric.
 //
-// V1 (this file): returns a static known-good snapshot of current state +
-//   ISO timestamp. Update the constants below when regime shifts (or wire
-//   them to env vars). Acceptable because IRM treats the value as a daily
-//   indicator, not a real-time feed.
-//
-// V2 (planned): swap to a Worker scheduled every hour that connects to
-//   AISStream, counts transits in the Hormuz bounding box over rolling 24h,
-//   writes to Cloudflare KV. This function then reads from KV.
+// V2 (2026-05-12): Reads from OIL_KV key `ais_state` (written every 5 minutes
+//   by scripts/scrape_ais.py via .github/workflows/ais-scraper.yml). When that
+//   scraper has captured fresh data, the live `summary.transits24h` count
+//   takes precedence over the env-var fallback. The `is_static` + `live_*`
+//   fields tell downstream consumers (IRM) which mode is active so they can
+//   render PROVISIONAL pills only when truly using static fallback.
 //
 // Schema accepted by IRM's hormuz_v1 parser (any of these field names work):
 //   daily_transit_estimate     (preferred — 24h transit count)
 //   transits_per_day | transits_24h | vessel_count_total | total_active
 
+const AIS_STATE_KEY = "ais_state";
+// How recent must scraper output be for us to use it (vs fall back to env vars)?
+const AIS_STATE_FRESH_SECONDS = 30 * 60; // 30 minutes · scraper runs every 5
+
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const debug = url.searchParams.get("debug") === "1";
 
-  // ── Current state · update when the dashboard's main reading shifts ──
-  // Numbers below match the live hormuz-watch dashboard's last verified
-  // observation. Tweak them when you spot a meaningful regime change, or
-  // override via env vars HORMUZ_TRANSITS_24H / HORMUZ_BDTI / etc.
-  const transits24h = numFromEnv(env.HORMUZ_TRANSITS_24H, 84);
+  // ── Live AIS state · written by scripts/scrape_ais.py every 5 minutes ──
+  // If the scraper has fresh data (last 30 min) with > 0 transits, use it.
+  // Otherwise fall back to env-var-overridable static values.
+  let aisLive = null;          // { transits24h, inbound, outbound, vesselCount, ageSec, source }
+  if (env.OIL_KV) {
+    try {
+      const raw = await env.OIL_KV.get(AIS_STATE_KEY);
+      if (raw) {
+        const kv = JSON.parse(raw);
+        const summary = kv?.summary || kv;
+        const fetchedAt = kv?.fetchedAt || 0;
+        const ageSec = fetchedAt ? Math.floor(Date.now() / 1000 - fetchedAt) : null;
+        const t24h = Number(summary?.transits24h);
+        // Only treat as live if scraper saw actual data AND it's fresh
+        if (Number.isFinite(t24h) && t24h > 0 && ageSec != null && ageSec < AIS_STATE_FRESH_SECONDS) {
+          aisLive = {
+            transits24h: t24h,
+            inbound: Number(summary.currentInbound ?? 0) || 0,
+            outbound: Number(summary.currentOutbound ?? 0) || 0,
+            vesselCount: Number(summary.vesselCount ?? 0) || 0,
+            eastbound: Number(summary.eastbound24h ?? 0) || 0,
+            westbound: Number(summary.westbound24h ?? 0) || 0,
+            uniqueImos: Number(summary.uniqueImos24h ?? 0) || 0,
+            typeBreakdown: summary.typeBreakdown || null,
+            categories: summary.categories || null,
+            ageSec,
+            source: "GHA AISStream scraper · ais_state KV (every 5 min)"
+          };
+        }
+      }
+    } catch { /* fall through to static */ }
+  }
+
+  // Resolve final values · live wins when available
+  const transits24h = aisLive ? aisLive.transits24h : numFromEnv(env.HORMUZ_TRANSITS_24H, 84);
   const baseline = numFromEnv(env.HORMUZ_BASELINE_30D, 140);
-  const inbound = numFromEnv(env.HORMUZ_INBOUND, 38);
-  const outbound = numFromEnv(env.HORMUZ_OUTBOUND, 42);
+  const inbound = aisLive ? aisLive.inbound : numFromEnv(env.HORMUZ_INBOUND, 38);
+  const outbound = aisLive ? aisLive.outbound : numFromEnv(env.HORMUZ_OUTBOUND, 42);
   const dark = numFromEnv(env.HORMUZ_DARK, 947);
-  // BDTI: prefer KV (set via /admin/bdti or weekly scraper), fall back to env default
+
+  // BDTI: existing OIL_KV lookup · preserved unchanged
   let bdti = numFromEnv(env.HORMUZ_BDTI, 14);
   let bdti_as_of = null;
   let bdti_stale = false;
@@ -53,23 +86,35 @@ export async function onRequestGet({ request, env }) {
 
   const payload = {
     as_of: new Date().toISOString(),
-    daily_transit_estimate: transits24h,        // primary IRM hormuz_throughput input
-    transits_per_day: transits24h,              // alias
+    daily_transit_estimate: transits24h,
+    transits_per_day: transits24h,
     vessel_count_inbound: inbound,
     vessel_count_outbound: outbound,
-    total_active: totalActive,                  // current snapshot count
-    baseline_30d: baseline,                     // 30-day rolling reference
+    total_active: totalActive,
+    baseline_30d: baseline,
     pct_of_normal: pctOfNormal,
-    dark_vessels: dark,                         // suspect AIS-off
-    bdti: bdti,                                 // Baltic Dirty Tanker Index
-    bdti_as_of: bdti_as_of,                     // ISO date of BDTI publish week (null if env-default)
-    bdti_stale: bdti_stale,                     // true if >9 days old (missed weekly publish)
-    oil_transit_value_usd_per_day: 1120000000,  // baseline 21M b/d × $80 = $1.12 Bn
+    dark_vessels: dark,
+    bdti: bdti,
+    bdti_as_of: bdti_as_of,
+    bdti_stale: bdti_stale,
+    oil_transit_value_usd_per_day: 1120000000,
     incidents_30d: 58,
     india_import_dependency_pct: 58.0,
-    source: "hormuz-watch · static snapshot · v1",
+    // V2 honesty fields · downstream consumers detect static vs live
+    is_static: !aisLive,
+    live_source_count: aisLive ? 1 : 0,
+    ais_state_age_sec: aisLive?.ageSec ?? null,
+    source: aisLive
+      ? aisLive.source
+      : "hormuz-watch · static fallback · env-var defaults (AIS scraper stale or no data)",
+    // Expose richer AIS payload when live
+    eastbound_24h: aisLive?.eastbound ?? null,
+    westbound_24h: aisLive?.westbound ?? null,
+    unique_imos_24h: aisLive?.uniqueImos ?? null,
+    vessel_count_in_bbox: aisLive?.vesselCount ?? null,
+    type_breakdown: aisLive?.typeBreakdown ?? null,
     upgrade_note: debug
-      ? "V1 ships static state. V2 will read live from KV updated by AISStream worker."
+      ? `Reads ais_state from OIL_KV (written by scrape_ais.py every 5 min). Live mode when age < ${AIS_STATE_FRESH_SECONDS}s AND transits24h > 0. Otherwise env-var fallback.`
       : undefined
   };
 
