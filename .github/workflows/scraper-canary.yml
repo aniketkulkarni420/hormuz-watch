@@ -1,0 +1,43 @@
+name: scraper-canary
+on:
+  schedule:
+    - cron: "0 12 * * 3"   # Wednesday 12:00 UTC — midweek, between Friday scrapes
+  workflow_dispatch:
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet requests
+      - name: Run BDTI scraper (dry-run)
+        id: dryrun
+        continue-on-error: true
+        run: python scripts/scrape_bdti.py --dry-run 2>&1 | tee /tmp/canary.log
+      - name: Upload canary log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraper-canary-${{ github.run_id }}
+          path: /tmp/canary.log
+          retention-days: 14
+      - name: Alert on failure
+        if: steps.dryrun.outcome != 'success'
+        env:
+          RESEND_KEY: ${{ secrets.RESEND_KEY }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+        run: |
+          if [ -n "$RESEND_KEY" ] && [ -n "$ALERT_EMAIL" ]; then
+            LOG_TAIL=$(tail -40 /tmp/canary.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            curl -X POST https://api.resend.com/emails \
+              -H "Authorization: Bearer $RESEND_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"from\":\"Hormuz Watch <onboarding@resend.dev>\",\"to\":[\"$ALERT_EMAIL\"],\"subject\":\"Hormuz Watch — BDTI scraper canary failed\",\"text\":\"BDTI scraper canary failed — HSN site may have changed structure. Manual update may be needed Friday.\\n\\nLog tail:\\n$LOG_TAIL\"}"
+          else
+            echo "::warning::Canary failed but RESEND_KEY/ALERT_EMAIL not set"
+          fi
+          exit 1

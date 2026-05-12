@@ -5,8 +5,17 @@
 //
 // Storage: KV key "bdti_latest" → { value, asOf, source, wow_pct, ts }
 // Falls back to env.HORMUZ_BDTI legacy default if KV empty.
+import { reportError } from "../_lib/sentry.js";
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet(ctx) {
+  try { return await _handleBdtiGet(ctx); }
+  catch (e) {
+    await reportError(e, ctx.env, { tags: { endpoint: "/api/bdti", method: "GET" } });
+    throw e;
+  }
+}
+
+async function _handleBdtiGet({ env }) {
   let kv_data = null;
   if (env.OIL_KV) {
     try {
@@ -40,7 +49,15 @@ export async function onRequestGet({ env }) {
   });
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(ctx) {
+  try { return await _handleBdtiPost(ctx); }
+  catch (e) {
+    await reportError(e, ctx.env, { tags: { endpoint: "/api/bdti", method: "POST" } });
+    throw e;
+  }
+}
+
+async function _handleBdtiPost({ request, env }) {
   if (!env.OIL_KV) return json({ error: "KV binding missing" }, 500);
   const token = request.headers.get("X-Admin-Token") || request.headers.get("X-Snapshot-Token");
   // Accept either ADMIN_TOKEN (manual via /admin/bdti form) or SNAPSHOT_TOKEN (scraper)

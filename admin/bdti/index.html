@@ -149,6 +149,10 @@ async function postBdti(e){
     });
     const d = await r.json();
     if (r.ok && d.ok) {
+      try {
+        fetch("/api/event", { method: "POST", headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ event: "admin_bdti_submit" }), keepalive: true });
+      } catch(e) {}
       status.textContent = "Updated " + d.value;
       if (d.wow_pct != null) status.textContent += " (WoW " + (d.wow_pct >= 0 ? "+" : "") + d.wow_pct + "%)";
       status.className = "status ok";

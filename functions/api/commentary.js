@@ -3,8 +3,17 @@
 //   POST /api/commentary             — token-gated, write new commentary
 //
 // Auth on POST: X-Admin-Token header must match env.ADMIN_TOKEN secret.
+import { reportError } from "../_lib/sentry.js";
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(ctx) {
+  try { return await _handleCommentaryGet(ctx); }
+  catch (e) {
+    await reportError(e, ctx.env, { tags: { endpoint: "/api/commentary", method: "GET" } });
+    throw e;
+  }
+}
+
+async function _handleCommentaryGet({ request, env }) {
   if (!env.DB) return json({ error: "D1 binding missing" }, 500);
   const url = new URL(request.url);
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "5", 10), 50);
@@ -27,7 +36,15 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(ctx) {
+  try { return await _handleCommentaryPost(ctx); }
+  catch (e) {
+    await reportError(e, ctx.env, { tags: { endpoint: "/api/commentary", method: "POST" } });
+    throw e;
+  }
+}
+
+async function _handleCommentaryPost({ request, env }) {
   if (!env.DB) return json({ error: "D1 binding missing" }, 500);
   const token = request.headers.get("X-Admin-Token");
   if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {

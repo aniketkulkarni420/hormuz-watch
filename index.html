@@ -917,6 +917,21 @@ header{
 
 <script>
 // ═══════════════════════════════════════════════════
+// FEATURE USAGE TRACKING (FIX #8) — POSTs to /api/event
+// Allow-list enforced server-side; fire-and-forget.
+// ═══════════════════════════════════════════════════
+function track(event, props){
+  try {
+    fetch("/api/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: event, props: props || null }),
+      keepalive: true,
+    });
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════
 // DATA DEFINITIONS
 // ═══════════════════════════════════════════════════
 
@@ -2713,6 +2728,15 @@ function renderSigTooltip(targetId, v){
   var el = document.getElementById(targetId);
   if(!el || !v) return;
   el.innerHTML = '<div class="sig-tt-verdict cv-'+v.level+'" title="'+(v.desc||"").replace(/"/g,"&quot;")+'"><span aria-hidden="true" style="margin-right:5px;font-family:var(--mono)">'+v.icon+'</span>'+v.label+'</div><div class="sig-tt-text">'+v.text+'</div>';
+  // FIX #8 — track once per session when a verdict tooltip is hovered
+  if (!el._ttTracked) {
+    el._ttTracked = true;
+    el.addEventListener("mouseenter", function(){
+      if (window._verdictTooltipSeen) return;
+      window._verdictTooltipSeen = true;
+      if (typeof track === "function") track("verdict_tooltip", { panel: targetId });
+    }, { once: false });
+  }
 }
 
 function renderConclusions(){
@@ -2832,6 +2856,7 @@ function toggleCmt(){
   if (!t || !b) return;
   var banner = document.getElementById("cmtBanner");
   if (_cmtExpanded) {
+    if (typeof track === "function") track("commentary_expand");
     t.classList.remove("collapsed"); b.textContent = "Collapse";
     if (banner) banner.classList.add("expanded");
   } else {

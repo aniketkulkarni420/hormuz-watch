@@ -92,3 +92,18 @@ CREATE TABLE IF NOT EXISTS digest_runs (
   status          TEXT DEFAULT 'draft'                -- 'draft' | 'reviewed' | 'sent' | 'failed'
 );
 CREATE INDEX IF NOT EXISTS idx_digest_runs_ts ON digest_runs(ts);
+
+-- ─── Feature usage analytics (FIX #8) ────────────────────
+-- Lightweight event log for tracking which dashboard features users actually use.
+-- Distinct from the system `events` table above (which is for threshold/source
+-- alerts). Allow-list enforced server-side in /api/event.
+CREATE TABLE IF NOT EXISTS feature_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts INTEGER NOT NULL,
+  event TEXT NOT NULL,
+  props TEXT,         -- JSON
+  ip_hash TEXT,       -- SHA-256 of IP+salt for uniqueness without PII
+  ua_short TEXT       -- "Chrome/Mac", "Safari/iOS" etc. — no fingerprinting
+);
+CREATE INDEX IF NOT EXISTS idx_feature_events_ts ON feature_events(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_feature_events_name ON feature_events(event);

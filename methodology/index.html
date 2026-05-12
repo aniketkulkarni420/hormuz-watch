@@ -178,5 +178,16 @@ a:hover{text-decoration:underline}
 © 2026 Aniket Kulkarni · All rights reserved · <a href="https://www.linkedin.com/in/aniket-kulkarni-equity-research/" target="_blank" rel="noopener">LinkedIn</a> · <a href="/terms">Terms</a>
 </div>
 </div>
+<script>
+// FIX #8 — feature analytics page-load ping
+try {
+  fetch("/api/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: "methodology_view" }),
+    keepalive: true,
+  });
+} catch(e) {}
+</script>
 </body>
 </html>

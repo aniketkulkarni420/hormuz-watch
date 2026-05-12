@@ -13,6 +13,8 @@
 //
 // TODO: read thresholds from /config/verdict_thresholds.json once Worker can import JSON
 
+import { reportError } from "../_lib/sentry.js";
+
 function computeVerdict(data) {
   // data: { transits_24h, vessels_transiting, brent_price, gfw_encounters, dark_pct }
   const t    = data.transits_24h || 0;
@@ -37,7 +39,16 @@ function computeVerdict(data) {
   else                 return "NORMAL";
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(ctx) {
+  try {
+    return await _handleRecord(ctx);
+  } catch (e) {
+    await reportError(e, ctx.env, { tags: { endpoint: "/api/record", method: "POST" } });
+    throw e;
+  }
+}
+
+async function _handleRecord({ request, env }) {
   const token = request.headers.get("X-Snapshot-Token");
   if (!env.SNAPSHOT_TOKEN || token !== env.SNAPSHOT_TOKEN) {
     return json({ error: "unauthorized" }, 401);

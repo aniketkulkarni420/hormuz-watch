@@ -1,7 +1,17 @@
 // Cloudflare Pages Function — Global Fishing Watch v3 proxy
 // Holds GFW_TOKEN (JWT) server-side. Client POSTs JSON body, we forward + add auth.
 // KV caching: GFW satellite data updates every 4-12h, so we cache for 4h per unique query.
-export async function onRequestPost({ request, env }) {
+import { reportError } from "../_lib/sentry.js";
+
+export async function onRequestPost(ctx) {
+  try { return await _handleGfwPost(ctx); }
+  catch (e) {
+    await reportError(e, ctx.env, { tags: { endpoint: "/api/gfw", method: "POST" } });
+    throw e;
+  }
+}
+
+async function _handleGfwPost({ request, env }) {
   if (!env.GFW_TOKEN) {
     return json({ error: "GFW_TOKEN not configured" }, 500);
   }

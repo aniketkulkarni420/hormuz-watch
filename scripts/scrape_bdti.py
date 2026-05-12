@@ -131,7 +131,9 @@ def post_bdti(data):
 
 
 def main():
-    print(f"=== BDTI scrape at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
+    dry_run = "--dry-run" in sys.argv
+    mode = "DRY RUN" if dry_run else "LIVE"
+    print(f"=== BDTI scrape [{mode}] at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
     sources = [
         ("hellenic-shipping-news", hellenic_shipping_news),
         ("investing.com",          investing_com),
@@ -141,12 +143,18 @@ def main():
         result = fn()
         if result:
             print(f"\n✓ Got BDTI = {result['value']} from {result['source']}")
+            if dry_run:
+                print(f"DRY RUN — found BDTI from {result['source']}: {result['value']}")
+                return 0
             ok = post_bdti(result)
             if ok:
                 print("✓ Updated successfully")
                 return 0
             else:
                 print("⚠ POST failed but value was found — continuing to next source")
+    if dry_run:
+        print("\nDRY RUN — no sources returned a value")
+        return 1
     print("\n✗ All BDTI sources failed. /admin/bdti remains as manual fallback.")
     print("  Watchdog will alert if BDTI ages past 9 days.")
     return 0  # Don't fail the workflow — manual fallback is expected

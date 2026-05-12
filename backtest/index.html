@@ -197,6 +197,16 @@ function drawChart(points) {
 }
 
 run();
+
+// FIX #8 — feature analytics page-load ping
+try {
+  fetch("/api/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: "backtest_open" }),
+    keepalive: true,
+  });
+} catch(e) {}
 </script>
 </body>
 </html>

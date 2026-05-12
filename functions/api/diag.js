@@ -59,6 +59,27 @@ export async function onRequestGet({ request, env }) {
   out.healthy = stale.length === 0;
   out.staleFeeds = stale.map(([k, v]) => `${k}:${v.ageMin}m`);
 
+  // ── AIS key health probe ─────────────────────────────────────────────────
+  // When AISStream silently revokes the key, the scraper still runs (fresh
+  // fetchedAt) but messagesProcessed is 0. Regular staleness check passes,
+  // so we'd never alert. This probe catches that specifically.
+  out.aisHealthCheck = "ok";
+  try {
+    const raw = await env.OIL_KV.get("ais_state");
+    if (raw) {
+      const ais = JSON.parse(raw);
+      const fetchedAt = ais.fetchedAt || ais.ts || 0;
+      const ageSec = now - fetchedAt;
+      const msgs = ais.messagesProcessed;
+      // Scraper recently ran (< 1 hour) AND got zero messages — key likely revoked
+      if (msgs === 0 && ageSec < 3600) {
+        out.aisHealthCheck = "no_messages_recent";
+        out.staleFeeds.push("ais_zero_messages");
+        out.healthy = false;
+      }
+    }
+  } catch { /* AIS state already covered by feeds.ais_state */ }
+
   // ── Secret rotation tracking ────────────────────────────────────────────
   // SECRETS_LAST_ROTATED env var is YYYY-MM-DD format, set manually in CF Pages
   // when secrets are rotated. Watchdog alerts if >90 days.

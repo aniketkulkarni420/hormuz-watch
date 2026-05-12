@@ -92,6 +92,8 @@ These are the ONLY secrets CF Pages Functions need. AIS_KEY is NOT used here —
 | `RESEND_KEY` | Resend email service (subscribe confirmation) | YES |
 | `RESEND_FROM` | `Hormuz Watch <onboarding@resend.dev>` | YES |
 | `HORMUZ_BASELINE_*`, `HORMUZ_BDTI`, `HORMUZ_DARK`, `HORMUZ_INBOUND`, `HORMUZ_OUTBOUND`, `HORMUZ_TRANSITS_*` | Legacy snapshot.js IRM endpoint defaults | YES (existing) |
+| `SENTRY_DSN` | Backend error reporter for CF Pages Functions write-path endpoints (record, subscribe, bdti, gfw, commentary). Get from Sentry → Settings → Client Keys (DSN). **Different from frontend Loader Script.** Leave unset to disable backend reporting. | Optional |
+| `IP_HASH_SALT` | Salt for `/api/event` IP hashing (FIX #8 feature analytics). Default works but rotate every 90 days for uniqueness counts. | Optional |
 | ~~`TWELVE_KEY`~~ | **REMOVED** — Twelve Data tier deleted in commit 5333e2b; can delete from CF dashboard | NO |
 
 ### GitHub Secrets (for GHA workflows)

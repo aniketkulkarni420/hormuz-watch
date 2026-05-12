@@ -5,7 +5,17 @@
 // Currently this stores subscribers in D1. Confirmation email sending is wired
 // only if env.RESEND_KEY is set; otherwise subscribers are stored as
 // 'confirmation_pending' and we surface a friendly message.
-export async function onRequestPost({ request, env }) {
+import { reportError } from "../_lib/sentry.js";
+
+export async function onRequestPost(ctx) {
+  try { return await _handleSubscribePost(ctx); }
+  catch (e) {
+    await reportError(e, ctx.env, { tags: { endpoint: "/api/subscribe", method: "POST" } });
+    throw e;
+  }
+}
+
+async function _handleSubscribePost({ request, env }) {
   if (!env.DB) return json({ error: "D1 binding missing" }, 500);
 
   // ── IP rate limit: max 3 subscribe attempts / hour / IP ─────────────────
@@ -88,7 +98,15 @@ export async function onRequestPost({ request, env }) {
   });
 }
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(ctx) {
+  try { return await _handleSubscribeGet(ctx); }
+  catch (e) {
+    await reportError(e, ctx.env, { tags: { endpoint: "/api/subscribe", method: "GET" } });
+    throw e;
+  }
+}
+
+async function _handleSubscribeGet({ request, env }) {
   if (!env.DB) return json({ error: "D1 binding missing" }, 500);
   const url = new URL(request.url);
   const token = url.searchParams.get("confirm");
