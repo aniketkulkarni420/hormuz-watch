@@ -1,0 +1,28 @@
+name: bdti-weekly
+on:
+  schedule:
+    - cron: "30 18 * * 5"   # Friday 18:30 UTC — after Baltic Exchange close (16:30 UTC)
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet requests
+      - name: Run BDTI scraper
+        env:
+          SNAPSHOT_TOKEN: ${{ secrets.SNAPSHOT_TOKEN }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: python scripts/scrape_bdti.py 2>&1 | tee /tmp/scrape.log
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrape-log-bdti-${{ github.run_id }}
+          path: /tmp/scrape.log
+          retention-days: 14

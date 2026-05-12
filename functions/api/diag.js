@@ -12,7 +12,8 @@ export async function onRequestGet({ request, env }) {
   const out = { ts: now, feeds: {} };
 
   // KV reads — for each key, return age + small payload preview
-  const kvKeys = ["latest", "ais_state", "scrape_status_oil", "scrape_status_ais", "verdict_latest"];
+  // bdti_latest has a different "stale" threshold (weekly publish vs continuous)
+  const kvKeys = ["latest", "ais_state", "scrape_status_oil", "scrape_status_ais", "verdict_latest", "bdti_latest"];
   for (const k of kvKeys) {
     try {
       const raw = await env.OIL_KV.get(k);
@@ -49,7 +50,12 @@ export async function onRequestGet({ request, env }) {
   }
 
   // Overall health rollup
-  const stale = Object.entries(out.feeds).filter(([_, v]) => v && v.ageMin && v.ageMin > 30);
+  // BDTI publishes weekly so threshold is 9 days (12960 min), not 30 min
+  const stale = Object.entries(out.feeds).filter(([k, v]) => {
+    if (!v || !v.ageMin) return false;
+    const limit = k === "bdti_latest" ? 12960 : 30;
+    return v.ageMin > limit;
+  });
   out.healthy = stale.length === 0;
   out.staleFeeds = stale.map(([k, v]) => `${k}:${v.ageMin}m`);
 

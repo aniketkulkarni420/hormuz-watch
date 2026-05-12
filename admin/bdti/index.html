@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · BDTI · Hormuz Watch</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;padding:0;min-height:100vh}
+.wrap{max-width:560px;margin:0 auto;padding:40px 24px}
+.back{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;margin-bottom:18px}
+.back:hover{color:var(--amber)}
+h1{font-size:28px;font-weight:900;letter-spacing:-.005em;margin-bottom:6px}
+.sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em;margin-bottom:32px}
+.current{margin-bottom:24px;padding:14px 18px;background:var(--panel);border:1px solid var(--border);border-radius:8px}
+.current-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.current-val{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--amber);margin:6px 0}
+.current-meta{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.stale-badge{display:inline-block;padding:2px 7px;background:rgba(255,62,82,.15);color:var(--red);border-radius:3px;font-size:9px;font-weight:700;margin-left:6px;text-transform:uppercase}
+.token-row{margin-bottom:20px;padding:14px 16px;background:var(--panel);border:1px solid var(--border);border-radius:6px;display:flex;gap:10px;align-items:center}
+.token-row label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;flex-shrink:0}
+.token-row input{flex:1;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:4px;font-family:var(--mono);font-size:11px}
+.token-row button{background:transparent;border:1px solid var(--amber);color:var(--amber);padding:7px 12px;border-radius:4px;font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
+.token-status{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.token-status.ok{color:var(--green)}
+form{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:30px}
+.field{margin-bottom:18px}
+.field label{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;font-weight:700}
+input[type="number"],input[type="text"],input[type="date"]{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:5px;font-family:var(--mono);font-size:13px}
+input:focus{outline:none;border-color:var(--amber)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.helper{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:4px;line-height:1.5}
+.submit{margin-top:12px;display:flex;gap:12px;align-items:center}
+.submit button{background:var(--amber);color:#000;border:0;padding:11px 22px;border-radius:5px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.submit button:disabled{opacity:.4;cursor:not-allowed}
+.status{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+.status.ok{color:var(--green)}.status.err{color:var(--red)}
+.foot{margin-top:30px;font-family:var(--mono);font-size:10px;color:var(--muted2);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="/">&larr; Back to dashboard</a>
+<h1>BDTI admin</h1>
+<div class="sub">Manual update for Baltic Dirty Tanker Index &middot; published weekly Fridays</div>
+
+<div class="current" id="current">Loading current value...</div>
+
+<div class="token-row">
+  <label>Admin token</label>
+  <input id="tok" type="password" placeholder="Paste ADMIN_TOKEN" autocomplete="off">
+  <button onclick="saveToken()">Save</button>
+  <span class="token-status" id="tokStatus">Not saved</span>
+</div>
+
+<form onsubmit="postBdti(event)">
+  <div class="row2">
+    <div class="field">
+      <label>BDTI value *</label>
+      <input type="number" id="value" step="0.1" min="100" max="5000" placeholder="e.g. 1248" required>
+      <div class="helper">Typical range 400&ndash;2500. Sanity bounds 100&ndash;5000.</div>
+    </div>
+    <div class="field">
+      <label>As of (week ending)</label>
+      <input type="date" id="asOf">
+      <div class="helper">Friday of the publish week. Leaves blank &rarr; today.</div>
+    </div>
+  </div>
+  <div class="field">
+    <label>Source (optional)</label>
+    <input type="text" id="source" placeholder="e.g. balticexchange.com, Hellenic Shipping News">
+    <div class="helper">For audit trail. Defaults to &quot;admin-form&quot;.</div>
+  </div>
+  <div class="submit">
+    <button id="submitBtn" type="submit">Update BDTI</button>
+    <span class="status" id="submitStatus"></span>
+  </div>
+</form>
+
+<div class="foot">&copy; 2026 Aniket Kulkarni &middot; admin &middot; noindex &middot; token-gated</div>
+</div>
+
+<script>
+function getToken(){ return sessionStorage.getItem("hormuz_admin_token") || ""; }
+function saveToken(){
+  const t = document.getElementById("tok").value.trim();
+  if (!t) return;
+  sessionStorage.setItem("hormuz_admin_token", t);
+  document.getElementById("tokStatus").textContent = "Saved this session";
+  document.getElementById("tokStatus").className = "token-status ok";
+}
+window.addEventListener("DOMContentLoaded", () => {
+  if (getToken()) {
+    document.getElementById("tok").value = getToken();
+    document.getElementById("tokStatus").textContent = "Saved this session";
+    document.getElementById("tokStatus").className = "token-status ok";
+  }
+  // Pre-fill asOf with last Friday
+  const d = new Date();
+  const dayOfWeek = d.getUTCDay();
+  const diff = (dayOfWeek + 2) % 7;          // shift back to Friday
+  d.setUTCDate(d.getUTCDate() - diff);
+  document.getElementById("asOf").value = d.toISOString().slice(0, 10);
+  loadCurrent();
+});
+
+async function loadCurrent(){
+  const el = document.getElementById("current");
+  try {
+    const r = await fetch("/api/bdti");
+    const d = await r.json();
+    const staleBadge = d.stale ? '<span class="stale-badge">stale</span>' : '';
+    const wow = d.wow_pct != null ? ` &middot; WoW ${d.wow_pct >= 0 ? "+" : ""}${d.wow_pct}%` : '';
+    el.innerHTML =
+      '<div class="current-label">Current value' + staleBadge + '</div>' +
+      '<div class="current-val">' + d.value + '</div>' +
+      '<div class="current-meta">as of ' + (d.asOf || "unknown") + ' &middot; source: ' + d.source +
+      (d.ageDays != null ? ' &middot; age: ' + d.ageDays + 'd' : '') + wow + '</div>';
+  } catch (e) {
+    el.textContent = "Failed to load current value: " + e.message;
+  }
+}
+
+async function postBdti(e){
+  e.preventDefault();
+  const token = getToken();
+  if (!token) { alert("Save your admin token first"); return; }
+  const btn = document.getElementById("submitBtn");
+  const status = document.getElementById("submitStatus");
+  btn.disabled = true; status.textContent = "Updating..."; status.className = "status";
+  const payload = {
+    value: parseFloat(document.getElementById("value").value),
+    asOf: document.getElementById("asOf").value || null,
+    source: document.getElementById("source").value.trim() || null,
+  };
+  try {
+    const r = await fetch("/api/bdti", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": token },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      status.textContent = "Updated " + d.value;
+      if (d.wow_pct != null) status.textContent += " (WoW " + (d.wow_pct >= 0 ? "+" : "") + d.wow_pct + "%)";
+      status.className = "status ok";
+      document.getElementById("value").value = "";
+      loadCurrent();
+    } else {
+      status.textContent = "Error: " + (d.error || "failed"); status.className = "status err";
+    }
+  } catch (err) {
+    status.textContent = "Error: " + err.message; status.className = "status err";
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

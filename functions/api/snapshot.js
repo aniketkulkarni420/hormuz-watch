@@ -29,7 +29,24 @@ export async function onRequestGet({ request, env }) {
   const inbound = numFromEnv(env.HORMUZ_INBOUND, 38);
   const outbound = numFromEnv(env.HORMUZ_OUTBOUND, 42);
   const dark = numFromEnv(env.HORMUZ_DARK, 947);
-  const bdti = numFromEnv(env.HORMUZ_BDTI, 14);
+  // BDTI: prefer KV (set via /admin/bdti or weekly scraper), fall back to env default
+  let bdti = numFromEnv(env.HORMUZ_BDTI, 14);
+  let bdti_as_of = null;
+  let bdti_stale = false;
+  if (env.OIL_KV) {
+    try {
+      const raw = await env.OIL_KV.get("bdti_latest");
+      if (raw) {
+        const kv = JSON.parse(raw);
+        if (kv && kv.value) {
+          bdti = kv.value;
+          bdti_as_of = kv.asOf || null;
+          const ageDays = Math.floor((Date.now() - (kv.ts || 0) * 1000) / 86400000);
+          bdti_stale = ageDays > 9;
+        }
+      }
+    } catch { /* fall back to env default */ }
+  }
 
   const totalActive = inbound + outbound;
   const pctOfNormal = +((transits24h / baseline) * 100).toFixed(1);
@@ -45,6 +62,8 @@ export async function onRequestGet({ request, env }) {
     pct_of_normal: pctOfNormal,
     dark_vessels: dark,                         // suspect AIS-off
     bdti: bdti,                                 // Baltic Dirty Tanker Index
+    bdti_as_of: bdti_as_of,                     // ISO date of BDTI publish week (null if env-default)
+    bdti_stale: bdti_stale,                     // true if >9 days old (missed weekly publish)
     oil_transit_value_usd_per_day: 1120000000,  // baseline 21M b/d × $80 = $1.12 Bn
     incidents_30d: 58,
     india_import_dependency_pct: 58.0,
