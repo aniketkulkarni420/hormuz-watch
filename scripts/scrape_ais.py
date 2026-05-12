@@ -31,10 +31,18 @@ STATE_TTL_MS = 30 * 60 * 1000
 TRANSIT_WINDOW_MS = 24 * 3600 * 1000
 BBOX = [[[24.0, 52.0], [28.5, 59.5]]]
 
-CF_ACCOUNT_ID = os.environ["CF_ACCOUNT_ID"]
-CF_API_TOKEN  = os.environ["CF_API_TOKEN"]
-KV_NS         = os.environ["CF_KV_NAMESPACE_ID"]
-AIS_KEY       = os.environ["AIS_KEY"]
+CF_ACCOUNT_ID = os.environ["CF_ACCOUNT_ID"].strip()
+CF_API_TOKEN  = os.environ["CF_API_TOKEN"].strip()
+KV_NS         = os.environ["CF_KV_NAMESPACE_ID"].strip()
+# 2026-05-12 · trailing whitespace/newline in the GH secret causes AISStream to
+# silently close the WebSocket after subscription. Strip aggressively + log
+# length so future debug can catch this immediately.
+_raw_ais_key = os.environ["AIS_KEY"]
+AIS_KEY = _raw_ais_key.strip()
+if len(AIS_KEY) != len(_raw_ais_key):
+    print(f"  ⚠ AIS_KEY had {len(_raw_ais_key) - len(AIS_KEY)} char(s) of whitespace stripped "
+          f"(raw len={len(_raw_ais_key)}, clean len={len(AIS_KEY)}). "
+          f"This is the #1 cause of 'connection closes immediately after subscription'.")
 
 
 def kv_get(key):
@@ -119,104 +127,120 @@ async def listen_and_capture(state, transits, crossing_imos):
     existing_mmsi_crossings = {entry["mmsi"] for entry in crossing_imos if "mmsi" in entry}
 
     print(f"  AIS_KEY present: {bool(AIS_KEY)} (len {len(AIS_KEY) if AIS_KEY else 0})")
+    # Sanity check · AISStream keys are 40 hex chars · anything else = paste error
+    if len(AIS_KEY) != 40:
+        print(f"  ⚠ AIS_KEY length is {len(AIS_KEY)} (expected 40). "
+              f"Likely a paste error in GH secrets. Re-paste the raw 40-char key from aisstream.io/login.")
     print(f"  Connecting to AISStream WebSocket, bbox={BBOX}, listen={LISTEN_DURATION}s")
 
-    async with websockets.connect("wss://stream.aisstream.io/v0/stream", ping_interval=20) as ws:
-        sub_payload = {
-            "APIKey": AIS_KEY,
-            "BoundingBoxes": BBOX,
-            "FilterMessageTypes": ["PositionReport", "ShipStaticData"]
-        }
-        await ws.send(json.dumps(sub_payload))
-        print(f"  Subscription sent. Listening...")
-        end_time = time.time() + LISTEN_DURATION
-        first_msg_logged = False
-        while time.time() < end_time:
-            remaining = end_time - time.time()
-            if remaining <= 0:
-                break
-            try:
-                raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
-            except asyncio.TimeoutError:
-                break
-            try:
-                msg = json.loads(raw)
-            except Exception:
-                # Raw non-JSON message — log first 200 chars
-                if len(error_samples) < 3:
-                    error_samples.append(f"non-JSON: {str(raw)[:200]}")
-                continue
-
-            # Log first received message regardless of type — confirms connection works
-            if not first_msg_logged:
-                print(f"  First message received: type={msg.get('MessageType','?')}, keys={list(msg.keys())[:6]}")
-                first_msg_logged = True
-
-            msg_count += 1
-            meta = msg.get("MetaData") or {}
-            mmsi = meta.get("MMSI")
-            if not mmsi:
-                # AISStream sends error/status frames without MMSI — capture them
-                other_msgs += 1
-                if len(error_samples) < 3:
-                    # Trim payload to avoid printing key
-                    sample = {k: v for k, v in msg.items() if k.lower() not in ("apikey", "api_key")}
-                    error_samples.append(f"no-MMSI: {json.dumps(sample)[:250]}")
-                continue
-            mmsi = str(mmsi)
-            name = (meta.get("ShipName") or "").strip()
-            mt = msg.get("MessageType")
-            if mt == "ShipStaticData":
-                sd = (msg.get("Message") or {}).get("ShipStaticData") or {}
-                if mmsi in state:
-                    if sd.get("Type"): state[mmsi]["type"] = sd["Type"]
-                    if sd.get("Destination"): state[mmsi]["dest"] = sd["Destination"].strip()
-                    bow = sd.get("ToBow", 0) or 0
-                    stern = sd.get("ToStern", 0) or 0
-                    if bow or stern:
-                        state[mmsi]["length_m"] = bow + stern
-                continue
-            if mt != "PositionReport":
-                continue
-            pos = (msg.get("Message") or {}).get("PositionReport") or {}
-            lat = meta.get("latitude"); lng = meta.get("longitude")
-            if not (lat and lng) or (lat == 0 and lng == 0):
-                continue
-            heading = pos.get("TrueHeading") or pos.get("Cog") or 0
-            if heading >= 360: heading = pos.get("Cog") or 0
-            sog = pos.get("Sog") or 0
-
-            # Gate crossing detection
-            prev = state.get(mmsi)
-            now_ms = int(time.time() * 1000)
-            if prev and GATE_LAT_MIN <= lat <= GATE_LAT_MAX:
-                prev_side = "east" if prev["lng"] > GATE_LNG else "west"
-                curr_side = "east" if lng > GATE_LNG else "west"
-                if prev_side != curr_side:
-                    crossing = {
-                        "mmsi": mmsi,
-                        "name": name or prev.get("name") or f"MMSI {mmsi}",
-                        "dir": "eastbound" if curr_side == "east" else "westbound",
-                        "time": now_ms,
-                        "lat": lat, "lng": lng
-                    }
-                    transits.append(crossing)
-                    # Cumulative IMO tracking: only add if not already seen in 24h window
-                    if mmsi not in existing_mmsi_crossings:
-                        crossing_imos.append({"mmsi": mmsi, "time": now_ms})
-                        existing_mmsi_crossings.add(mmsi)
-
-            state[mmsi] = {
-                **(prev or {}),
-                "lat": lat, "lng": lng, "sog": sog, "heading": heading,
-                "category": categorize(lat, lng, sog, heading),
-                "lastSeen": now_ms,
-                "name": name or (prev and prev.get("name")) or f"MMSI {mmsi}",
+    connection_closed_early = False
+    try:
+        async with websockets.connect("wss://stream.aisstream.io/v0/stream", ping_interval=20) as ws:
+            sub_payload = {
+                "APIKey": AIS_KEY,
+                "BoundingBoxes": BBOX,
+                "FilterMessageTypes": ["PositionReport", "ShipStaticData"]
             }
-    # Print diagnostics before returning — surface auth/subscription issues
+            await ws.send(json.dumps(sub_payload))
+            print(f"  Subscription sent. Listening...")
+            end_time = time.time() + LISTEN_DURATION
+            first_msg_logged = False
+            while time.time() < end_time:
+                remaining = end_time - time.time()
+                if remaining <= 0:
+                    break
+                try:
+                    raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
+                except asyncio.TimeoutError:
+                    break
+                try:
+                    msg = json.loads(raw)
+                except Exception:
+                    if len(error_samples) < 3:
+                        error_samples.append(f"non-JSON: {str(raw)[:200]}")
+                    continue
+
+                if not first_msg_logged:
+                    print(f"  First message received: type={msg.get('MessageType','?')}, keys={list(msg.keys())[:6]}")
+                    first_msg_logged = True
+
+                msg_count += 1
+                meta = msg.get("MetaData") or {}
+                mmsi = meta.get("MMSI")
+                if not mmsi:
+                    other_msgs += 1
+                    if len(error_samples) < 3:
+                        sample = {k: v for k, v in msg.items() if k.lower() not in ("apikey", "api_key")}
+                        error_samples.append(f"no-MMSI: {json.dumps(sample)[:250]}")
+                    continue
+                mmsi = str(mmsi)
+                name = (meta.get("ShipName") or "").strip()
+                mt = msg.get("MessageType")
+                if mt == "ShipStaticData":
+                    sd = (msg.get("Message") or {}).get("ShipStaticData") or {}
+                    if mmsi in state:
+                        if sd.get("Type"): state[mmsi]["type"] = sd["Type"]
+                        if sd.get("Destination"): state[mmsi]["dest"] = sd["Destination"].strip()
+                        bow = sd.get("ToBow", 0) or 0
+                        stern = sd.get("ToStern", 0) or 0
+                        if bow or stern:
+                            state[mmsi]["length_m"] = bow + stern
+                    continue
+                if mt != "PositionReport":
+                    continue
+                pos = (msg.get("Message") or {}).get("PositionReport") or {}
+                lat = meta.get("latitude"); lng = meta.get("longitude")
+                if not (lat and lng) or (lat == 0 and lng == 0):
+                    continue
+                heading = pos.get("TrueHeading") or pos.get("Cog") or 0
+                if heading >= 360: heading = pos.get("Cog") or 0
+                sog = pos.get("Sog") or 0
+
+                prev = state.get(mmsi)
+                now_ms = int(time.time() * 1000)
+                if prev and GATE_LAT_MIN <= lat <= GATE_LAT_MAX:
+                    prev_side = "east" if prev["lng"] > GATE_LNG else "west"
+                    curr_side = "east" if lng > GATE_LNG else "west"
+                    if prev_side != curr_side:
+                        crossing = {
+                            "mmsi": mmsi,
+                            "name": name or prev.get("name") or f"MMSI {mmsi}",
+                            "dir": "eastbound" if curr_side == "east" else "westbound",
+                            "time": now_ms,
+                            "lat": lat, "lng": lng
+                        }
+                        transits.append(crossing)
+                        if mmsi not in existing_mmsi_crossings:
+                            crossing_imos.append({"mmsi": mmsi, "time": now_ms})
+                            existing_mmsi_crossings.add(mmsi)
+
+                state[mmsi] = {
+                    **(prev or {}),
+                    "lat": lat, "lng": lng, "sog": sog, "heading": heading,
+                    "category": categorize(lat, lng, sog, heading),
+                    "lastSeen": now_ms,
+                    "name": name or (prev and prev.get("name")) or f"MMSI {mmsi}",
+                }
+    except (websockets.exceptions.ConnectionClosedError,
+            websockets.exceptions.ConnectionClosed,
+            asyncio.exceptions.IncompleteReadError) as e:
+        # AISStream closes the WS without a close-frame when the API key is rejected.
+        # Surface the actual cause so debug isn't guesswork next time.
+        connection_closed_early = True
+        print(f"  ✗ AISStream closed the WebSocket without a close-frame · {type(e).__name__}: {e}")
+        print(f"    Most likely · AIS_KEY rejected (revoked / expired / trailing whitespace / "
+              f"monthly bandwidth quota at https://aisstream.io/login).")
+        print(f"    Less likely · AISStream service incident.")
+        if len(error_samples) < 3:
+            error_samples.append(f"ws-close: {type(e).__name__}: {str(e)[:150]}")
+
+    # Diagnostics
     if msg_count == 0 and other_msgs == 0:
-        print(f"  ⚠ ZERO messages received in {LISTEN_DURATION}s. Likely: (1) AIS_KEY rejected silently, "
-              f"(2) AISStream rate-limited, (3) no broadcasts in bbox (unlikely for Persian Gulf).")
+        if connection_closed_early:
+            print(f"  ⚠ ZERO messages because WebSocket closed mid-subscription · see error above")
+        else:
+            print(f"  ⚠ ZERO messages received in {LISTEN_DURATION}s. Likely: (1) AIS_KEY rejected silently, "
+                  f"(2) AISStream rate-limited, (3) no broadcasts in bbox (unlikely for Persian Gulf).")
     if other_msgs > 0:
         print(f"  ⚠ Received {other_msgs} non-position frames (possible errors). Samples:")
         for s in error_samples:
