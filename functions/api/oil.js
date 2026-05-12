@@ -76,28 +76,7 @@ export async function onRequestGet({ env }) {
     } catch (e) { /* fall through */ }
   }
 
-  // Tier 2: Twelve Data (Pro+)
-  if (env.TWELVE_KEY) {
-    try {
-      const [bRes, wRes] = await Promise.all([
-        fetch("https://api.twelvedata.com/quote?symbol=BRENT&apikey=" + encodeURIComponent(env.TWELVE_KEY),
-          { cf: { cacheTtl: 600, cacheEverything: true } }),
-        fetch("https://api.twelvedata.com/quote?symbol=WTI&apikey=" + encodeURIComponent(env.TWELVE_KEY),
-          { cf: { cacheTtl: 600, cacheEverything: true } })
-      ]);
-      const [b, w] = await Promise.all([bRes.json(), wRes.json()]);
-      const validCommodity = (q) => q && !q.code && q.exchange && /NYMEX|ICE|CME|MTA/i.test(q.exchange) && isFinite(parseFloat(q.close));
-      if (validCommodity(b) && validCommodity(w)) {
-        return json({
-          source: "TwelveData",
-          tier: "primary",
-          brent: { level: parseFloat(b.close), change: parseFloat(b.change), changePct: parseFloat(b.percent_change), open: parseFloat(b.open), prevClose: parseFloat(b.previous_close), t: b.timestamp },
-          wti:   { level: parseFloat(w.close), change: parseFloat(w.change), changePct: parseFloat(w.percent_change), open: parseFloat(w.open), prevClose: parseFloat(w.previous_close), t: w.timestamp },
-          fetchedAt: Date.now()
-        });
-      }
-    } catch (e) { /* fall through */ }
-  }
+  // Tier 2 (Twelve Data) removed — free tier doesn't support commodity futures
 
   // Tier 3: FinnHub BNO/USO ETF intraday %
   if (env.FINNHUB_KEY) {

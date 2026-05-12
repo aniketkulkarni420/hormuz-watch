@@ -213,17 +213,37 @@ def sanity_check(sym, q):
 
 
 def cross_verify(results):
-    """Compare live estimate vs official reference. Log divergence > 15%."""
+    """Compare live estimate vs official reference. Log divergence > 15%.
+    HARD FAIL: if divergence > 50%, remove the live entry entirely (only keep official)."""
     b_live = results.get("brent", {}).get("c")
     b_off  = results.get("brent_official", {}).get("c")
     if b_live and b_off and b_off > 0:
         pct_diff = abs(b_live - b_off) / b_off * 100
         results["brent_divergence_pct"] = round(pct_diff, 2)
-        if pct_diff > 15:
+        if pct_diff > 50:
+            print(f"  HARD FAIL: brent live ${b_live:.2f} vs official ${b_off:.2f} = {pct_diff:.1f}% gap — refusing to write live source")
+            results.pop("brent", None)
+            results["brent_live_suspect"] = True
+        elif pct_diff > 15:
             print(f"  WARN: Brent live ${b_live:.2f} vs official ${b_off:.2f} = {pct_diff:.1f}% gap — possible demo data")
             results["brent_live_suspect"] = True
         else:
             results["brent_live_suspect"] = False
+
+    w_live = results.get("wti", {}).get("c")
+    w_off  = results.get("wti_official", {}).get("c")
+    if w_live and w_off and w_off > 0:
+        pct_diff_w = abs(w_live - w_off) / w_off * 100
+        results["wti_divergence_pct"] = round(pct_diff_w, 2)
+        if pct_diff_w > 50:
+            print(f"  HARD FAIL: wti live ${w_live:.2f} vs official ${w_off:.2f} = {pct_diff_w:.1f}% gap — refusing to write live source")
+            results.pop("wti", None)
+            results["wti_live_suspect"] = True
+        elif pct_diff_w > 15:
+            print(f"  WARN: WTI live ${w_live:.2f} vs official ${w_off:.2f} = {pct_diff_w:.1f}% gap — possible demo data")
+            results["wti_live_suspect"] = True
+        else:
+            results["wti_live_suspect"] = False
     return results
 
 
@@ -276,14 +296,17 @@ def get_kv(key):
 
 
 def maybe_snapshot(last_snapshot_ts):
-    """Call /api/record if >55 min since last snapshot."""
+    """Call /api/record if >55 min since last snapshot. FORCE_SNAPSHOT=1 bypasses guard."""
     SNAPSHOT_TOKEN = os.environ.get("SNAPSHOT_TOKEN", "")
     SITE_URL = os.environ.get("SITE_URL", "https://hormuz-watch-7cd.pages.dev")
     if not SNAPSHOT_TOKEN:
         print("  SNAPSHOT_TOKEN not set — skipping D1 snapshot")
         return
     now = int(time.time())
-    if last_snapshot_ts and (now - last_snapshot_ts) < 3300:  # 55 min
+    force = os.environ.get("FORCE_SNAPSHOT") == "1"
+    if force:
+        print("  FORCE_SNAPSHOT=1 set — bypassing 55-min guard")
+    elif last_snapshot_ts and (now - last_snapshot_ts) < 3300:  # 55 min
         print(f"  D1 snapshot: skipping (last was {(now - last_snapshot_ts) // 60}m ago)")
         return
     try:
@@ -370,6 +393,14 @@ def main():
 
     payload = {"fetchedAt": int(time.time()), "source": "github-actions", "symbols": results}
     body = json.dumps(payload, separators=(",", ":"))
+    # KV "latest" shape:
+    #   { fetchedAt: unix_seconds, source: "github-actions",
+    #     symbols: { brent: {c,pc,d,dp,o,h,l,t,src,updatedAt?}, wti: {...},
+    #                brent_official: {c,pc,d,dp,t,src,date}, wti_official: {...},
+    #                brent_live_suspect: bool, brent_divergence_pct: float,
+    #                wti_live_suspect: bool, wti_divergence_pct: float,
+    #                fro: {...}, stng: {...}, ... },
+    #   }
     ok = put_kv("latest", body)
     # P8 — surface scrape status so /health can show it without opening the Actions tab
     status_body = json.dumps({

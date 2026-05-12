@@ -204,6 +204,7 @@ Currently sends from `onboarding@resend.dev` (Resend default verified sender). F
 | 5 | Rotate Twelve Data key (`1095421975c04de5b3e9d5f5a0c2991f`) | Security hygiene |
 | 6 | Rotate Cloudflare API token (`cfut_TsSL...`) | Security hygiene |
 | 7 | Choose custom email sender domain (e.g. `kamayakya.com`) and verify DNS in Resend dashboard | Replaces `onboarding@resend.dev` with branded sender |
+| 8 | Set `ALERT_EMAIL` secret in GitHub repo (e.g. `aniket@kamayakya.com`) | Used by watchdog workflow for stale feed alerts |
 
 ---
 
@@ -585,3 +586,15 @@ All fixes shipped in commit **`527458a`** unless noted. Order matches §17 prior
 - **No new dependencies introduced.** Marker density handled with a grid-bucket render threshold instead of `leaflet.markercluster`.
 
 *§18 appended 2026-05-11 against commit `527458a`.*
+
+---
+
+## 19. OPERATIONAL TOOLING
+
+- /api/_diag?token=SNAPSHOT_TOKEN — full system state JSON in one call
+- GHA workflows:
+  - smoke-test — runs on every push, verifies endpoints after deploy
+  - watchdog — hourly, alerts via Resend if any feed >30 min stale
+  - oil-scraper / ais-scraper — upload logs as artifacts (7-day retention)
+- Force snapshot: trigger oil-scraper via workflow_dispatch with force_snapshot=1
+

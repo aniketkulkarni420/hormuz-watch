@@ -1,0 +1,31 @@
+name: watchdog
+on:
+  schedule:
+    - cron: "17 * * * *"  # hourly at :17 — staggered from scrapers
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run diag check
+        env:
+          SNAPSHOT_TOKEN: ${{ secrets.SNAPSHOT_TOKEN }}
+          RESEND_KEY: ${{ secrets.RESEND_KEY }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+        run: |
+          DIAG=$(curl -sf "https://hormuz-watch-7cd.pages.dev/api/_diag?token=$SNAPSHOT_TOKEN")
+          echo "$DIAG" | python3 -m json.tool || (echo "diag failed to parse"; exit 1)
+          HEALTHY=$(echo "$DIAG" | python3 -c "import sys,json; print(json.load(sys.stdin).get('healthy', False))")
+          if [ "$HEALTHY" != "True" ]; then
+            STALE=$(echo "$DIAG" | python3 -c "import sys,json; print(','.join(json.load(sys.stdin).get('staleFeeds',[])))")
+            echo "::warning::Stale feeds: $STALE"
+            if [ -n "$RESEND_KEY" ] && [ -n "$ALERT_EMAIL" ]; then
+              curl -X POST https://api.resend.com/emails \
+                -H "Authorization: Bearer $RESEND_KEY" \
+                -H "Content-Type: application/json" \
+                -d "{\"from\":\"Hormuz Watch <onboarding@resend.dev>\",\"to\":[\"$ALERT_EMAIL\"],\"subject\":\"Hormuz Watch — feeds stale\",\"text\":\"Stale feeds: $STALE\\n\\nFull diag: $DIAG\"}"
+            fi
+          else
+            echo "All feeds healthy."
+          fi

@@ -1,0 +1,31 @@
+name: smoke-test
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for CF Pages deploy
+        run: sleep 90
+      - name: Check homepage loads
+        run: curl -sfo /dev/null https://hormuz-watch-7cd.pages.dev/ || (echo "homepage failed"; exit 1)
+      - name: Check /api/oil shape
+        run: |
+          R=$(curl -sf https://hormuz-watch-7cd.pages.dev/api/oil)
+          echo "$R" | grep -q '"tier"' || (echo "oil response missing tier"; echo "$R"; exit 1)
+      - name: Check /api/ais shape
+        run: |
+          R=$(curl -sf https://hormuz-watch-7cd.pages.dev/api/ais)
+          echo "$R" | grep -q '"summary"' || (echo "ais response missing summary"; echo "$R"; exit 1)
+      - name: Check /api/snapshot legacy endpoint still works
+        run: |
+          R=$(curl -sf https://hormuz-watch-7cd.pages.dev/api/snapshot)
+          echo "$R" | grep -q '"as_of"' || (echo "snapshot response missing as_of"; echo "$R"; exit 1)
+      - name: Check /api/health
+        run: curl -sf https://hormuz-watch-7cd.pages.dev/health > /dev/null
+      - name: Check 404 page exists
+        run: |
+          C=$(curl -s -o /dev/null -w "%{http_code}" https://hormuz-watch-7cd.pages.dev/nonexistent-xyz-123)
+          [[ "$C" == "404" || "$C" == "200" ]] || (echo "404 page returned $C"; exit 1)

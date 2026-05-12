@@ -190,6 +190,11 @@ def main():
         }
     }
     body = json.dumps(payload, separators=(",", ":"))
+    # KV "ais_state" shape:
+    #   { fetchedAt: unix_seconds, lastListenSec: int, messagesProcessed: int,
+    #     vesselCount: int, transits24h: int, eastbound24h: int, westbound24h: int,
+    #     categories: {transit: int, anchored: int, approach: int},
+    #     crossing_imos_24h: [str], hasState: bool }
     ok = kv_put("ais_state", body)
     # P8 — surface scrape status for /health
     try:

@@ -1,3 +1,4 @@
+# DEPRECATED: AIS aggregation moved to GHA scraper. Worker remains deployed but inactive.
 name = "hormuz-ais-aggregator"
 main = "src/index.js"
 compatibility_date = "2024-09-23"

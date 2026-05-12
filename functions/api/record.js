@@ -2,6 +2,16 @@
 // Called by a scheduled cron job hitting POST /api/record with X-Snapshot-Token header.
 // Pulls current state from internal /api/* endpoints, writes one row to D1 snapshots.
 // Designed to be safe to call multiple times an hour (INSERT OR REPLACE by ts to nearest hour).
+//
+// ─── DATA WRITES (for grepability) ────────────────────────────────────────
+// KV: writes "verdict_latest" = { verdict: "NORMAL"|"ELEVATED"|"HIGH"|"CRITICAL", ts }
+// KV: writes "last_snapshot_ts" = unix seconds (used by scraper's maybe_snapshot guard)
+// D1: INSERT INTO snapshots(ts, transits_24h, vessels_transiting, brent_price, wti_price,
+//      bw_spread, brent_source, bdti, bdti_wow, gfw_encounters, gfw_loitering, dark_pct,
+//      india_via_hormuz_pct, source_health, verdict)
+// ──────────────────────────────────────────────────────────────────────────
+//
+// TODO: read thresholds from /config/verdict_thresholds.json once Worker can import JSON
 
 function computeVerdict(data) {
   // data: { transits_24h, vessels_transiting, brent_price, gfw_encounters, dark_pct }
