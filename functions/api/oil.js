@@ -27,19 +27,14 @@ export async function onRequestGet({ env }) {
           const w  = data.symbols.wti;
           const bo = data.symbols.brent_official;
           const wo = data.symbols.wti_official;
-          const brentLiveSuspect    = data.symbols.brent_live_suspect === true;
-          const brentDivergencePct  = data.symbols.brent_divergence_pct ?? null;
 
-          let tier = stale ? "primary-stale" : "primary";
-          if (!stale && brentLiveSuspect) tier = "primary-suspect";
+          const tier = stale ? "primary-stale" : "primary";
 
           const resp = {
             source:   "Live commodity feed",
             tier,
             stale,
             staleMin,
-            brentLiveSuspect,
-            brentDivergencePct,
             brent: {
               level: b.c, change: b.d, changePct: b.dp,
               open: b.o, prevClose: b.pc, high: b.h, low: b.l,

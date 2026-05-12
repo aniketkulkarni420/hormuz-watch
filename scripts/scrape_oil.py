@@ -212,38 +212,30 @@ def sanity_check(sym, q):
     return True
 
 
-def cross_verify(results):
-    """Compare live estimate vs official reference. Log divergence > 15%.
-    HARD FAIL: if divergence > 50%, remove the live entry entirely (only keep official)."""
-    b_live = results.get("brent", {}).get("c")
-    b_off  = results.get("brent_official", {}).get("c")
-    if b_live and b_off and b_off > 0:
-        pct_diff = abs(b_live - b_off) / b_off * 100
-        results["brent_divergence_pct"] = round(pct_diff, 2)
-        if pct_diff > 50:
-            print(f"  HARD FAIL: brent live ${b_live:.2f} vs official ${b_off:.2f} = {pct_diff:.1f}% gap — refusing to write live source")
-            results.pop("brent", None)
-            results["brent_live_suspect"] = True
-        elif pct_diff > 15:
-            print(f"  WARN: Brent live ${b_live:.2f} vs official ${b_off:.2f} = {pct_diff:.1f}% gap — possible demo data")
-            results["brent_live_suspect"] = True
-        else:
-            results["brent_live_suspect"] = False
+def time_series_check(results, prev_kv):
+    """Compare today's live price against yesterday's KV value.
+    A >30% jump in one scrape cycle = almost certainly bad data (decimal typo,
+    stale mock, API glitch). Removing the EIA-based divergence check — EIA spot
+    is 5-7 days old, oil can move 15-20%+ legitimately in that window.
 
-    w_live = results.get("wti", {}).get("c")
-    w_off  = results.get("wti_official", {}).get("c")
-    if w_live and w_off and w_off > 0:
-        pct_diff_w = abs(w_live - w_off) / w_off * 100
-        results["wti_divergence_pct"] = round(pct_diff_w, 2)
-        if pct_diff_w > 50:
-            print(f"  HARD FAIL: wti live ${w_live:.2f} vs official ${w_off:.2f} = {pct_diff_w:.1f}% gap — refusing to write live source")
-            results.pop("wti", None)
-            results["wti_live_suspect"] = True
-        elif pct_diff_w > 15:
-            print(f"  WARN: WTI live ${w_live:.2f} vs official ${w_off:.2f} = {pct_diff_w:.1f}% gap — possible demo data")
-            results["wti_live_suspect"] = True
-        else:
-            results["wti_live_suspect"] = False
+    Hard bounds remain in SANITY_RANGES ($30-$300). This adds a soft anomaly
+    detection that complements SANITY_RANGES without false-positiving on real moves.
+    """
+    if not prev_kv or not prev_kv.get("symbols"):
+        return results
+    for sym in ("brent", "wti"):
+        new_q = results.get(sym)
+        old_q = prev_kv.get("symbols", {}).get(sym)
+        if not new_q or not old_q:
+            continue
+        new_c = new_q.get("c")
+        old_c = old_q.get("c")
+        if not (new_c and old_c and old_c > 0):
+            continue
+        pct = abs(new_c - old_c) / old_c * 100
+        if pct > 30:
+            print(f"  ANOMALY: {sym} jumped {pct:.1f}% from prev KV (${old_c:.2f} → ${new_c:.2f}) — refusing to write")
+            results.pop(sym, None)
     return results
 
 
@@ -378,8 +370,12 @@ def main():
     else:
         print("  ✗ wti_official   EIA + FRED both failed")
 
-    # ── Cross-verify live vs official Brent ───────────────────────────────────
-    results = cross_verify(results)
+    # ── Time-series anomaly check (vs prev KV) ────────────────────────────────
+    # Removed EIA divergence comparison — EIA spot is 5-7 days old; oil can
+    # legitimately move 15-20%+ in that window. Comparing live to stale official
+    # created false-positive "suspect" flags. Instead, compare live to prev live.
+    prev_kv = get_kv("latest")
+    results = time_series_check(results, prev_kv)
 
     # Stocks (Yahoo → Stooq)
     for key, sym in [("fro","FRO"),("stng","STNG"),("tnk","TNK"),("dht","DHT"),("nat","NAT"),("insw","INSW")]:
@@ -397,8 +393,7 @@ def main():
     #   { fetchedAt: unix_seconds, source: "github-actions",
     #     symbols: { brent: {c,pc,d,dp,o,h,l,t,src,updatedAt?}, wti: {...},
     #                brent_official: {c,pc,d,dp,t,src,date}, wti_official: {...},
-    #                brent_live_suspect: bool, brent_divergence_pct: float,
-    #                wti_live_suspect: bool, wti_divergence_pct: float,
+    #                (anomalous live values are dropped before write — see time_series_check),
     #                fro: {...}, stng: {...}, ... },
     #   }
     ok = put_kv("latest", body)

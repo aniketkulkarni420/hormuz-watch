@@ -2276,7 +2276,7 @@ function renderEIA() {
   // primaryOil   = KV live estimate (OilPriceAPI demo or Yahoo futures, ~5-min lag)
   // secondaryEtf = FinnHub ETF proxy (NYSE hours only, % change only)
   // officialBrent/Wti = EIA/FRED daily spot included in same KV payload
-  var primaryOil   = (_liveOil && (_liveOil.tier === "primary" || _liveOil.tier === "primary-stale" || _liveOil.tier === "primary-suspect")
+  var primaryOil   = (_liveOil && (_liveOil.tier === "primary" || _liveOil.tier === "primary-stale")
                        && _liveOil.brent && isFinite(_liveOil.brent.level)) ? _liveOil : null;
   var secondaryEtf = (_liveOil && _liveOil.tier === "secondary"
                        && _liveOil.brent && isFinite(_liveOil.brent.proxyDp)) ? _liveOil : null;
@@ -2298,17 +2298,7 @@ function renderEIA() {
   if(ctSub) ctSub.textContent = "21M bbl/day × $" + headlineBrent.toFixed(1) + "/bbl Brent";
 
   var brentEl = document.getElementById("brentPrice");
-  if(brentEl) {
-    var suspectFlag = (_liveOil && _liveOil.brentLiveSuspect);
-    brentEl.textContent = "$" + headlineBrent.toFixed(1) + (suspectFlag ? " ⚠" : "");
-    if(suspectFlag) {
-      brentEl.title = "Live price diverges significantly from official reference — showing as estimate only.";
-      brentEl.style.color = "var(--amber)";
-    } else {
-      brentEl.title = "";
-      brentEl.style.color = "";
-    }
-  }
+  if(brentEl) brentEl.textContent = "$" + headlineBrent.toFixed(1);
 
   // ── Official EIA reference row ────────────────────────────────────────────
   // Show only when a live estimate exists — two-row layout is meaningful then.
