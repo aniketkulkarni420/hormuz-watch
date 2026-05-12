@@ -79,30 +79,36 @@ Claude scheduled tasks
 
 All stored as Cloudflare Pages secrets (env vars in Functions runtime). Values **never** in code or chat after rotation.
 
-### Cloudflare Pages secrets
-| Name | Purpose | Where stored | Rotation status |
-|---|---|---|---|
-| `EIA_KEY` | EIA petroleum API | CF Pages secret (prod + preview) | Original, not rotated |
-| `GFW_TOKEN` | Global Fishing Watch JWT | CF Pages secret | Was rotated once; current value working |
-| `FINNHUB_KEY` | FinnHub ETF prices (free tier, BNO/USO only) | CF Pages secret | Original from chat, not rotated |
-| `TWELVE_KEY` | Twelve Data (free tier doesn't support commodity futures — Pro needed) | CF Pages secret | Original from chat |
-| `SNAPSHOT_TOKEN` | Gates POST /api/record (D1 writer) | CF Pages secret | Generated server-side; in scheduled-task prompt |
-| `ADMIN_TOKEN` | Gates POST /api/commentary | CF Pages secret | Generated server-side |
-| `RESEND_KEY` | Resend email service | CF Pages secret | Original from chat |
-| `RESEND_FROM` | `Hormuz Watch <onboarding@resend.dev>` (sender address) | CF Pages secret | Resend default until custom domain verified |
+### Cloudflare Pages env vars (Production)
+These are the ONLY secrets CF Pages Functions need. AIS_KEY is NOT used here — it only goes to GitHub Secrets because the scraper runs in GHA, not in CF.
+
+| Name | Purpose | Required? |
+|---|---|---|
+| `EIA_KEY` | EIA petroleum API | YES |
+| `GFW_TOKEN` | Global Fishing Watch JWT | YES |
+| `FINNHUB_KEY` | FinnHub ETF prices (free tier, BNO/USO only) | YES |
+| `SNAPSHOT_TOKEN` | Gates POST /api/record + GET /api/diag | YES |
+| `ADMIN_TOKEN` | Gates POST /api/commentary | YES |
+| `RESEND_KEY` | Resend email service (subscribe confirmation) | YES |
+| `RESEND_FROM` | `Hormuz Watch <onboarding@resend.dev>` | YES |
+| `HORMUZ_BASELINE_*`, `HORMUZ_BDTI`, `HORMUZ_DARK`, `HORMUZ_INBOUND`, `HORMUZ_OUTBOUND`, `HORMUZ_TRANSITS_*` | Legacy snapshot.js IRM endpoint defaults | YES (existing) |
+| ~~`TWELVE_KEY`~~ | **REMOVED** — Twelve Data tier deleted in commit 5333e2b; can delete from CF dashboard | NO |
 
 ### GitHub Secrets (for GHA workflows)
-| Name | Purpose |
-|---|---|
-| `CF_ACCOUNT_ID` | `0d6dd06f6064a117d0ea03e6187c16cc` |
-| `CF_API_TOKEN` | KV-write scoped, rotates every 90 days recommended |
-| `CF_KV_NAMESPACE_ID` | `65bcc219241e41e7b9b3f2df645e2bd5` |
-| `AIS_KEY` | AISStream.io API key |
-| `EIA_KEY` | Same as CF secret, used in scraper fallback |
+| Name | Purpose | Required? | Status |
+|---|---|---|---|
+| `CF_ACCOUNT_ID` | `0d6dd06f6064a117d0ea03e6187c16cc` | YES | set |
+| `CF_API_TOKEN` | KV-write scoped, rotate every 90 days | YES | set |
+| `CF_KV_NAMESPACE_ID` | `65bcc219241e41e7b9b3f2df645e2bd5` | YES | set |
+| `AIS_KEY` | AISStream.io API key — ONLY here, not in CF | YES | set (verify validity) |
+| `EIA_KEY` | Same value as CF Pages env | YES | set |
+| `SNAPSHOT_TOKEN` | Same value as CF Pages env — scraper POSTs to /api/record, watchdog GETs /api/diag | YES | **MISSING** |
+| `SITE_URL` | `https://hormuz-watch-7cd.pages.dev` | Optional (default works) | missing OK |
+| `RESEND_KEY` | Same value as CF Pages env — watchdog uses for alert emails | YES for alerts | **MISSING** |
+| `ALERT_EMAIL` | Email address to receive watchdog stale-feed alerts | YES for alerts | **MISSING** |
 
-### AIS Worker secrets (separate from Pages)
-- `AIS_KEY` (same value)
-- `SNAPSHOT_TOKEN` (DIFFERENT from Pages — Worker has its own)
+### Deprecated AIS Worker (`workers/ais-aggregator/`)
+Worker is deployed but inactive. The DO-based AIS aggregator was abandoned due to free-tier eviction. The scraper now lives in GHA. No active secrets needed for this Worker.
 
 ---
 
