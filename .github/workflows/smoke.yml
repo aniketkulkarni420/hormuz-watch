@@ -11,50 +11,74 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Resolve target URL
         id: target
         run: |
-          # Production for main pushes; CF Pages preview URL for PRs
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # CF Pages preview URLs follow pattern: <commit-sha-7>.<project>.pages.dev
             SHA=$(git rev-parse --short=7 HEAD)
             URL="https://${SHA}.hormuz-watch.pages.dev"
-            echo "url=$URL" >> "$GITHUB_OUTPUT"
-            echo "Preview URL: $URL"
           else
-            echo "url=https://hormuz-watch-7cd.pages.dev" >> "$GITHUB_OUTPUT"
+            URL="https://hormuz-watch-7cd.pages.dev"
           fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Target URL: $URL"
 
       - name: Wait for CF Pages deploy
-        run: sleep 120
+        run: sleep 180   # bumped from 120 — new Functions need longer to register
 
-      - name: Check homepage loads
-        run: curl -sfo /dev/null ${{ steps.target.outputs.url }}/ || (echo "homepage failed"; exit 1)
-
-      - name: Check /api/oil shape
+      - name: Run smoke checks (with CF routing lag tolerance)
+        env:
+          BASE: ${{ steps.target.outputs.url }}
         run: |
-          R=$(curl -sf ${{ steps.target.outputs.url }}/api/oil)
-          echo "$R" | grep -q '"tier"' || (echo "oil response missing tier"; echo "$R"; exit 1)
+          set -e
 
-      - name: Check /api/ais shape
-        run: |
-          R=$(curl -sf ${{ steps.target.outputs.url }}/api/ais)
-          echo "$R" | grep -q '"summary"' || (echo "ais response missing summary"; echo "$R"; exit 1)
+          # check_endpoint <path> <pattern> <expect_json>
+          # Retries once after 60s if response looks like the homepage HTML
+          # (CF Pages occasionally fails to register new Functions on first deploy).
+          check_endpoint() {
+            local path="$1"
+            local pattern="$2"
+            local expect_json="${3:-1}"
+            local url="${BASE}${path}"
+            local attempt=1
+            local max_attempts=2
 
-      - name: Check /api/snapshot legacy endpoint still works
-        run: |
-          R=$(curl -sf ${{ steps.target.outputs.url }}/api/snapshot)
-          echo "$R" | grep -q '"as_of"' || (echo "snapshot response missing as_of"; echo "$R"; exit 1)
+            while [ $attempt -le $max_attempts ]; do
+              echo "[$path] attempt $attempt/$max_attempts"
+              R=$(curl -sf "$url" || echo "__CURL_FAIL__")
 
-      - name: Check /api/bdti exists
-        run: |
-          R=$(curl -sf ${{ steps.target.outputs.url }}/api/bdti)
-          echo "$R" | grep -q '"value"' || (echo "bdti response missing value"; echo "$R"; exit 1)
+              if [ "$R" = "__CURL_FAIL__" ]; then
+                echo "  curl failed (non-2xx)"
+              elif echo "$R" | grep -q "$pattern"; then
+                echo "  ✓ matched '$pattern'"
+                return 0
+              elif [ "$expect_json" = "1" ] && echo "$R" | head -c 50 | grep -q "<!DOCTYPE\|<html"; then
+                echo "  ⚠ got HTML (likely CF Pages routing lag for new Function)"
+                if [ $attempt -lt $max_attempts ]; then
+                  echo "  → sleeping 60s and retrying once..."
+                  sleep 60
+                fi
+              else
+                echo "  ✗ no match for '$pattern'"
+                echo "  Response head: $(echo "$R" | head -c 200)"
+              fi
+              attempt=$((attempt + 1))
+            done
 
-      - name: Check /api/health
-        run: curl -sf ${{ steps.target.outputs.url }}/health > /dev/null
+            echo "FAIL: $path after $max_attempts attempts"
+            echo "Full response: $R"
+            return 1
+          }
+
+          check_endpoint "/"               "HORMUZ WATCH"  0
+          check_endpoint "/api/oil"        '"tier"'        1
+          check_endpoint "/api/ais"        '"summary"'     1
+          check_endpoint "/api/snapshot"   '"as_of"'       1
+          check_endpoint "/api/bdti"       '"value"'       1
+          check_endpoint "/health"         "Hormuz Watch"  0
 
       - name: Check 404 page exists
         run: |
-          C=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.target.outputs.url }}/nonexistent-xyz-123)
+          C=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.target.outputs.url }}/nonexistent-xyz-123")
           [[ "$C" == "404" || "$C" == "200" ]] || (echo "404 page returned $C"; exit 1)
