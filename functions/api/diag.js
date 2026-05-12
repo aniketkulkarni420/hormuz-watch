@@ -59,6 +59,26 @@ export async function onRequestGet({ request, env }) {
   out.healthy = stale.length === 0;
   out.staleFeeds = stale.map(([k, v]) => `${k}:${v.ageMin}m`);
 
+  // ── Secret rotation tracking ────────────────────────────────────────────
+  // SECRETS_LAST_ROTATED env var is YYYY-MM-DD format, set manually in CF Pages
+  // when secrets are rotated. Watchdog alerts if >90 days.
+  if (env.SECRETS_LAST_ROTATED) {
+    const rotDate = new Date(env.SECRETS_LAST_ROTATED + "T00:00:00Z").getTime();
+    if (isFinite(rotDate)) {
+      const ageDays = Math.floor((Date.now() - rotDate) / 86400000);
+      out.secretsAgeDays = ageDays;
+      out.secretsStale = ageDays > 90;
+      if (out.secretsStale) {
+        out.healthy = false;
+        out.staleFeeds.push(`secrets:${ageDays}d`);
+      }
+    }
+  } else {
+    out.secretsAgeDays = null;
+    out.secretsStale = null;
+    out.staleFeeds.push("secrets:not_tracked");
+  }
+
   return new Response(JSON.stringify(out, null, 2), {
     headers: { "content-type": "application/json", "cache-control": "no-store" }
   });

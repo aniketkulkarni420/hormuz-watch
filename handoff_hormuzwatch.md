@@ -597,10 +597,81 @@ All fixes shipped in commit **`527458a`** unless noted. Order matches §17 prior
 
 ## 19. OPERATIONAL TOOLING
 
-- /api/diag?token=SNAPSHOT_TOKEN — full system state JSON in one call
+- `/api/diag?token=SNAPSHOT_TOKEN` — full system state JSON in one call
 - GHA workflows:
-  - smoke-test — runs on every push, verifies endpoints after deploy
-  - watchdog — hourly, alerts via Resend if any feed >30 min stale
-  - oil-scraper / ais-scraper — upload logs as artifacts (7-day retention)
-- Force snapshot: trigger oil-scraper via workflow_dispatch with force_snapshot=1
+  - `smoke-test` — push to main + every PR (uses CF preview URL), verifies endpoints after deploy
+  - `watchdog` — hourly, alerts via Resend if any feed stale or secrets >90d old
+  - `data-refresh` / `vessel-sync` — scraper logs uploaded as artifacts (7-day retention)
+  - `bdti-weekly` — Friday 18:30 UTC, best-effort BDTI scrape
+  - `db-backup` — Sunday 04:00 UTC, exports D1 to SQL.gz artifact (90-day retention)
+- Force snapshot: trigger `data-refresh` via workflow_dispatch with `force_snapshot=1`
+- Admin forms:
+  - `/admin/commentary` — analyst commentary banner
+  - `/admin/bdti` — manual BDTI update when scraper misses
+
+---
+
+## 20. UPTIMEROBOT — external watchdog (recommended, free)
+
+The GHA watchdog has a circular dependency: if GitHub Actions is down, the
+watchdog itself is also down. Belt-and-suspenders: add an external monitor.
+
+### Setup (one-time, 5 minutes)
+1. Create free account at https://uptimerobot.com (no card; 50 monitors free)
+2. Click **+ Add New Monitor**
+3. Settings:
+   - Monitor Type: **Keyword**
+   - Friendly Name: `Hormuz Watch · diag healthy`
+   - URL: `https://hormuz-watch-7cd.pages.dev/api/diag?token=<YOUR_SNAPSHOT_TOKEN>`
+   - Keyword Type: **Should exist** (alert if missing)
+   - Keyword Value: `"healthy":true`
+   - Monitoring Interval: **5 minutes**
+4. Alert Contacts: add your email
+5. Save
+
+UptimeRobot now polls `/api/diag` every 5 minutes from external infrastructure
+(not GHA, not Cloudflare). If `healthy:true` disappears for two consecutive
+checks (~10 min), you get an email immediately. Independent of GitHub.
+
+### Also recommended
+- Add a second monitor: HTTP keyword check on `/api/oil` with keyword `"tier":"primary"`.
+  Catches the case where scrapers are healthy but oil source is broken.
+
+---
+
+## 21. SECRET ROTATION WORKFLOW
+
+Set `SECRETS_LAST_ROTATED` env var in CF Pages (format `YYYY-MM-DD`) when you
+rotate any of the high-value secrets. The watchdog will email when >90 days.
+
+### Rotation checklist (quarterly)
+1. `ADMIN_TOKEN` — generate new value, update CF Pages env. Inform yourself only.
+2. `SNAPSHOT_TOKEN` — generate new value, update CF Pages env AND GitHub Secret
+   (both must match — scraper POSTs to /api/record with this token).
+3. `CF_API_TOKEN` — regenerate in Cloudflare dashboard, update GitHub Secret only.
+4. `AIS_KEY` — only rotate if compromised; otherwise just verify still active.
+5. After rotating any of the above, update `SECRETS_LAST_ROTATED` in CF Pages
+   to today's date (`YYYY-MM-DD`). Watchdog resets.
+
+### Why this matters
+ADMIN_TOKEN gates `/admin/commentary` and `/admin/bdti`. If it leaks (committed
+to chat, screenshot, copy-paste error), anyone can post commentary or set BDTI.
+SNAPSHOT_TOKEN gates `/api/record` (D1 writes) and `/api/diag`. Same risk.
+
+---
+
+## 22. CF PAGES PREVIEW DEPLOYMENTS
+
+CF Pages automatically creates preview deployments for non-`main` branches.
+Workflow for changes that need visual verification:
+
+1. `git checkout -b feat/whatever`
+2. Make changes, commit, `git push origin feat/whatever`
+3. CF Pages auto-deploys to `https://<short-sha>.hormuz-watch.pages.dev`
+4. Smoke test workflow auto-runs against the preview URL (PR-triggered)
+5. Open the preview URL in browser — visual check
+6. Open PR → merge to main → production deploys
+
+This catches visual regressions before users see them. CF preview URLs persist
+for the life of the branch.
 

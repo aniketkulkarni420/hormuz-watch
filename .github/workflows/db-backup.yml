@@ -1,0 +1,36 @@
+name: db-backup
+on:
+  schedule:
+    - cron: "0 4 * * 0"      # Sunday 04:00 UTC — quiet window
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install wrangler
+        run: npm install --no-save wrangler@latest
+      - name: Export D1 to SQL
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          mkdir -p backups
+          STAMP=$(date -u +%Y%m%d)
+          npx wrangler d1 export hormuz-watch-data --remote --output=backups/d1-$STAMP.sql 2>&1 | tail -20
+          ls -lh backups/
+          # Gzip for size
+          gzip backups/d1-$STAMP.sql
+          echo "Backup size:" && ls -lh backups/
+      - name: Upload backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d1-backup-${{ github.run_id }}
+          path: backups/*.sql.gz
+          retention-days: 90

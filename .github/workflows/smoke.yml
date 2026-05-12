@@ -2,30 +2,59 @@ name: smoke-test
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - name: Resolve target URL
+        id: target
+        run: |
+          # Production for main pushes; CF Pages preview URL for PRs
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # CF Pages preview URLs follow pattern: <commit-sha-7>.<project>.pages.dev
+            SHA=$(git rev-parse --short=7 HEAD)
+            URL="https://${SHA}.hormuz-watch.pages.dev"
+            echo "url=$URL" >> "$GITHUB_OUTPUT"
+            echo "Preview URL: $URL"
+          else
+            echo "url=https://hormuz-watch-7cd.pages.dev" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Wait for CF Pages deploy
-        run: sleep 90
+        run: sleep 120
+
       - name: Check homepage loads
-        run: curl -sfo /dev/null https://hormuz-watch-7cd.pages.dev/ || (echo "homepage failed"; exit 1)
+        run: curl -sfo /dev/null ${{ steps.target.outputs.url }}/ || (echo "homepage failed"; exit 1)
+
       - name: Check /api/oil shape
         run: |
-          R=$(curl -sf https://hormuz-watch-7cd.pages.dev/api/oil)
+          R=$(curl -sf ${{ steps.target.outputs.url }}/api/oil)
           echo "$R" | grep -q '"tier"' || (echo "oil response missing tier"; echo "$R"; exit 1)
+
       - name: Check /api/ais shape
         run: |
-          R=$(curl -sf https://hormuz-watch-7cd.pages.dev/api/ais)
+          R=$(curl -sf ${{ steps.target.outputs.url }}/api/ais)
           echo "$R" | grep -q '"summary"' || (echo "ais response missing summary"; echo "$R"; exit 1)
+
       - name: Check /api/snapshot legacy endpoint still works
         run: |
-          R=$(curl -sf https://hormuz-watch-7cd.pages.dev/api/snapshot)
+          R=$(curl -sf ${{ steps.target.outputs.url }}/api/snapshot)
           echo "$R" | grep -q '"as_of"' || (echo "snapshot response missing as_of"; echo "$R"; exit 1)
+
+      - name: Check /api/bdti exists
+        run: |
+          R=$(curl -sf ${{ steps.target.outputs.url }}/api/bdti)
+          echo "$R" | grep -q '"value"' || (echo "bdti response missing value"; echo "$R"; exit 1)
+
       - name: Check /api/health
-        run: curl -sf https://hormuz-watch-7cd.pages.dev/health > /dev/null
+        run: curl -sf ${{ steps.target.outputs.url }}/health > /dev/null
+
       - name: Check 404 page exists
         run: |
-          C=$(curl -s -o /dev/null -w "%{http_code}" https://hormuz-watch-7cd.pages.dev/nonexistent-xyz-123)
+          C=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.target.outputs.url }}/nonexistent-xyz-123)
           [[ "$C" == "404" || "$C" == "200" ]] || (echo "404 page returned $C"; exit 1)

@@ -7,6 +7,23 @@
 // 'confirmation_pending' and we surface a friendly message.
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error: "D1 binding missing" }, 500);
+
+  // ── IP rate limit: max 3 subscribe attempts / hour / IP ─────────────────
+  // Prevents abuse where someone POSTs other people's emails to spam them
+  // with confirmation emails from our domain.
+  const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "unknown";
+  if (env.OIL_KV && ip !== "unknown") {
+    try {
+      const rlKey = `sub_rl_${ip}`;
+      const raw = await env.OIL_KV.get(rlKey);
+      const cnt = raw ? parseInt(raw, 10) : 0;
+      if (cnt >= 3) {
+        return json({ error: "rate limit — try again in an hour" }, 429);
+      }
+      await env.OIL_KV.put(rlKey, String(cnt + 1), { expirationTtl: 3600 });
+    } catch { /* KV blip — allow through, don't block legitimate subscribers */ }
+  }
+
   let body;
   try { body = await request.json(); }
   catch { return json({ error: "invalid JSON body" }, 400); }
