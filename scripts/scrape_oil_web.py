@@ -77,11 +77,10 @@ def fetch_page(p, url, label):
             selector_value = page.evaluate("""() => {
               const sels = [
                 '[data-test="instrument-price-last"]',
-                '[data-symbol]',
+                'fin-streamer[data-field="regularMarketPrice"]',
+                'fin-streamer[data-test="qsp-price"]',
                 'span.commodity-value',
                 '#last_last',
-                'fin-streamer[data-field="regularMarketPrice"]',
-                'fin-streamer[data-test="qsp-price"]'
               ];
               for (const s of sels) {
                 const el = document.querySelector(s);
