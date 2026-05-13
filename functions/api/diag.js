@@ -15,7 +15,7 @@ export async function onRequestGet({ request, env }) {
   // bdti_latest has a different "stale" threshold (weekly publish vs continuous)
   // ais_last_success_ts + ais_last_recovery_ts are excluded from staleness rules — they're
   // markers, not feeds. Surfaced separately below.
-  const kvKeys = ["latest", "ais_state", "scrape_status_oil", "scrape_status_ais", "verdict_latest", "bdti_latest"];
+  const kvKeys = ["latest", "oil_scraped", "ais_state", "vessel_count_scraped", "scrape_status_oil", "scrape_status_ais", "verdict_latest", "bdti_latest", "aircraft_state", "seismic_state", "gdelt_state", "weather_state", "news_headlines", "ofac_state", "currency_irr"];
   for (const k of kvKeys) {
     try {
       const raw = await env.OIL_KV.get(k);

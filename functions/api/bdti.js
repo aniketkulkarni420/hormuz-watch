@@ -86,6 +86,39 @@ async function _handleBdtiPost({ request, env }) {
     const raw = await env.OIL_KV.get("bdti_latest");
     if (raw) prev = JSON.parse(raw);
   } catch { /* ignore */ }
+
+  // Confidence gate: scraper (SNAPSHOT_TOKEN) writes must not overwrite a high-quality
+  // manual entry with a low-confidence auto-scrape. Manual entries (ADMIN_TOKEN) always win.
+  const isAdminWrite = env.ADMIN_TOKEN && token === env.ADMIN_TOKEN;
+  const isScraperWrite = !isAdminWrite;
+  const newConfidence = body.confidence || (isAdminWrite ? "manual" : "unknown");
+  if (isScraperWrite && prev && prev.source === "manual-verified-BDTI" && newConfidence === "low") {
+    return json({
+      ok: false,
+      skipped: true,
+      reason: "scraper low-confidence value rejected — manual entry preserved",
+      preserved: prev.value,
+      attempted: value,
+      newConfidence,
+    }, 200);
+  }
+  // Also reject scraper writes that diverge >25% from a manual entry less than 14 days old
+  if (isScraperWrite && prev && prev.source === "manual-verified-BDTI" && prev.ts) {
+    const prevAgeDays = (Math.floor(Date.now() / 1000) - prev.ts) / 86400;
+    if (prevAgeDays < 14) {
+      const divergencePct = Math.abs(value - prev.value) / prev.value * 100;
+      if (divergencePct > 25) {
+        return json({
+          ok: false,
+          skipped: true,
+          reason: "scraper value diverges " + Math.round(divergencePct) + "% from recent manual entry — preserved",
+          preserved: prev.value,
+          attempted: value,
+        }, 200);
+      }
+    }
+  }
+
   const wow_pct = (prev && prev.value)
     ? Math.round(((value - prev.value) / prev.value) * 1000) / 10
     : null;

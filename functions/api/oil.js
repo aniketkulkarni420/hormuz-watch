@@ -12,7 +12,59 @@
 //
 // Falls back through legacy tiers if KV empty or stale.
 export async function onRequestGet({ env }) {
-  // Tier 1: KV (GitHub Action scraper)
+  // Tier 0: oil_scraped KV (cross-verified 2-3 sources) — PREFER when fresh + high-confidence
+  // This is more accurate than Tier 1 single-source OPA demo. Returns median of consensus.
+  if (env.OIL_KV) {
+    try {
+      const rawScraped = await env.OIL_KV.get("oil_scraped");
+      if (rawScraped) {
+        const dataS = JSON.parse(rawScraped);
+        const ageMinS = (Date.now() / 1000 - dataS.fetchedAt) / 60;
+        const isFresh = ageMinS <= 30;
+        const isHighConf = dataS.brent?.confidence === "high" && dataS.wti?.confidence === "high";
+        if (isFresh && isHighConf && dataS.brent && dataS.wti) {
+          const b = dataS.brent, w = dataS.wti;
+          // Also try to pull official EIA reference from `latest` for the dual-display
+          let bo = null, wo = null;
+          try {
+            const rawLatest = await env.OIL_KV.get("latest");
+            if (rawLatest) {
+              const dataL = JSON.parse(rawLatest);
+              const boRaw = dataL.symbols?.brent_official;
+              const woRaw = dataL.symbols?.wti_official;
+              if (boRaw) bo = { level: boRaw.c, change: boRaw.d, changePct: boRaw.dp, asOf: boRaw.date, src: boRaw.src };
+              if (woRaw) wo = { level: woRaw.c, change: woRaw.d, changePct: woRaw.dp, asOf: woRaw.date, src: woRaw.src };
+            }
+          } catch (e) { /* ignore */ }
+          const resp = {
+            source: "Cross-verified · " + (b.sources?.length || 0) + " sources",
+            tier: "tier0-xverified",
+            stale: false, staleMin: 0,
+            brent: {
+              level: b.value, change: null, changePct: null,
+              src: "cross-verified",
+              sources: b.sources, confidence: b.confidence,
+              median: b.median, min: b.min, max: b.max,
+            },
+            wti: {
+              level: w.value, change: null, changePct: null,
+              src: "cross-verified",
+              sources: w.sources, confidence: w.confidence,
+              median: w.median, min: w.min, max: w.max,
+            },
+            fetchedAt: dataS.fetchedAt * 1000,
+            ageMin: Math.round(ageMinS * 10) / 10,
+            scrapeSources: dataS.sources_succeeded,
+          };
+          if (bo) resp.brentOfficial = bo;
+          if (wo) resp.wtiOfficial = wo;
+          return json(resp);
+        }
+      }
+    } catch (e) { /* fall through to Tier 1 */ }
+  }
+
+  // Tier 1: KV (GitHub Action scraper — single-source OPA demo)
   if (env.OIL_KV) {
     try {
       const raw = await env.OIL_KV.get("latest");
