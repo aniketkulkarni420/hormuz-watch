@@ -7,17 +7,23 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install --quiet requests
+      - name: Install playwright
+        run: |
+          pip install --quiet playwright requests
+          playwright install --with-deps chromium
       - name: Run BDTI scraper
         env:
           SNAPSHOT_TOKEN: ${{ secrets.SNAPSHOT_TOKEN }}
           SITE_URL: ${{ secrets.SITE_URL }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
         run: python scripts/scrape_bdti.py 2>&1 | tee /tmp/scrape.log
       - name: Upload log
         if: always()

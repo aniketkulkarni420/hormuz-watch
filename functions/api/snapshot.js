@@ -157,6 +157,11 @@ export async function onRequestGet({ request, env }) {
     scraped_vessel_perport:  vesselScrape?.perSite?.vesselfinder?.perPort
                               ? Object.fromEntries(Object.entries(vesselScrape.perSite.vesselfinder.perPort).map(([k,v]) => [k, v?.data?.total ?? null]))
                               : null,
+    scraped_vessel_types:    vesselScrape?.byType && Object.keys(vesselScrape.byType).length ? vesselScrape.byType : null,
+    scraped_vessel_arrivals: vesselScrape?.totals?.arrivals ?? null,
+    scraped_vessel_departures: vesselScrape?.totals?.departures ?? null,
+    scraped_vessel_expected_24h: vesselScrape?.totals?.expected_24h ?? null,
+    scraped_age_sec:         vesselScrape?.fetchedAt ? Math.floor(Date.now()/1000 - vesselScrape.fetchedAt) : null,
     scraped_confidence:      vesselScrape?.confidence ?? null,
     data_source:             aisLive?.dataSource ?? (aisLive ? "ais" : "static"),
     aircraft_count:          aircraft?.count ?? null,

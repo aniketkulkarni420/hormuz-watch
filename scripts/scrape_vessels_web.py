@@ -134,27 +134,153 @@ def parse_mst_port(html):
     return {"arrivals": arrivals, "departures": departures, "unique_vessels": len(unique_vessels), "total": total}
 
 
+VESSEL_TYPE_BUCKETS = {
+    "Tanker":         re.compile(r"(?:crude\s*oil\s*tanker|oil\s*products?\s*tanker|chemical\s*tanker|lng\s*tanker|lpg\s*tanker|tanker|oil\/chem|prod\.?\s*tanker|crude/oil)", re.I),
+    "Bulk Carrier":   re.compile(r"(?:bulk\s*carrier|bulker|ore\s*carrier|self\s*discharging\s*bulk)", re.I),
+    "Container Ship": re.compile(r"(?:container\s*ship|container)", re.I),
+    "Cargo":          re.compile(r"(?:general\s*cargo|cargo\s*ship|ro-?ro|vehicles?\s*carrier|car\s*carrier|reefer|refrigerated|deck\s*cargo)", re.I),
+    "Passenger":      re.compile(r"(?:passenger|cruise|ferry)", re.I),
+    "Offshore/Service": re.compile(r"(?:offshore|supply|tug|fishing|patrol|research|sar|crew\s*boat|anchor\s*handling|pilot)", re.I),
+}
+
+
+def _classify_type(raw):
+    """Map a raw vessel-type string to a top-level bucket."""
+    if not raw:
+        return "Other"
+    s = raw.strip()
+    for bucket, pat in VESSEL_TYPE_BUCKETS.items():
+        if pat.search(s):
+            return bucket
+    return "Other"
+
+
 def parse_vf_port(html):
-    """Extract arrivals + departures from VesselFinder port page."""
+    """Extract arrivals + departures + vessel types from VesselFinder port page.
+
+    VF port pages render two main tables: 'Arrivals (last 24h)' and
+    'Departures (last 24h)' plus 'Expected Arrivals'. Each row carries a
+    vessel-type column. We pull rows from each table separately and count
+    types across all rows.
+    """
     if not html:
         return None
-    # VF port pages list "Recent Arrivals" and "Expected Arrivals" tables
-    arrivals = 0
-    departures = 0
 
-    # Count vessel links
+    types = {}
+
+    def bump(bucket):
+        types[bucket] = types.get(bucket, 0) + 1
+
+    # Vessel link counter (deduped) — keeps the legacy `unique_vessels` field meaningful.
     vessel_links = re.findall(r'/vessels/details/[^"\']+', html)
     unique_vessels = set(vessel_links)
 
-    m_arr = re.search(r'(?:recent|last)\s*arrivals?[^0-9]{0,50}(\d+)', html, re.IGNORECASE)
-    if m_arr: arrivals = int(m_arr.group(1))
-    m_dep = re.search(r'(?:recent|last)\s*departures?[^0-9]{0,50}(\d+)', html, re.IGNORECASE)
-    if m_dep: departures = int(m_dep.group(1))
+    # ---- Section splitter ----
+    # VesselFinder labels sections with h2/h3 (and sometimes a div header). Split
+    # the document into named segments so we can attribute rows to arrivals vs
+    # departures vs expected.
+    section_pat = re.compile(
+        r"(arrivals?\s*\(?\s*last\s*24h?\s*\)?|recent\s*arrivals?|departures?\s*\(?\s*last\s*24h?\s*\)?|recent\s*departures?|expected\s*arrivals?|in\s*port)",
+        re.I,
+    )
+    cursor = 0
+    segments = []
+    for m in section_pat.finditer(html):
+        if segments:
+            segments[-1] = (segments[-1][0], html[segments[-1][1]:m.start()])
+        label = m.group(1).lower()
+        if "departure" in label:
+            tag = "departures"
+        elif "expected" in label:
+            tag = "expected"
+        elif "in port" in label:
+            tag = "inport"
+        else:
+            tag = "arrivals"
+        segments.append((tag, m.end()))
+    # Close last segment
+    if segments and isinstance(segments[-1][1], int):
+        segments[-1] = (segments[-1][0], html[segments[-1][1]:])
 
-    total = max(len(unique_vessels), arrivals + departures)
-    if total == 0:
+    counts = {"arrivals": 0, "departures": 0, "expected": 0, "inport": 0}
+
+    # ---- Row extractor: a <tr> with a vessel link is one vessel. We also pull
+    # a vessel-type hint from common VF column classes / nearby spans. ----
+    row_pat = re.compile(
+        r'<tr[^>]*>(?P<row>.*?)</tr>',
+        re.S | re.I,
+    )
+    # Common VF type cell patterns (class names have changed over time)
+    type_cell_pats = [
+        re.compile(r'<td[^>]*class="[^"]*(?:aiv-vty|vty|vessel-type|type-col)[^"]*"[^>]*>\s*([^<]+?)\s*<', re.I),
+        re.compile(r'<td[^>]*data-type="([^"]+)"', re.I),
+        re.compile(r'<span[^>]*class="[^"]*(?:vty|vessel-type)[^"]*"[^>]*>\s*([^<]+?)\s*<', re.I),
+    ]
+
+    def extract_row_type(row_html):
+        for pat in type_cell_pats:
+            m = pat.search(row_html)
+            if m:
+                return m.group(1).strip()
+        # Fallback: look for keyword in the row text
+        text = re.sub(r"<[^>]+>", " ", row_html)
+        text = re.sub(r"\s+", " ", text)
+        for bucket, pat in VESSEL_TYPE_BUCKETS.items():
+            if pat.search(text):
+                return bucket
         return None
-    return {"arrivals": arrivals, "departures": departures, "unique_vessels": len(unique_vessels), "total": total}
+
+    counted_in_section = False
+    for tag, body in segments:
+        if not isinstance(body, str):
+            continue
+        section_rows = 0
+        for rm in row_pat.finditer(body):
+            row = rm.group("row")
+            if "/vessels/details/" not in row and "/vessels/" not in row:
+                continue
+            section_rows += 1
+            raw_type = extract_row_type(row)
+            bump(_classify_type(raw_type))
+            counted_in_section = True
+        if tag in counts:
+            counts[tag] += section_rows
+
+    # Fallback if section labels missed: count all vessel-link rows once.
+    if not counted_in_section:
+        for rm in row_pat.finditer(html):
+            row = rm.group("row")
+            if "/vessels/details/" not in row:
+                continue
+            raw_type = extract_row_type(row)
+            bump(_classify_type(raw_type))
+
+    # Heuristic explicit-count fallbacks (still useful when tables didn't parse)
+    if counts["arrivals"] == 0:
+        m_arr = re.search(r'(?:recent|last)\s*arrivals?[^0-9]{0,50}(\d+)', html, re.I)
+        if m_arr:
+            counts["arrivals"] = int(m_arr.group(1))
+    if counts["departures"] == 0:
+        m_dep = re.search(r'(?:recent|last)\s*departures?[^0-9]{0,50}(\d+)', html, re.I)
+        if m_dep:
+            counts["departures"] = int(m_dep.group(1))
+    if counts["expected"] == 0:
+        m_exp = re.search(r'expected\s*arrivals?[^0-9]{0,50}(\d+)', html, re.I)
+        if m_exp:
+            counts["expected"] = int(m_exp.group(1))
+
+    total = max(len(unique_vessels), counts["arrivals"] + counts["departures"])
+    if total == 0 and sum(types.values()) == 0:
+        return None
+
+    return {
+        "arrivals":       counts["arrivals"],
+        "departures":     counts["departures"],
+        "expected_24h":   counts["expected"],
+        "unique_vessels": len(unique_vessels),
+        "total":          total,
+        "types":          types,
+    }
 
 
 def scrape_site(site, ports):
@@ -228,9 +354,29 @@ def main():
 
     confidence = "high" if sites_succeeded == 2 else "medium" if sites_succeeded == 1 else "none"
 
+    # ---- Roll up vessel types across all ports of the richest site ----
+    # Prefer vesselfinder (the parser that emits types). Sum types across ports.
+    by_type = {}
+    expected_24h_total = 0
+    vf = per_site.get("vesselfinder")
+    if vf:
+        for port_name, info in vf.get("perPort", {}).items():
+            data = info.get("data") if isinstance(info, dict) else None
+            if not data:
+                continue
+            for k, v in (data.get("types") or {}).items():
+                by_type[k] = by_type.get(k, 0) + int(v or 0)
+            expected_24h_total += int(data.get("expected_24h") or 0)
+
     result = {
         "fetchedAt": int(time.time()),
-        "totals": {"arrivals": total_arrivals, "departures": total_departures, "all": total_all},
+        "totals": {
+            "arrivals": total_arrivals,
+            "departures": total_departures,
+            "all": total_all,
+            "expected_24h": expected_24h_total,
+        },
+        "byType": by_type,
         "perSite": per_site,
         "sites_succeeded": sites_succeeded,
         "confidence": confidence,

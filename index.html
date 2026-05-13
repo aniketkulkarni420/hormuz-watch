@@ -2378,9 +2378,46 @@ function updateVesselUI(){
 // we surface an honest "composite analytical signals" banner, replace the
 // vessel-mix bars with a global-fleet reference, and substitute an inferred
 // transit estimate computed from composite signal scoring.
+// Persian Gulf port country palette for Port Activity bars
+var _PORT_META = {
+  "Fujairah":     { country: "UAE",   color: "var(--amber)" },
+  "Khor Fakkan":  { country: "UAE",   color: "var(--amber)" },
+  "Jebel Ali":    { country: "UAE",   color: "var(--amber)" },
+  "Ras Tanura":   { country: "Saudi", color: "var(--blue)"  },
+  "Bandar Abbas": { country: "Iran",  color: "var(--red)"   }
+};
+
+function _renderPortActivityBars(perPort){
+  if(!perPort) return "";
+  var entries = Object.entries(perPort).filter(function(e){ return e[1] != null && e[1] > 0; });
+  if(!entries.length) return "";
+  entries.sort(function(a,b){ return b[1] - a[1]; });
+  var max = entries[0][1] || 1;
+  return entries.map(function(e){
+    var name = e[0], count = e[1];
+    var meta = _PORT_META[name] || { country: "—", color: "var(--muted)" };
+    var pct = Math.max(6, Math.round(count/max*100));
+    return ''
+      + '<div style="display:grid;grid-template-columns:96px 1fr 28px;gap:8px;align-items:center;padding:3px 0;font-family:var(--mono);font-size:11px">'
+      + '<span style="color:'+meta.color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+meta.country+'">'+name+'</span>'
+      + '<div style="height:10px;background:var(--panel2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+meta.color+'"></div></div>'
+      + '<span style="color:var(--text);text-align:right">'+count+'</span>'
+      + '</div>';
+  }).join("");
+}
+
 function applyAisDegradedMode(snap){
   if(!snap) return;
   var isStatic = !!snap.is_static;
+  var isWebScrape = snap.data_source === "web_scrape";
+  var scrapedTotal = isFinite(snap.scraped_vessel_total) ? snap.scraped_vessel_total : null;
+  var scrapedPerPort = snap.scraped_vessel_perport || null;
+  var scrapedTypes = snap.scraped_vessel_types || null;
+  // "AIS broken" = static-mode (no live AIS) — port-activity reframe kicks in
+  // whenever we have fresh scraped data, regardless of whether snapshot.js is
+  // already using it as transit-count fallback.
+  var aisBroken = isStatic || isWebScrape || (isFinite(snap.transits_per_day) && snap.transits_per_day === 0);
+  var portActivityMode = aisBroken && (isWebScrape || (scrapedTotal && scrapedTotal > 0) || scrapedPerPort);
   // 1) Top banner
   var bannerId = "compositeBanner";
   var existing = document.getElementById(bannerId);
@@ -2395,17 +2432,64 @@ function applyAisDegradedMode(snap){
     existing.remove();
   }
 
-  // 2) Vessel Movement card — inferred estimate when no AIS
-  if(isStatic){
+  // 2) Vessel Movement card — Port Activity mode when web-scraped data is fresh
+  if(portActivityMode){
+    var moveSrc = document.getElementById("moveSrc");
+    if(moveSrc){
+      moveSrc.textContent = "WEB FEED · 4h";
+      moveSrc.style.color = "var(--blue)";
+    }
+    var elT = document.getElementById("mvTransit24h");
+    if(elT){
+      elT.textContent = scrapedTotal != null ? scrapedTotal : "—";
+      elT.style.color = "var(--amber)";
+      elT.dataset.scrapeMode = "1";
+    }
+    // Replace subtitle "crossings · last 24h" with port-activity description
+    var subEl = elT && elT.nextElementSibling;
+    if(subEl){
+      subEl.textContent = "vessels in 5 Persian Gulf ports · web feed · 4h refresh";
+    }
+    // Replace direction split bar (#mvDirBar + its label row) with per-port bars
+    var dirBar = document.getElementById("mvDirBar");
+    if(dirBar && !dirBar.dataset.replaced){
+      dirBar.dataset.replaced = "1";
+      // dirBar.parentNode is the headline wrapper; replace dirBar + its sibling label row
+      var labelRow = dirBar.nextElementSibling;
+      var portsWrap = document.createElement("div");
+      portsWrap.id = "mvPortsBars";
+      portsWrap.style.cssText = "margin-top:8px";
+      portsWrap.innerHTML = _renderPortActivityBars(scrapedPerPort);
+      dirBar.parentNode.insertBefore(portsWrap, dirBar);
+      dirBar.style.display = "none";
+      if(labelRow) labelRow.style.display = "none";
+    } else if(dirBar && dirBar.dataset.replaced){
+      // Refresh bars on re-poll
+      var portsWrap2 = document.getElementById("mvPortsBars");
+      if(portsWrap2) portsWrap2.innerHTML = _renderPortActivityBars(scrapedPerPort);
+    }
+    // Hide the Transiting/Anchored/Approach grid + replace with explanation tile
+    var grid3 = document.getElementById("mvTransit") && document.getElementById("mvTransit").parentNode.parentNode;
+    if(grid3 && !grid3.dataset.scrapeReplaced){
+      grid3.dataset.scrapeReplaced = "1";
+      grid3.style.gridTemplateColumns = "1fr";
+      // Hide all three tiles
+      Array.prototype.forEach.call(grid3.children, function(c){ c.style.display = "none"; });
+      var explain = document.createElement("div");
+      explain.id = "mvCategoriesExplain";
+      explain.style.cssText = "background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.5";
+      explain.textContent = "Categories (transit / anchored / approach) require live AIS positions · pending recovery";
+      grid3.appendChild(explain);
+    }
+  } else if(isStatic){
+    // Original inferred-estimate path — no scraped data available
     var moveSrc = document.getElementById("moveSrc");
     if(moveSrc){
       moveSrc.textContent = "AIS DEGRADED · inferred";
       moveSrc.style.color = "var(--amber)";
     }
-    // Inferred = baseline_30d * normalisation from composite tile (default 0.92 if absent)
     var baseline = isFinite(snap.baseline_30d) ? snap.baseline_30d : 140;
     var norm = 0.92;
-    // Use military aircraft as crude stress proxy: more mil = more disruption
     if(isFinite(snap.military_aircraft_count)){
       var mil = snap.military_aircraft_count;
       if(mil >= 5) norm = 0.70;
@@ -2413,31 +2497,52 @@ function applyAisDegradedMode(snap){
       else if(mil >= 1) norm = 0.88;
     }
     var inferred = Math.round(baseline * norm);
-    var elT = document.getElementById("mvTransit24h");
-    if(elT && !elT.dataset.live){ elT.textContent = "~"+inferred; elT.style.color = "var(--muted)"; }
+    var elT2 = document.getElementById("mvTransit24h");
+    if(elT2 && !elT2.dataset.live){ elT2.textContent = "~"+inferred; elT2.style.color = "var(--muted)"; }
     ["mvWest","mvEast","mvTransit","mvAnchored","mvApproach"].forEach(function(id){
       var el = document.getElementById(id);
       if(el && !el.dataset.live){ el.textContent = "—"; el.style.color = "var(--muted)"; }
     });
-    // Subtitle under tiles becomes "live AIS pending"
-    var noteEl = document.querySelector("#mvDirBar")?.parentElement?.parentElement;
-    // (best-effort — leaves directional text as-is)
   }
 
-  // 3) Vessel Type Mix — global reference when typeBreakdown empty
+  // 3) Vessel Type Mix — prefer scraped types when AIS broken, else global ref
   if(isStatic || !snap.type_breakdown){
     var mixSrc = document.getElementById("mixSrc");
-    if(mixSrc){
-      mixSrc.textContent = "GLOBAL FLEET REF";
-      mixSrc.style.color = "var(--muted)";
-    }
     var bars = document.getElementById("typeBars");
-    if(bars && !bars.dataset.composite){
-      bars.dataset.composite = "1";
-      bars.innerHTML =
-        '<div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-bottom:6px">Live mix pending AIS recovery — global tanker market reference:</div>' +
-        ['VLCC (300m+) — 30%','Suezmax (270–300m) — 20%','Aframax (240–270m) — 15%','Panamax (220–240m) — 15%','Smaller — 20%']
-          .map(function(t){ return '<div style="font-family:var(--mono);font-size:10px;color:var(--text);padding:3px 0">'+t+'</div>'; }).join('');
+    var typeKeys = scrapedTypes ? Object.keys(scrapedTypes) : [];
+    if(scrapedTypes && typeKeys.length){
+      if(mixSrc){
+        mixSrc.textContent = "WEB FEED · 4h";
+        mixSrc.style.color = "var(--blue)";
+      }
+      if(bars){
+        bars.dataset.composite = "scraped";
+        var totalT = typeKeys.reduce(function(s,k){ return s + (scrapedTypes[k]||0); }, 0) || 1;
+        var rows = typeKeys.map(function(k){ return [k, scrapedTypes[k]||0]; })
+                           .sort(function(a,b){ return b[1]-a[1]; });
+        bars.innerHTML =
+          '<div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-bottom:6px">Persian Gulf port mix (5 ports · scraped):</div>' +
+          rows.map(function(r){
+            var pct = Math.round(r[1]/totalT*100);
+            return '<div class="tbar-row" style="display:grid;grid-template-columns:120px 1fr 60px;gap:6px;align-items:center;font-family:var(--mono);font-size:10px;padding:2px 0">'
+              + '<span>'+r[0]+'</span>'
+              + '<div style="height:8px;background:var(--panel2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+Math.max(4,pct)+'%;background:var(--amber)"></div></div>'
+              + '<span class="tbar-pct" style="text-align:right">'+r[1]+' · '+pct+'%</span>'
+              + '</div>';
+          }).join('');
+      }
+    } else {
+      if(mixSrc){
+        mixSrc.textContent = "GLOBAL FLEET REF";
+        mixSrc.style.color = "var(--muted)";
+      }
+      if(bars && !bars.dataset.composite){
+        bars.dataset.composite = "ref";
+        bars.innerHTML =
+          '<div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-bottom:6px">Live mix pending AIS recovery — global tanker market reference:</div>' +
+          ['VLCC (300m+) — 30%','Suezmax (270–300m) — 20%','Aframax (240–270m) — 15%','Panamax (220–240m) — 15%','Smaller — 20%']
+            .map(function(t){ return '<div style="font-family:var(--mono);font-size:10px;color:var(--text);padding:3px 0">'+t+'</div>'; }).join('');
+      }
     }
   }
 }

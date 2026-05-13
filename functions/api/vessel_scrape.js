@@ -13,7 +13,8 @@ export async function onRequestGet({ env }) {
     const now = Math.floor(Date.now() / 1000);
     const ageSec = data.fetchedAt ? now - data.fetchedAt : null;
     const ageHours = ageSec != null ? Math.round(ageSec / 3600 * 10) / 10 : null;
-    return json({ ...data, ageSec, ageHours });
+    // Surface byType explicitly so consumers don't have to dig through perSite
+    return json({ ...data, byType: data.byType || null, ageSec, ageHours });
   } catch (e) {
     return json({ error: String(e).slice(0, 200) }, 500);
   }
