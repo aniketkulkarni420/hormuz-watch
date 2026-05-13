@@ -62,6 +62,22 @@ export async function onRequestGet({ request, env }) {
   const outbound = aisLive ? aisLive.outbound : numFromEnv(env.HORMUZ_OUTBOUND, 42);
   const dark = numFromEnv(env.HORMUZ_DARK, 947);
 
+  // ─── Composite signals · Path D (May 2026) ────────────────────────────────
+  // Read 4 new KV keys; surface counts in snapshot for downstream consumers.
+  let aircraft = null, seismic = null, gdelt = null, weather = null;
+  if (env.OIL_KV) {
+    const safeGet = async (k) => {
+      try { const r = await env.OIL_KV.get(k); return r ? JSON.parse(r) : null; }
+      catch { return null; }
+    };
+    [aircraft, seismic, gdelt, weather] = await Promise.all([
+      safeGet("aircraft_state"),
+      safeGet("seismic_state"),
+      safeGet("gdelt_state"),
+      safeGet("weather_state"),
+    ]);
+  }
+
   // BDTI: existing OIL_KV lookup · preserved unchanged
   let bdti = numFromEnv(env.HORMUZ_BDTI, 14);
   let bdti_as_of = null;
@@ -113,6 +129,15 @@ export async function onRequestGet({ request, env }) {
     unique_imos_24h: aisLive?.uniqueImos ?? null,
     vessel_count_in_bbox: aisLive?.vesselCount ?? null,
     type_breakdown: aisLive?.typeBreakdown ?? null,
+    // ── Composite signals (Path D) ─────────────────────────────────────────
+    aircraft_count:          aircraft?.count ?? null,
+    military_aircraft_count: aircraft?.militaryCount ?? null,
+    earthquake_count_7d:     seismic?.count_7d ?? null,
+    seismic_max_mag:         seismic?.max_mag ?? null,
+    gdelt_article_count_24h: gdelt?.article_count_24h ?? null,
+    gdelt_neg_tone_pct:      gdelt?.neg_tone_pct ?? null,
+    weather_rough:           weather?.roughConditions ?? null,
+    weather_wind_max_knots:  weather?.windMaxKnots ?? null,
     upgrade_note: debug
       ? `Reads ais_state from OIL_KV (written by scrape_ais.py every 5 min). Live mode when age < ${AIS_STATE_FRESH_SECONDS}s AND transits24h > 0. Otherwise env-var fallback.`
       : undefined

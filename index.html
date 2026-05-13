@@ -823,6 +823,25 @@ header{
       </div>
     </div>
 
+    <!-- AERIAL ACTIVITY (Path D — composite signal) -->
+    <div class="rblock" id="aerialBlock">
+      <div class="rhead">
+        Aerial activity
+        <span class="rhead-src src-live" style="color:var(--green)" id="aerialSrc">LIVE FEED</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
+        <span style="font-family:var(--mono);font-size:26px;font-weight:700;color:var(--amber)" id="aerialMil">—</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">military callsigns · Persian Gulf airspace</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px" id="aerialSub">Awaiting first ADS-B sweep…</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding-top:9px;border-top:1px solid var(--border)">
+        <div style="background:var(--panel2);border-radius:5px;padding:8px"><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)" id="aerialTotal">—</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted)">Total a/c</div></div>
+        <div style="background:var(--panel2);border-radius:5px;padding:8px"><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--blue)" id="aerialLow">—</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted)">&lt;1000 ft</div></div>
+        <div style="background:var(--panel2);border-radius:5px;padding:8px"><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green)" id="aerialHigh">—</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted)">&gt;30k ft</div></div>
+      </div>
+      <div class="conclusion" id="concAerial" style="display:none"></div>
+    </div>
+
     <!-- TREND CHART (re-added in Section 1: Price & flow) -->
     <div class="rblock">
       <div class="rhead">
@@ -845,6 +864,22 @@ header{
       <div class="rhead">Cross-signal verification</div>
       <div class="xv-rows" id="xvRows"></div>
       <div class="conclusion" id="concCross" style="display:none"></div>
+    </div>
+
+    <!-- GEOPOLITICAL EVENTS (Path D — composite signal) -->
+    <div class="rblock" id="eventsBlock">
+      <div class="rhead">
+        Geopolitical events
+        <span class="rhead-src src-live" style="color:var(--blue)" id="eventsSrc">GDELT FEED</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
+        <span style="font-family:var(--mono);font-size:26px;font-weight:700;color:var(--amber)" id="evArt">—</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">articles · last 24h</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;margin-bottom:8px" id="evTone">Awaiting first GDELT sweep…</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Top sources</div>
+      <div id="evSources" style="font-family:var(--mono);font-size:10px;color:var(--text);line-height:1.6">—</div>
+      <div class="conclusion" id="concEvents" style="display:none"></div>
     </div>
 
     <!-- TENSION GAUGE -->
@@ -900,6 +935,36 @@ header{
 
     <!-- ═══════════ SECTION 4: CONTEXT ═══════════ -->
     <div class="rsection">Context</div>
+
+    <!-- ENVIRONMENTAL CONDITIONS (Path D — weather + seismic) -->
+    <div class="rblock" id="envBlock">
+      <div class="rhead">
+        Environmental conditions
+        <span class="rhead-src src-eia" style="color:var(--blue)">WEATHER + USGS</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div style="background:var(--panel2);border-radius:5px;padding:9px">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:3px">WIND · MAX</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--amber)" id="envWind">—</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted)" id="envWindLbl">knots · 4 points</div>
+        </div>
+        <div style="background:var(--panel2);border-radius:5px;padding:9px">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:3px">VISIBILITY · MIN</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--blue)" id="envVis">—</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted)">km</div>
+        </div>
+      </div>
+      <div style="background:var(--panel2);border-radius:5px;padding:9px;margin-bottom:6px">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:3px">SEISMIC · LAST 7 DAYS</div>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text)" id="envEqCount">—</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted)" id="envEqMax">events ≥ M4</span>
+        </div>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.5" id="envSummary">
+        Routine weather and seismic conditions support normal shipping operations.
+      </div>
+    </div>
 
     <!-- FLAG FLOW (re-added in Context — slowest-moving signal) -->
     <div class="rblock">
@@ -1510,17 +1575,26 @@ var XV_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 async function _fetchXvData(){
   var now = Date.now();
   if(_xvCache.ts && (now - _xvCache.ts) < XV_CACHE_TTL_MS){
-    return { snapshot:_xvCache.snapshot, bdti:_xvCache.bdti };
+    return _xvCache;
   }
   var results = await Promise.all([
     fetch("/api/snapshot").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
-    fetch("/api/bdti").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+    fetch("/api/bdti").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+    fetch("/api/aircraft").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+    fetch("/api/events").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+    fetch("/api/weather").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+    fetch("/api/seismic").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
   ]);
-  _xvCache = { ts: now, snapshot: results[0], bdti: results[1] };
-  return { snapshot: results[0], bdti: results[1] };
+  _xvCache = {
+    ts: now,
+    snapshot: results[0], bdti: results[1],
+    aircraft: results[2], events: results[3],
+    weather: results[4], seismic: results[5]
+  };
+  return _xvCache;
 }
 
-function _computeXvRows(aisCount, snapshot, bdti){
+function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, seismic){
   var rows = [];
   // Track most severe row for tension gauge fallback wiring
   var sev = { rank: 0, level: "NORMAL", color: "var(--green)" };
@@ -1600,6 +1674,82 @@ function _computeXvRows(aisCount, snapshot, bdti){
     rows.push({ label:"Rate-volume divergence", id:"xv-rate", status:status, statusColor:color, body:body });
   }
 
+  // Row 4 — Aerial activity (OpenSky ADS-B)
+  if(!aircraft || aircraft.error || aircraft.count == null){
+    rows.push({ label:"Aerial activity", id:"xv-air", status:"--", statusColor:"var(--muted)",
+                body:"Aircraft feed initialising. ADS-B sweep runs every 15 min." });
+  } else {
+    var mil = aircraft.militaryCount || 0;
+    var total = aircraft.count || 0;
+    var airStatus, airColor, airBody;
+    if(mil >= 5){
+      airStatus = mil+" MIL · HIGH"; airColor = "var(--red)";
+      airBody = mil+" military callsigns in Persian Gulf airspace vs baseline ~2. "+total+" total aircraft tracked. Significant air-power posture.";
+      bump(3, "HIGH", "var(--red)");
+    } else if(mil >= 3){
+      airStatus = mil+" MIL · ELEVATED"; airColor = "var(--amber)";
+      airBody = mil+" military callsigns above baseline (~2). "+total+" total aircraft. Watch for escalation.";
+      bump(2, "ELEVATED", "var(--amber)");
+    } else {
+      airStatus = mil+" MIL · NORMAL"; airColor = "var(--green)";
+      airBody = mil+" military callsigns (baseline ~2) · "+total+" total aircraft. Air activity routine.";
+    }
+    rows.push({ label:"Aerial activity", id:"xv-air", status:airStatus, statusColor:airColor, body:airBody });
+  }
+
+  // Row 5 — Geopolitical pressure (GDELT)
+  if(!events || events.error || events.neg_tone_pct == null){
+    rows.push({ label:"Geopolitical pressure", id:"xv-geo", status:"--", statusColor:"var(--muted)",
+                body:"GDELT feed initialising. Hourly sweep of Hormuz/Iran news tone." });
+  } else {
+    var negPct = events.neg_tone_pct || 0;
+    var arts = events.article_count_24h || 0;
+    var geoStatus, geoColor, geoBody;
+    if(negPct > 55){
+      geoStatus = negPct+"% NEG · HIGH"; geoColor = "var(--red)";
+      geoBody = arts+" articles last 24h, "+negPct+"% with negative tone vs baseline ~30%. Sustained narrative pressure.";
+      bump(3, "HIGH", "var(--red)");
+    } else if(negPct > 40){
+      geoStatus = negPct+"% NEG · ELEVATED"; geoColor = "var(--amber)";
+      geoBody = arts+" articles last 24h, "+negPct+"% negative tone (baseline ~30%). Tension narrative building.";
+      bump(2, "ELEVATED", "var(--amber)");
+    } else {
+      geoStatus = negPct+"% NEG · NORMAL"; geoColor = "var(--green)";
+      geoBody = arts+" articles, "+negPct+"% negative tone (baseline ~30%). Normal news pressure.";
+    }
+    rows.push({ label:"Geopolitical pressure", id:"xv-geo", status:geoStatus, statusColor:geoColor, body:geoBody });
+  }
+
+  // Row 6 — Environmental conditions (weather + seismic)
+  var hasWx = weather && !weather.error;
+  var hasSe = seismic && !seismic.error;
+  if(!hasWx && !hasSe){
+    rows.push({ label:"Environmental conditions", id:"xv-env", status:"--", statusColor:"var(--muted)",
+                body:"Weather + seismic feeds initialising." });
+  } else {
+    var rough = hasWx && weather.roughConditions;
+    var maxMag = hasSe ? (seismic.max_mag || 0) : 0;
+    var eqCount = hasSe ? (seismic.count_7d || 0) : 0;
+    var envStatus, envColor, envBody;
+    if(rough && maxMag >= 5){
+      envStatus = "STRESSED"; envColor = "var(--red)";
+      envBody = "Rough Hormuz seas ("+(weather.windMaxKnots||0)+"kn wind) AND M"+maxMag+" earthquake in region. Shipping impact likely.";
+      bump(2, "ELEVATED", "var(--amber)");
+    } else if(rough){
+      envStatus = "ROUGH SEAS"; envColor = "var(--amber)";
+      envBody = "Max wind "+(weather.windMaxKnots||0)+"kn across 4 Hormuz points; min visibility "+(weather.visibilityMinKm||"—")+"km. Slow operations.";
+    } else if(maxMag >= 6){
+      envStatus = "SEISMIC"; envColor = "var(--amber)";
+      envBody = "M"+maxMag+" earthquake within 7 days · "+eqCount+" events ≥M4 in region. Watch port status.";
+    } else {
+      envStatus = "NORMAL"; envColor = "var(--green)";
+      var wxBit = hasWx ? "wind "+(weather.windMaxKnots||0)+"kn" : "weather pending";
+      var seBit = hasSe ? eqCount+" eq (max M"+maxMag+")" : "seismic pending";
+      envBody = wxBit+" · "+seBit+". Routine environment.";
+    }
+    rows.push({ label:"Environmental conditions", id:"xv-env", status:envStatus, statusColor:envColor, body:envBody });
+  }
+
   return { rows: rows, severity: sev };
 }
 
@@ -1632,7 +1782,10 @@ async function renderXV(aisCount){
   var xv = document.getElementById("xvRows");
   if(!xv) return;
   var data = await _fetchXvData();
-  var out = _computeXvRows(aisCount, data.snapshot, data.bdti);
+  var out = _computeXvRows(aisCount, data.snapshot, data.bdti, data.aircraft, data.events, data.weather, data.seismic);
+  // Stash composite data for new tiles (aerial / geopolitical / environment)
+  window._compositeData = data;
+  if(typeof renderCompositeTiles === "function") try { renderCompositeTiles(data); } catch(e){}
   xv.innerHTML = "";
   out.rows.forEach(function(def){
     var row = document.createElement("div");
@@ -2220,6 +2373,178 @@ function updateVesselUI(){
     }
   }
 }
+// ─── Composite-mode UI reframe · runs when AIS is degraded ──────────────────
+// When /api/snapshot reports is_static:true OR vessel feed has zero data,
+// we surface an honest "composite analytical signals" banner, replace the
+// vessel-mix bars with a global-fleet reference, and substitute an inferred
+// transit estimate computed from composite signal scoring.
+function applyAisDegradedMode(snap){
+  if(!snap) return;
+  var isStatic = !!snap.is_static;
+  // 1) Top banner
+  var bannerId = "compositeBanner";
+  var existing = document.getElementById(bannerId);
+  if(isStatic && !existing){
+    var b = document.createElement("div");
+    b.id = bannerId;
+    b.style.cssText = "background:#3a2a0c;border:1px solid #8a6a2a;color:#f1c14c;font-family:var(--mono);font-size:11px;padding:8px 12px;border-radius:5px;margin:8px 0;line-height:1.5";
+    b.innerHTML = "Live vessel feed degraded · using composite analytical signals (aircraft, oil, geopolitical events, tanker stocks, weather, seismic). <a href='/methodology#composite' style='color:#f1c14c;text-decoration:underline'>more info</a>";
+    var cmt = document.querySelector(".main") || document.body;
+    cmt.insertBefore(b, cmt.firstChild);
+  } else if(!isStatic && existing){
+    existing.remove();
+  }
+
+  // 2) Vessel Movement card — inferred estimate when no AIS
+  if(isStatic){
+    var moveSrc = document.getElementById("moveSrc");
+    if(moveSrc){
+      moveSrc.textContent = "AIS DEGRADED · inferred";
+      moveSrc.style.color = "var(--amber)";
+    }
+    // Inferred = baseline_30d * normalisation from composite tile (default 0.92 if absent)
+    var baseline = isFinite(snap.baseline_30d) ? snap.baseline_30d : 140;
+    var norm = 0.92;
+    // Use military aircraft as crude stress proxy: more mil = more disruption
+    if(isFinite(snap.military_aircraft_count)){
+      var mil = snap.military_aircraft_count;
+      if(mil >= 5) norm = 0.70;
+      else if(mil >= 3) norm = 0.82;
+      else if(mil >= 1) norm = 0.88;
+    }
+    var inferred = Math.round(baseline * norm);
+    var elT = document.getElementById("mvTransit24h");
+    if(elT && !elT.dataset.live){ elT.textContent = "~"+inferred; elT.style.color = "var(--muted)"; }
+    ["mvWest","mvEast","mvTransit","mvAnchored","mvApproach"].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el && !el.dataset.live){ el.textContent = "—"; el.style.color = "var(--muted)"; }
+    });
+    // Subtitle under tiles becomes "live AIS pending"
+    var noteEl = document.querySelector("#mvDirBar")?.parentElement?.parentElement;
+    // (best-effort — leaves directional text as-is)
+  }
+
+  // 3) Vessel Type Mix — global reference when typeBreakdown empty
+  if(isStatic || !snap.type_breakdown){
+    var mixSrc = document.getElementById("mixSrc");
+    if(mixSrc){
+      mixSrc.textContent = "GLOBAL FLEET REF";
+      mixSrc.style.color = "var(--muted)";
+    }
+    var bars = document.getElementById("typeBars");
+    if(bars && !bars.dataset.composite){
+      bars.dataset.composite = "1";
+      bars.innerHTML =
+        '<div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-bottom:6px">Live mix pending AIS recovery — global tanker market reference:</div>' +
+        ['VLCC (300m+) — 30%','Suezmax (270–300m) — 20%','Aframax (240–270m) — 15%','Panamax (220–240m) — 15%','Smaller — 20%']
+          .map(function(t){ return '<div style="font-family:var(--mono);font-size:10px;color:var(--text);padding:3px 0">'+t+'</div>'; }).join('');
+    }
+  }
+}
+
+// ─── Composite tiles renderer (aerial, events, environment) ─────────────────
+function renderCompositeTiles(data){
+  if(!data) return;
+  // Aerial activity
+  if(data.aircraft && !data.aircraft.error){
+    var ac = data.aircraft;
+    var mil = ac.militaryCount || 0;
+    var total = ac.count || 0;
+    var bands = ac.byAltitude || {};
+    var setT = function(id, v){ var el = document.getElementById(id); if(el) el.textContent = v; };
+    setT("aerialMil", mil);
+    setT("aerialTotal", total);
+    setT("aerialLow", bands.low ?? "—");
+    setT("aerialHigh", bands.high ?? "—");
+    var sub = mil >= 5 ? "Elevated military posture (baseline ~2)"
+            : mil >= 3 ? "Above baseline · monitor"
+            : mil >= 1 ? "Routine military activity"
+            : "No military signatures detected";
+    var subEl = document.getElementById("aerialSub");
+    if(subEl) subEl.textContent = sub + " · " + total + " total a/c tracked";
+    var concEl = document.getElementById("concAerial");
+    if(concEl){
+      var concTxt = mil >= 3 ? "↑ Aerial posture elevated — historically precedes incident headlines."
+                  : "Aerial activity within normal range.";
+      concEl.style.display = "block";
+      concEl.style.cssText = "display:block;margin-top:9px;padding:7px 9px;font-family:var(--mono);font-size:10px;color:"+(mil>=3?"var(--amber)":"var(--green)")+";border-left:2px solid "+(mil>=3?"var(--amber)":"var(--green)")+";background:var(--panel2);border-radius:3px";
+      concEl.textContent = concTxt;
+    }
+  }
+  // Geopolitical events
+  if(data.events && !data.events.error){
+    var ev = data.events;
+    var arts = ev.article_count_24h || 0;
+    var neg = ev.neg_tone_pct;
+    var setT2 = function(id, v){ var el = document.getElementById(id); if(el) el.textContent = v; };
+    setT2("evArt", arts);
+    var toneEl = document.getElementById("evTone");
+    if(toneEl){
+      var color = "var(--green)", lbl = "tone normal";
+      if(neg != null && neg > 55){ color = "var(--red)"; lbl = "very negative ("+neg+"%)"; }
+      else if(neg != null && neg > 40){ color = "var(--amber)"; lbl = "negative ("+neg+"%)"; }
+      else if(neg != null){ lbl = "tone "+neg+"% neg"; }
+      toneEl.style.color = color;
+      toneEl.textContent = "Avg tone: " + lbl + " · baseline ~30% negative";
+    }
+    var sourceWrap = document.getElementById("evSources");
+    if(sourceWrap){
+      var top = (ev.top_sources || []).slice(0, 3);
+      if(top.length === 0) sourceWrap.textContent = "—";
+      else sourceWrap.innerHTML = top.map(function(s){
+        return '<div>'+s.domain+' · '+s.count+'</div>';
+      }).join('');
+    }
+  }
+  // Environmental
+  if(data.weather && !data.weather.error){
+    var wx = data.weather;
+    var elW = document.getElementById("envWind");
+    if(elW){
+      elW.textContent = (wx.windMaxKnots != null) ? wx.windMaxKnots : "—";
+      elW.style.color = (wx.windMaxKnots > 25) ? "var(--red)" : "var(--amber)";
+    }
+    var elV = document.getElementById("envVis");
+    if(elV) elV.textContent = (wx.visibilityMinKm != null) ? wx.visibilityMinKm : "—";
+  }
+  if(data.seismic && !data.seismic.error){
+    var se = data.seismic;
+    var elC = document.getElementById("envEqCount");
+    var elM = document.getElementById("envEqMax");
+    if(elC) elC.textContent = se.count_7d ?? "—";
+    if(elM) elM.textContent = "events ≥ M4 · max M" + (se.max_mag || 0);
+  }
+  // Combined env summary
+  var summary = document.getElementById("envSummary");
+  if(summary){
+    var rough = data.weather && data.weather.roughConditions;
+    var maxMag = (data.seismic && data.seismic.max_mag) || 0;
+    if(rough && maxMag >= 5){
+      summary.textContent = "Both rough seas and a moderate quake — shipping operations likely to slow.";
+      summary.style.color = "var(--red)";
+    } else if(rough){
+      summary.textContent = "Rough seas at Hormuz — VLCC pilotage and anchor handling slower than normal.";
+      summary.style.color = "var(--amber)";
+    } else if(maxMag >= 6){
+      summary.textContent = "Significant earthquake within 7 days — check port-status feeds.";
+      summary.style.color = "var(--amber)";
+    } else {
+      summary.textContent = "Routine weather and seismic conditions support normal shipping operations.";
+      summary.style.color = "var(--muted)";
+    }
+  }
+}
+
+// Pull /api/snapshot every 90s to drive the AIS-degraded reframe.
+function pollSnapshotForDegradedMode(){
+  fetch("/api/snapshot")
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){ if(d) applyAisDegradedMode(d); })
+    .catch(function(){});
+}
+setTimeout(pollSnapshotForDegradedMode, 4000);
+setInterval(pollSnapshotForDegradedMode, 90000);
+
 // Poll AIS Worker every 30s; degrade silently if unavailable
 function fetchAisServer(){
   fetch("https://hormuz-ais-aggregator.aniket-kulkarni.workers.dev/state")

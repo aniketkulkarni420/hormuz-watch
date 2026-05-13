@@ -194,6 +194,43 @@ def eia(series):
         return None
 
 
+def eia_imports_persian_gulf():
+    """EIA petroleum/move/impcus series MTTIMUSPG1 — US crude imports from
+    Persian Gulf countries (monthly). Returns {value, asOf, src} or None.
+
+    Path D composite signal: import volume is a slow but high-fidelity proxy
+    for sustained Hormuz disruption — flows drop weeks before official news.
+    """
+    if not EIA_KEY:
+        return None
+    series = "MTTIMUSPG1"
+    url = (f"https://api.eia.gov/v2/petroleum/move/impcus/data/"
+           f"?api_key={EIA_KEY}&frequency=monthly&data%5B0%5D=value"
+           f"&facets%5Bseries%5D%5B%5D={series}"
+           f"&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=desc"
+           f"&offset=0&length=3")
+    try:
+        r = S.get(url, timeout=20)
+        if r.status_code != 200:
+            print(f"  eia_imports_persian_gulf HTTP {r.status_code}")
+            return None
+        data = r.json().get("response", {}).get("data", [])
+        valid = [d for d in data if d.get("value")]
+        if not valid:
+            return None
+        latest = valid[0]
+        return {
+            "value": float(latest["value"]),
+            "asOf": latest.get("period"),
+            "src": "eia-monthly",
+            "series": series,
+            "units": latest.get("units") or "MBBL",
+        }
+    except Exception as e:
+        print(f"  eia_imports_persian_gulf exception: {e}")
+        return None
+
+
 SANITY_RANGES = {
     "brent":          (30, 300),   # $/bbl — hard outer bounds
     "wti":            (20, 290),
@@ -370,6 +407,14 @@ def main():
     else:
         print("  ✗ wti_official   EIA + FRED both failed")
 
+    # ── Persian Gulf imports (slow signal, monthly) ───────────────────────────
+    pg = eia_imports_persian_gulf()
+    if pg:
+        results["pg_imports"] = pg
+        print(f"  ✓ pg_imports     via {pg['src']:12s}: {pg['value']:.1f} {pg['units']} (as of {pg['asOf']})")
+    else:
+        print("  ✗ pg_imports     EIA monthly series unavailable")
+
     # ── Time-series anomaly check (vs prev KV) ────────────────────────────────
     # Removed EIA divergence comparison — EIA spot is 5-7 days old; oil can
     # legitimately move 15-20%+ in that window. Comparing live to stale official
@@ -393,6 +438,7 @@ def main():
     #   { fetchedAt: unix_seconds, source: "github-actions",
     #     symbols: { brent: {c,pc,d,dp,o,h,l,t,src,updatedAt?}, wti: {...},
     #                brent_official: {c,pc,d,dp,t,src,date}, wti_official: {...},
+    #                pg_imports: {value, asOf, src, series, units},   # EIA MTTIMUSPG1 monthly
     #                (anomalous live values are dropped before write — see time_series_check),
     #                fro: {...}, stng: {...}, ... },
     #   }

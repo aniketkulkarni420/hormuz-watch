@@ -94,6 +94,7 @@ These are the ONLY secrets CF Pages Functions need. AIS_KEY is NOT used here —
 | `HORMUZ_BASELINE_*`, `HORMUZ_BDTI`, `HORMUZ_DARK`, `HORMUZ_INBOUND`, `HORMUZ_OUTBOUND`, `HORMUZ_TRANSITS_*` | Legacy snapshot.js IRM endpoint defaults | YES (existing) |
 | `SENTRY_DSN` | Backend error reporter for CF Pages Functions write-path endpoints (record, subscribe, bdti, gfw, commentary). Get from Sentry → Settings → Client Keys (DSN). **Different from frontend Loader Script.** Leave unset to disable backend reporting. | Optional |
 | `IP_HASH_SALT` | Salt for `/api/event` IP hashing (FIX #8 feature analytics). Default works but rotate every 90 days for uniqueness counts. | Optional |
+| `OPENWEATHER_KEY` | OpenWeather Current Weather API key (free tier, 1000 calls/day). Used by `scrape_weather.py`. **Path D composite signal.** If unset, weather scraper exits 0 (no failure) and the `weather_state` KV / `/api/weather` endpoint stays empty. | Optional · **PENDING USER ACTION** |
 | ~~`TWELVE_KEY`~~ | **REMOVED** — Twelve Data tier deleted in commit 5333e2b; can delete from CF dashboard | NO |
 
 ### GitHub Secrets (for GHA workflows)
@@ -128,6 +129,10 @@ Worker is deployed but inactive. The DO-based AIS aggregator was abandoned due t
 | `/api/commentary` | GET / POST | POST needs `X-Admin-Token` | Analyst commentary CRUD |
 | `/api/subscribe` | POST / GET | none | Email subscription + double opt-in confirmation |
 | `/api/snapshot` | GET | public | Legacy stable snapshot for India Risk Monitor (separate concern, untouched) |
+| `/api/aircraft` | GET | public | OpenSky ADS-B sweep over Persian Gulf airspace (military + altitude bands) |
+| `/api/seismic` | GET | public | USGS earthquakes in Iran + Gulf region (7d, mag ≥ 4) |
+| `/api/events` | GET | public | GDELT 2.0 article tone + sources (Hormuz/Iran/tanker/oil/sanctions query, 24h) |
+| `/api/weather` | GET | public | OpenWeather conditions at 4 Hormuz points (wind, visibility, rough flag) |
 
 ### External Worker endpoints
 - `hormuz-ais-aggregator.aniket-kulkarni.workers.dev/state` — Durable Object state (currently limited by free-tier eviction; see §6)
@@ -179,6 +184,18 @@ Currently sends from `onboarding@resend.dev` (Resend default verified sender). F
 | 2.4-auto | Commentary automation (auto-draft + you publish) | ⏸ Deferred per user |
 | 2.5 | Statistical confidence on verdicts | ⏸ Deferred per user (needs 30+ days D1) |
 | 2.6 | ACLED conflict events | ⏸ Blocked on Research-tier upgrade (email drafted) |
+
+### 🟩 TIER 2.7 — Composite signal coverage (NEW · May 2026)
+| # | Item | Status |
+|---|---|---|
+| 2.7.1 | OpenSky ADS-B (`aircraft_state` KV · `/api/aircraft`) | ✅ Live (every 15 min, anonymous tier) |
+| 2.7.2 | USGS seismic (`seismic_state` KV · `/api/seismic`) | ✅ Live (hourly, mag≥4 in Iran+Gulf bbox) |
+| 2.7.3 | GDELT 2.0 events (`gdelt_state` KV · `/api/events`) | ✅ Live (hourly, Hormuz/Iran/tanker query) |
+| 2.7.4 | OpenWeather 4-point sweep (`weather_state` KV · `/api/weather`) | ⏸ Requires `OPENWEATHER_KEY` (pending user action) |
+| 2.7.5 | EIA Persian Gulf imports series (`symbols.pg_imports` in `latest` KV) | ✅ Live (monthly, in `oil-scraper`) |
+| 2.7.6 | Tanker Activity Index computed in `/api/oil` | ✅ Live (mean dp% of 6 tanker stocks) |
+| 2.7.7 | Verdict refactor — composite-aware weights (record.js) | ✅ Live (`mode: ais-primary` vs `composite-fallback`) |
+| 2.7.8 | Frontend reframe — banner + 3 new tiles + 6 XV rows | ✅ Live (degrades gracefully when AIS recovers) |
 
 ### 🟦 TIER 3 — Differentiation (foundations laid)
 | # | Item | Status |
@@ -604,6 +621,10 @@ All fixes shipped in commit **`527458a`** unless noted. Order matches §17 prior
   - `smoke-test` — push to main + every PR (uses CF preview URL), verifies endpoints after deploy
   - `watchdog` — hourly, alerts via Resend if any feed stale or secrets >90d old
   - `data-refresh` / `vessel-sync` — scraper logs uploaded as artifacts (7-day retention)
+  - `aircraft-scraper` — every 15 min, OpenSky ADS-B → `aircraft_state` KV
+  - `seismic-scraper` — hourly, USGS → `seismic_state` KV
+  - `gdelt-scraper` — hourly, GDELT 2.0 → `gdelt_state` KV
+  - `weather-scraper` — hourly, OpenWeather (requires `OPENWEATHER_KEY`) → `weather_state` KV
   - `bdti-weekly` — Friday 18:30 UTC, best-effort BDTI scrape
   - `db-backup` — Sunday 04:00 UTC, exports D1 to SQL.gz artifact (90-day retention)
 - Force snapshot: trigger `data-refresh` via workflow_dispatch with `force_snapshot=1`

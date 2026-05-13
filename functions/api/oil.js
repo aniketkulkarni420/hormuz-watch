@@ -65,6 +65,38 @@ export async function onRequestGet({ env }) {
             };
           }
 
+          // EIA Persian Gulf imports (monthly slow signal)
+          if (data.symbols.pg_imports) {
+            const pg = data.symbols.pg_imports;
+            resp.pgImports = {
+              value: pg.value, asOf: pg.asOf || null,
+              src: pg.src, units: pg.units || "MBBL"
+            };
+          }
+
+          // Tanker Activity Index — equal-weighted mean dp% of 6 tanker stocks
+          const tankerKeys = ["fro", "insw", "stng", "tnk", "dht", "nat"];
+          const components = {};
+          const dps = [];
+          for (const k of tankerKeys) {
+            const sym = data.symbols[k];
+            if (sym && isFinite(sym.dp)) {
+              components[k] = { level: sym.c, dp: sym.dp };
+              dps.push(sym.dp);
+            }
+          }
+          if (dps.length > 0) {
+            const meanDp = dps.reduce((a, b) => a + b, 0) / dps.length;
+            resp.tankerActivityIndex = {
+              value: Math.round(meanDp * 100) / 100,
+              count: dps.length,
+              components,
+              interpretation: meanDp > 0
+                ? "tanker equities up — healthy shipping demand"
+                : "tanker equities down — softening freight market"
+            };
+          }
+
           return json(resp);
         }
       }
