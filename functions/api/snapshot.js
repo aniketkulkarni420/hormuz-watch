@@ -57,13 +57,13 @@ export async function onRequestGet({ request, env }) {
 
   // ─── Composite signals · Path D (May 2026) ────────────────────────────────
   // Read 5 KV keys; surface counts in snapshot for downstream consumers.
-  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null;
+  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null;
   if (env.OIL_KV) {
     const safeGet = async (k) => {
       try { const r = await env.OIL_KV.get(k); return r ? JSON.parse(r) : null; }
       catch { return null; }
     };
-    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency] = await Promise.all([
+    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest] = await Promise.all([
       safeGet("aircraft_state"),
       safeGet("seismic_state"),
       safeGet("gdelt_state"),
@@ -71,6 +71,8 @@ export async function onRequestGet({ request, env }) {
       safeGet("vessel_count_scraped"),
       safeGet("news_headlines"),
       safeGet("currency_irr"),
+      safeGet("ofac_state"),
+      safeGet("latest"),
     ]);
   }
 
@@ -186,6 +188,20 @@ export async function onRequestGet({ request, env }) {
     aed_usd:                 currency?.aed_usd ?? null,
     currency_age_sec:        currency?.fetchedAt ? Math.floor(Date.now()/1000 - currency.fetchedAt) : null,
     currency_interpretation: currency?.interpretation ?? null,
+    // OFAC Iran-related sanctions activity (every 6h via scrape_ofac.py)
+    ofac_iran_actions_30d:   ofac?.iran_related_actions_30d ?? null,
+    ofac_latest_action_date: ofac?.latest_action_date ?? null,
+    ofac_age_sec:            ofac?.fetchedAt ? Math.floor(Date.now()/1000 - ofac.fetchedAt) : null,
+    // EIA weekly inventory + SPR (written by scrape_oil.py weekly_stocks block)
+    spr_level_kbbl:          oilLatest?.symbols?.weekly_stocks?.spr_kbbl ?? null,
+    crude_inventory_kbbl:    oilLatest?.symbols?.weekly_stocks?.commercial_crude_kbbl ?? null,
+    inventory_wow_pct:       oilLatest?.symbols?.weekly_stocks?.crude_wow_pct ?? null,
+    spr_wow_pct:             oilLatest?.symbols?.weekly_stocks?.spr_wow_pct ?? null,
+    weekly_stocks_as_of:     oilLatest?.symbols?.weekly_stocks?.asOf ?? null,
+    // OPEC monthly production (STEO PAPR_OPEC, mbpd)
+    opec_production_mbpd:    oilLatest?.symbols?.opec_production?.value_mbpd ?? null,
+    opec_production_mom_pct: oilLatest?.symbols?.opec_production?.mom_pct ?? null,
+    opec_production_as_of:   oilLatest?.symbols?.opec_production?.asOf ?? null,
     upgrade_note: debug
       ? `Reads ais_state from OIL_KV (written by scrape_ais.py every 5 min). Live mode when age < ${AIS_STATE_FRESH_SECONDS}s AND transits24h > 0. Otherwise env-var fallback.`
       : undefined

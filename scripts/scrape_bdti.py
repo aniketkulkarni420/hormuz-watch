@@ -14,11 +14,13 @@ Sources (browser-rendered):
   2. Macrotrends       — /2519/baltic-dirty-tanker-index-bdti-historical-chart
                           (historical table — newest row first)
 
-  Trading Economics is DROPPED (2026-05-13): its `#p` selector on
-  /commodity/baltic-exchange-dirty-tanker-index returns the wrong element
-  (~101.88, unrelated metric on the page) rather than the BDTI headline.
-  The scrape_trading_economics() function is preserved but commented out
-  of the source list so it can be reinstated cleanly if TE's markup is fixed.
+  Trading Economics is DROPPED (2026-05-13): the page
+  /commodity/baltic-exchange-dirty-tanker-index returns
+  "There is no data for this indicator or it is unavailable at the moment"
+  and renders a generic commodities fallback table; `#p` then grabs the first
+  fallback row (Crude Oil ~101) instead of BDTI. Verified via
+  scripts/_discover_te_bdti.py on 2026-05-13. Re-enable only when TE restores
+  the dedicated BDTI page (look for non-empty <h1> and `data-symbol="BDTI"`).
 
 Sanity bounds: 100 <= BDTI <= 5000.
 Cross-verify:

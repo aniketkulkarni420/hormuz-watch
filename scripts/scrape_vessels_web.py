@@ -35,15 +35,22 @@ CF_ACCOUNT_ID = os.environ["CF_ACCOUNT_ID"]
 CF_API_TOKEN  = os.environ["CF_API_TOKEN"]
 KV_NS         = os.environ["CF_KV_NAMESPACE_ID"]
 
-# Per-site port URL patterns. MyShipTracking uses port-slug URLs, VesselFinder
-# uses UN_LOCODE. These are public discovery URLs — same as opening in browser.
+# Per-site port URL patterns. VesselFinder uses UN_LOCODE.
+#
+# MyShipTracking ports: DEFERRED 2026-05-13. MST uses /ports/port-of-NAME-in-CC-COUNTRY-id-NNN
+# URLs whose numeric IDs are not exposed by any public search endpoint we could find
+# (autocomplete/searchresult endpoints 404 from script context; `?searchresult=` query
+# string is silently ignored and returns the alphabetical first page; country filters
+# don't paginate). Slug guesses without IDs 404. Until IDs are sourced (manual via
+# browser network tab, or a paid MST API key), MST is left in PORTS as best-effort and
+# expected to return "no-data"/blocked — VesselFinder is the working source.
 PORTS = [
-    # (display_name, mst_slug, vf_locode)
-    ("Fujairah",    "fujairah-ae-002",        "AEFJR"),
-    ("Khor Fakkan", "khor-fakkan-ae-003",     "AEKLF"),
-    ("Jebel Ali",   "jebel-ali-ae-jea",       "AEJEA"),
-    ("Ras Tanura",  "ras-tanura-sa-rta",      "SARTA"),
-    ("Bandar Abbas","bandar-abbas-ir-bnd",    "IRBND"),
+    # (display_name, mst_slug_GUESS, vf_locode)
+    ("Fujairah",    "port-of-fujairah-in-ae-united-arab-emirates",       "AEFJR"),
+    ("Khor Fakkan", "port-of-khor-fakkan-in-ae-united-arab-emirates",    "AEKLF"),
+    ("Jebel Ali",   "port-of-jebel-ali-in-ae-united-arab-emirates",      "AEJEA"),
+    ("Ras Tanura",  "port-of-ras-tanura-in-sa-saudi-arabia",             "SARTA"),
+    ("Bandar Abbas","port-of-bandar-abbas-in-ir-iran",                   "IRBND"),
 ]
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"

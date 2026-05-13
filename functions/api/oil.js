@@ -74,6 +74,31 @@ export async function onRequestGet({ env }) {
             };
           }
 
+          // OPEC monthly production (STEO PAPR_OPEC)
+          if (data.symbols.opec_production) {
+            const op = data.symbols.opec_production;
+            resp.opecProduction = {
+              valueMbpd: op.value_mbpd ?? null,
+              momPct:    op.mom_pct ?? null,
+              asOf:      op.asOf || null,
+              src:       op.src || "eia-steo",
+            };
+          }
+
+          // EIA weekly stocks — commercial crude + SPR (WCESTUS1 + WCSSTUS1)
+          if (data.symbols.weekly_stocks) {
+            const ws = data.symbols.weekly_stocks;
+            resp.weeklyStocks = {
+              commercialCrudeKbbl: ws.commercial_crude_kbbl ?? null,
+              sprKbbl:             ws.spr_kbbl ?? null,
+              crudeWowPct:         ws.crude_wow_pct ?? null,
+              sprWowPct:           ws.spr_wow_pct ?? null,
+              asOf:                ws.asOf || null,
+              src:                 ws.src || "eia-weekly",
+              units:               ws.units || "kbbl",
+            };
+          }
+
           // Tanker Activity Index — equal-weighted mean dp% of 6 tanker stocks
           const tankerKeys = ["fro", "insw", "stng", "tnk", "dht", "nat"];
           const components = {};

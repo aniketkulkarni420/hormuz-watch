@@ -930,6 +930,23 @@ header{
       </div>
     </div>
 
+    <!-- SANCTIONS ACTIVITY (OFAC Iran-related, every 6h) -->
+    <div class="rblock" id="ofacBlock">
+      <div class="rhead">
+        <abbr title="US Treasury OFAC publishes designations of foreign individuals, entities, vessels, and tankers. Iran/IRGC/NIOC/NITC actions in the last 30 days are a leading indicator of US-Iran tension and shadow-fleet pressure.">Sanctions activity</abbr>
+        <span class="rhead-src src-eia" style="color:var(--blue)">OFAC · 6h</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px">Iran-related OFAC actions &middot; last 30d</div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+        <span style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--amber)" id="ofacCount">&mdash;</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted)" id="ofacLatest"></span>
+      </div>
+      <div id="ofacList" style="font-family:var(--mono);font-size:10px;line-height:1.5"></div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
+        Designations of Iranian tanker operators, IRGC fronts, or shadow-fleet vessels precede enforcement events. Bursts &gt; 3/month historically map to escalation cycles.
+      </div>
+    </div>
+
     <!-- CURRENCY PRESSURE (Iranian Rial — capital-flight / sanction-pressure proxy) -->
     <div class="rblock" id="currencyBlock">
       <div class="rhead">
@@ -3826,6 +3843,51 @@ if(document.readyState === "loading"){
 }
 // Refresh every 30 min — matches scraper cadence
 setInterval(loadNewsTile, 30 * 60 * 1000);
+
+// ─── OFAC sanctions tile ─────────────────────────────────────────────────
+function loadOfacTile(){
+  fetch("/api/ofac")
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      var cEl = document.getElementById("ofacCount");
+      var lEl = document.getElementById("ofacLatest");
+      var listEl = document.getElementById("ofacList");
+      if(!cEl || !listEl) return;
+      if(!d || d.iran_related_actions_30d == null){
+        cEl.textContent = "—";
+        listEl.innerHTML = '<div style="color:var(--muted)">OFAC feed unavailable — scraper has not run yet.</div>';
+        return;
+      }
+      cEl.textContent = d.iran_related_actions_30d;
+      if(d.latest_action_date && lEl){
+        lEl.textContent = "latest " + d.latest_action_date;
+      }
+      var actions = Array.isArray(d.recent_actions) ? d.recent_actions.slice(0, 3) : [];
+      if(actions.length === 0){
+        listEl.innerHTML = '<div style="color:var(--muted)">No Iran-related actions in window.</div>';
+      } else {
+        listEl.innerHTML = actions.map(function(a){
+          var t = (a.title || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+          var safeUrl = (a.url || "#").replace(/"/g,"&quot;");
+          return '<div style="margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:3px">'
+               + '<a href="' + safeUrl + '" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none">'
+               + '<span style="color:var(--muted);margin-right:6px">' + (a.date || "") + '</span>'
+               + t.slice(0, 110)
+               + '</a></div>';
+        }).join("");
+      }
+    })
+    .catch(function(){
+      var listEl = document.getElementById("ofacList");
+      if(listEl) listEl.innerHTML = '<div style="color:var(--muted)">OFAC feed unavailable.</div>';
+    });
+}
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", loadOfacTile);
+} else {
+  setTimeout(loadOfacTile, 0);
+}
+setInterval(loadOfacTile, 6 * 60 * 60 * 1000); // every 6h to match scraper
 
 </script>
 <!-- First-visit onboarding overlay (auto-hides for return visitors via localStorage) -->

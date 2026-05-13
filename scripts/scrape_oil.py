@@ -194,6 +194,112 @@ def eia(series):
         return None
 
 
+def eia_weekly_stocks():
+    """EIA weekly petroleum stocks — commercial crude (WCESTUS1) + SPR (WCSSTUS1).
+
+    Endpoint: /v2/petroleum/stoc/wstk  (frequency=weekly, units=MBBL = thousand barrels).
+
+    Returns dict or None:
+      { commercial_crude_kbbl, spr_kbbl, crude_wow_pct, spr_wow_pct, asOf, src }
+    Persian Gulf imports are kept monthly via eia_imports_persian_gulf() —
+    no clean weekly series exists for that flow.
+    """
+    if not EIA_KEY:
+        return None
+    out = {}
+
+    def _fetch(series):
+        url = (f"https://api.eia.gov/v2/petroleum/stoc/wstk/data/"
+               f"?api_key={EIA_KEY}&frequency=weekly&data%5B0%5D=value"
+               f"&facets%5Bseries%5D%5B%5D={series}"
+               f"&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=desc"
+               f"&offset=0&length=5")
+        try:
+            r = S.get(url, timeout=20)
+            if r.status_code != 200:
+                print(f"  eia_weekly_stocks[{series}] HTTP {r.status_code}")
+                return None
+            data = r.json().get("response", {}).get("data", [])
+            valid = [d for d in data if d.get("value") not in (None, "")]
+            if len(valid) < 1:
+                return None
+            return valid
+        except Exception as e:
+            print(f"  eia_weekly_stocks[{series}] exception: {str(e)[:120]}")
+            return None
+
+    crude = _fetch("WCESTUS1")
+    spr   = _fetch("WCSSTUS1")
+    if not crude and not spr:
+        return None
+
+    def _val(rows):
+        if not rows:
+            return None, None, None
+        latest = float(rows[0]["value"])
+        prev = float(rows[1]["value"]) if len(rows) > 1 and rows[1].get("value") else None
+        wow = None
+        if prev and prev > 0:
+            wow = round((latest - prev) / prev * 100.0, 2)
+        return latest, wow, rows[0].get("period")
+
+    crude_v, crude_wow, crude_asof = _val(crude)
+    spr_v,   spr_wow,   spr_asof   = _val(spr)
+
+    out = {
+        "commercial_crude_kbbl": crude_v,
+        "crude_wow_pct":         crude_wow,
+        "spr_kbbl":              spr_v,
+        "spr_wow_pct":           spr_wow,
+        "asOf":                  crude_asof or spr_asof,
+        "src":                   "eia-weekly",
+        "series":                "WCESTUS1 + WCSSTUS1",
+        "units":                 "kbbl",
+    }
+    return out
+
+
+def eia_opec_production():
+    """EIA STEO `PAPR_OPEC` — Total OPEC Petroleum Supply (monthly, mbpd).
+    Most recent historical month + 1-month change. STEO mixes history and
+    forecast; we filter by current month (UTC) and take the latest non-future row.
+    """
+    if not EIA_KEY:
+        return None
+    url = (f"https://api.eia.gov/v2/steo/data/"
+           f"?api_key={EIA_KEY}&frequency=monthly&data%5B0%5D=value"
+           f"&facets%5BseriesId%5D%5B%5D=PAPR_OPEC"
+           f"&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=desc"
+           f"&offset=0&length=24")
+    try:
+        r = S.get(url, timeout=20)
+        if r.status_code != 200:
+            return None
+        data = r.json().get("response", {}).get("data", [])
+        now = time.gmtime()
+        current_period = f"{now.tm_year:04d}-{now.tm_mon:02d}"
+        # take latest period <= current (skip forecasts beyond current month)
+        hist = [d for d in data if d.get("period") and d["period"] <= current_period and d.get("value")]
+        if len(hist) < 2:
+            return None
+        latest = hist[0]; prev = hist[1]
+        v = float(latest["value"])
+        pv = float(prev["value"])
+        mom_pct = round((v - pv) / pv * 100.0, 2) if pv > 0 else None
+        return {
+            "value_mbpd": round(v, 3),
+            "prev_mbpd":  round(pv, 3),
+            "mom_pct":    mom_pct,
+            "asOf":       latest["period"],
+            "src":        "eia-steo",
+            "series":     "PAPR_OPEC",
+            "units":      "million barrels per day",
+        }
+    except Exception as e:
+        print(f"  eia_opec_production exception: {str(e)[:120]}")
+        return None
+
+
 def eia_imports_persian_gulf():
     """EIA petroleum/move/impcus series MTTIMUSPG1 — US crude imports from
     Persian Gulf countries (monthly). Returns {value, asOf, src} or None.
@@ -414,6 +520,24 @@ def main():
         print(f"  ✓ pg_imports     via {pg['src']:12s}: {pg['value']:.1f} {pg['units']} (as of {pg['asOf']})")
     else:
         print("  ✗ pg_imports     EIA monthly series unavailable")
+
+    # ── OPEC monthly production (STEO PAPR_OPEC) ──────────────────────────────
+    opec = eia_opec_production()
+    if opec:
+        results["opec_production"] = opec
+        print(f"  ✓ opec_production via {opec['src']:12s}: {opec['value_mbpd']:.2f} mbpd ({opec.get('mom_pct'):+.2f}% mom) as of {opec['asOf']}")
+    else:
+        print("  ✗ opec_production EIA STEO PAPR_OPEC unavailable")
+
+    # ── Weekly petroleum stocks (commercial crude + SPR) ──────────────────────
+    ws = eia_weekly_stocks()
+    if ws and (ws.get("commercial_crude_kbbl") or ws.get("spr_kbbl")):
+        results["weekly_stocks"] = ws
+        cv = ws.get("commercial_crude_kbbl"); cw = ws.get("crude_wow_pct")
+        sv = ws.get("spr_kbbl");              sw = ws.get("spr_wow_pct")
+        print(f"  ✓ weekly_stocks  crude={cv} kbbl ({cw:+.2f}% wow)  spr={sv} kbbl ({sw:+.2f}% wow)  as of {ws.get('asOf')}" if cv and sv and cw is not None and sw is not None else f"  ✓ weekly_stocks  partial: {ws}")
+    else:
+        print("  ✗ weekly_stocks  EIA WCESTUS1 + WCSSTUS1 unavailable")
 
     # ── Time-series anomaly check (vs prev KV) ────────────────────────────────
     # Removed EIA divergence comparison — EIA spot is 5-7 days old; oil can

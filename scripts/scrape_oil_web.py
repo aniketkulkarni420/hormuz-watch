@@ -275,14 +275,14 @@ def main():
 
     per_source = {}
     with sync_playwright() as p:
-        # Three sources, different infrastructure:
+        # Two sources, different infrastructure:
         #   1. OilPriceAPI demo — HTTP JSON, confirmed accurate (within 0.3% of Investing)
-        #   2. Trading Economics — Playwright + selector
-        #   3. Investing.com — Playwright + selector
-        # Yahoo dropped — fin-streamer selector kept extracting wrong element.
+        #   2. Investing.com — Playwright + selector
+        # Trading Economics DROPPED 2026-05-13: was ~4% off OPA/Investing consensus;
+        #   scrape_trading_economics() kept defined for future reinstatement.
+        # Yahoo dropped earlier — fin-streamer selector kept extracting wrong element.
         for fn, key in [
             (scrape_oilpriceapi_demo,  "oilpriceapi-demo"),
-            (scrape_trading_economics, "trading-economics"),
             (scrape_investing,         "investing.com"),
         ]:
             print(f"\n--- {key} ---")
