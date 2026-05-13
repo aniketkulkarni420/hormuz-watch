@@ -57,18 +57,19 @@ export async function onRequestGet({ request, env }) {
 
   // ─── Composite signals · Path D (May 2026) ────────────────────────────────
   // Read 5 KV keys; surface counts in snapshot for downstream consumers.
-  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null;
+  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null;
   if (env.OIL_KV) {
     const safeGet = async (k) => {
       try { const r = await env.OIL_KV.get(k); return r ? JSON.parse(r) : null; }
       catch { return null; }
     };
-    [aircraft, seismic, gdelt, weather, vesselScrape] = await Promise.all([
+    [aircraft, seismic, gdelt, weather, vesselScrape, news] = await Promise.all([
       safeGet("aircraft_state"),
       safeGet("seismic_state"),
       safeGet("gdelt_state"),
       safeGet("weather_state"),
       safeGet("vessel_count_scraped"),
+      safeGet("news_headlines"),
     ]);
   }
 
@@ -172,6 +173,11 @@ export async function onRequestGet({ request, env }) {
     gdelt_neg_tone_pct:      gdelt?.neg_tone_pct ?? null,
     weather_rough:           weather?.roughConditions ?? null,
     weather_wind_max_knots:  weather?.windMaxKnots ?? null,
+    // News headlines (Hormuz/Iran/tanker RSS aggregator, every 30 min)
+    news_count_24h:          news?.count_24h ?? null,
+    news_top_keywords:       Array.isArray(news?.top_keywords) ? news.top_keywords.slice(0, 3).map(x => Array.isArray(x) ? x[0] : x) : null,
+    news_sources_succeeded:  news?.sources_succeeded ?? null,
+    news_age_sec:            news?.fetchedAt ? Math.floor(Date.now()/1000 - news.fetchedAt) : null,
     upgrade_note: debug
       ? `Reads ais_state from OIL_KV (written by scrape_ais.py every 5 min). Live mode when age < ${AIS_STATE_FRESH_SECONDS}s AND transits24h > 0. Otherwise env-var fallback.`
       : undefined

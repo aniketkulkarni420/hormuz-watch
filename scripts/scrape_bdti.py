@@ -1,28 +1,40 @@
 #!/usr/bin/env python3
-"""Best-effort weekly BDTI scraper — Playwright edition.
+"""BDTI 3-source web scraper (Playwright) — cross-verified.
 
-BDTI (Baltic Dirty Tanker Index) is published Fridays by the Baltic Exchange.
-The official feed is paywalled. All practical free public sources require
-browser rendering (Cloudflare challenge or JS-rendered pages), so this script
-uses Playwright Chromium.
+Why this exists:
+  - Previous scraper relied on text-pattern parsing of Trading Economics and
+    Hellenic Shipping News articles. Both started returning empty for weeks,
+    leaving /api/bdti stuck on stale `bdti_latest` (or env-var fallback).
+  - This rewrite mirrors scripts/scrape_oil_web.py: three independent sources,
+    selector-first extraction with regex fallback, median + cross-verify with
+    a confidence rating.
 
-Source priority:
-  1. Trading Economics — https://tradingeconomics.com/commodity/baltic
-  2. Hellenic Shipping News — search BDTI, parse most recent tanker article
-  3. Investing.com — fallback (heavy page, Cloudflare-protected)
+Sources (all browser-rendered):
+  1. Trading Economics — /commodity/baltic-exchange-dirty-tanker-index
+  2. Investing.com     — /indices/baltic-dirty-tanker
+  3. Macrotrends       — /2519/baltic-dirty-tanker-index-bdti-historical-chart
+                          (historical table — newest row first)
 
-Strategy: try each in order, accept first plausible value (400-5000 — the
-current BDTI cycle has run high, e.g. ~3189).
+Sanity bounds: 100 <= BDTI <= 5000.
+Cross-verify:
+  - <=5%   spread → high
+  - 5-15%  spread → medium
+  - >15%   spread → low
+  - 1 src         → medium
+  - 0 src         → keep existing KV, exit non-zero
 
-On success: write KV `bdti_latest` (mirrors /api/bdti) AND POST to /api/bdti
-if SNAPSHOT_TOKEN + SITE_URL are set.
+Output:
+  - POSTs to {SITE_URL}/api/bdti with X-Snapshot-Token (preferred path —
+    Pages function writes KV `bdti_latest` and computes wow_pct).
+  - Falls back to direct KV write if POST unavailable.
+  - Manual admin form at /admin/bdti remains functional regardless.
 """
 
 import os
 import sys
-import re
 import time
 import json
+import re
 import requests
 
 SNAPSHOT_TOKEN = os.environ.get("SNAPSHOT_TOKEN", "")
@@ -31,165 +43,202 @@ CF_ACCOUNT_ID  = os.environ.get("CF_ACCOUNT_ID", "")
 CF_API_TOKEN   = os.environ.get("CF_API_TOKEN", "")
 KV_NS          = os.environ.get("CF_KV_NAMESPACE_ID", "")
 
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
 
-# BDTI sanity bounds — anything outside this range is almost certainly a misread.
-# Current cycle has run high (~3189 in mid-2025), so 5000 ceiling is generous.
-BDTI_MIN = 400
+BDTI_MIN = 100
 BDTI_MAX = 5000
 
 
-def open_browser_page(url, wait_ms=4000, wait_selector=None):
-    """Load URL via Playwright. Returns (html, title, status). status in {ok, blocked, error}."""
+def sanity_ok(v):
     try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        return None, None, "playwright-missing"
+        return v is not None and BDTI_MIN <= float(v) <= BDTI_MAX
+    except Exception:
+        return False
+
+
+def _to_float(s):
+    if s is None:
+        return None
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent=UA, viewport={"width": 1366, "height": 900}, locale="en-US",
-            )
-            page = context.new_page()
-            try:
-                page.goto(url, wait_until="domcontentloaded", timeout=35000)
-                if wait_selector:
-                    try:
-                        page.wait_for_selector(wait_selector, timeout=8000)
-                    except Exception:
-                        pass
-                page.wait_for_timeout(wait_ms)
-                title = page.title()
-                html = page.content()
-                browser.close()
-                low = (title or "").lower()
-                if any(s in low for s in ["just a moment", "checking your browser", "attention required"]):
-                    return html, title, "blocked"
-                return html, title, "ok"
-            except Exception as e:
-                browser.close()
-                return None, None, f"error: {str(e)[:120]}"
-    except Exception as e:
-        return None, None, f"launch: {str(e)[:120]}"
-
-
-def _strip_html(html):
-    text = re.sub(r"<script[^>]*>.*?</script>", " ", html or "", flags=re.S | re.I)
-    text = re.sub(r"<style[^>]*>.*?</style>", " ", text, flags=re.S | re.I)
-    text = re.sub(r"<[^>]+>", " ", text)
-    return re.sub(r"\s+", " ", text)
-
-
-def _valid(v):
-    try:
-        n = float(v)
+        s = str(s).strip().replace(",", "")
+        m = re.search(r"-?\d+(?:\.\d+)?", s)
+        return float(m.group(0)) if m else None
     except Exception:
         return None
-    return n if (BDTI_MIN <= n <= BDTI_MAX) else None
 
 
-def trading_economics():
-    """Trading Economics commodity page renders the BDTI headline value in JS."""
+def fetch_page(p, url, label, wait_selector=None, wait_ms=4000):
+    """Open URL in headless chromium. Returns (html, selector_value)."""
+    browser = None
+    try:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent=UA, viewport={"width": 1366, "height": 900}, locale="en-US",
+        )
+        page = context.new_page()
+        page.goto(url, wait_until="domcontentloaded", timeout=35000)
+        if wait_selector:
+            try:
+                page.wait_for_selector(wait_selector, timeout=8000)
+            except Exception:
+                pass
+        page.wait_for_timeout(wait_ms)
+        title = page.title()
+        html = page.content()
+        selector_value = None
+        try:
+            selector_value = page.evaluate("""() => {
+              const sels = [
+                '[data-test="instrument-price-last"]',
+                'span.commodity-value',
+                '[data-symbol="BDTI"]',
+                '#p',
+                '#last_last',
+                'span.historical_data_table_value',
+              ];
+              for (const s of sels) {
+                const el = document.querySelector(s);
+                if (el) {
+                  const t = el.getAttribute('data-value') || el.getAttribute('value') || el.textContent;
+                  if (t) return { sel: s, val: t.trim().slice(0,32) };
+                }
+              }
+              return null;
+            }""")
+        except Exception:
+            selector_value = None
+        browser.close()
+        low = (title or "").lower()
+        if any(s in low for s in ["just a moment", "checking your browser", "attention required", "cloudflare"]):
+            print(f"  [{label}] blocked (cloudflare/challenge)")
+            return None, None
+        return html, selector_value
+    except Exception as e:
+        print(f"  [{label}] error: {str(e)[:160]}")
+        try:
+            if browser:
+                browser.close()
+        except Exception:
+            pass
+        return None, None
+
+
+# ─────────────────── Source 1: Trading Economics ───────────────────
+def scrape_trading_economics(p):
     url = "https://tradingeconomics.com/commodity/baltic-exchange-dirty-tanker-index"
-    print(f"  GET {url}")
-    html, title, status = open_browser_page(url, wait_ms=5000)
-    if status != "ok" or not html:
-        print(f"  trading-economics status={status}")
+    html, sel = fetch_page(p, url, "te", wait_ms=5000)
+    if not html:
         return None
-    # First try structured price markup, then fall back to raw-text patterns.
-    structured_patterns = [
-        r'class="[^"]*commodity-value[^"]*"[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
+    candidates = []
+    if sel and sel.get("val"):
+        v = _to_float(sel["val"])
+        if sanity_ok(v):
+            candidates.append(("selector:" + sel["sel"], v))
+    for pat in [
         r'id="p"[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
+        r'class="[^"]*commodity-value[^"]*"[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
         r'data-symbol="[^"]*BDTI[^"]*"[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
-    ]
-    for pat in structured_patterns:
-        m = re.search(pat, html, flags=re.I)
+        r'class="te-blue text-right"[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
+        r'(?:Baltic\s*Dirty\s*Tanker|BDTI)[^<]{0,200}?(\d{3,4}(?:\.\d{1,2})?)',
+    ]:
+        m = re.search(pat, html, re.I)
         if m:
-            v = _valid(m.group(1).replace(",", ""))
-            if v is not None:
-                snippet = m.group(0)[:120]
-                print(f"  trading-economics structured match: {v}")
-                return {"value": v, "source": "trading-economics", "url": url, "matched": snippet}
-
-    text = _strip_html(html)
-    text_patterns = [
-        r"BDTI[^0-9]{0,200}(\d{3,4}(?:\.\d{1,2})?)",
-        r"Baltic Dirty Tanker[^0-9]{0,200}(\d{3,4}(?:\.\d{1,2})?)",
-        r"Dirty Tanker[^0-9]{0,200}(\d{3,4}(?:\.\d{1,2})?)",
-    ]
-    for pat in text_patterns:
-        for m in re.finditer(pat, text, flags=re.I):
-            v = _valid(m.group(1))
-            if v is not None:
-                snip = text[max(0, m.start() - 30):m.end() + 30]
-                print(f"  trading-economics text match: {v} via {pat[:40]}")
-                return {"value": v, "source": "trading-economics", "url": url, "matched": snip}
-    print("  trading-economics: no BDTI value matched")
+            v = _to_float(m.group(1))
+            if sanity_ok(v):
+                candidates.append((pat[:40], v))
+                break
+    if candidates:
+        print(f"  TE: {candidates[0][1]} ({candidates[0][0]})")
+        return candidates[0][1]
+    print("  TE: no value extracted")
     return None
 
 
-def hellenic_shipping_news():
-    """Search HSN, open up to 3 recent tanker articles, parse BDTI."""
-    search_url = "https://www.hellenicshippingnews.com/?s=BDTI"
-    print(f"  GET {search_url}")
-    html, title, status = open_browser_page(search_url, wait_ms=3500)
-    if status != "ok" or not html:
-        print(f"  hsn search status={status}")
-        return None
-    article_urls = re.findall(r'<h[23][^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>', html)
-    # De-dup while preserving order
-    seen = set()
-    article_urls = [u for u in article_urls if not (u in seen or seen.add(u))]
-    print(f"  hsn found {len(article_urls)} candidate articles")
-
-    text_patterns = [
-        r"BDTI[\)\s,.]+(?:at|of|was|=|stood at|rose to|fell to|reached|increased to|decreased to|jumped to|slipped to|edged up to|edged down to)?\s*(\d{3,4}(?:\.\d{1,2})?)",
-        r"Baltic Dirty Tanker Index[^0-9]{0,80}(\d{3,4}(?:\.\d{1,2})?)",
-        r"\(BDTI\)\s+(?:at|of|was|stood at|reached)?\s*(\d{3,4}(?:\.\d{1,2})?)",
-    ]
-    for art_url in article_urls[:3]:
-        ah, _, astatus = open_browser_page(art_url, wait_ms=2000)
-        if astatus != "ok" or not ah:
-            print(f"  hsn article {astatus}: {art_url[:80]}")
-            continue
-        text = _strip_html(ah)
-        for pat in text_patterns:
-            for m in re.finditer(pat, text, flags=re.I):
-                v = _valid(m.group(1))
-                if v is not None:
-                    snip = text[max(0, m.start() - 30):m.end() + 30]
-                    print(f"  hsn matched {v} via {pat[:40]}")
-                    return {"value": v, "source": "hellenic-shipping-news", "url": art_url, "matched": snip}
-    print("  hsn: no BDTI value matched in recent articles")
-    return None
-
-
-def investing_com():
-    """Investing.com BDTI page — heavy & Cloudflare-protected, give it more time."""
+# ─────────────────── Source 2: Investing.com ───────────────────
+def scrape_investing(p):
     url = "https://www.investing.com/indices/baltic-dirty-tanker"
-    print(f"  GET {url}")
-    html, title, status = open_browser_page(url, wait_ms=8000,
-                                            wait_selector='[data-test="instrument-price-last"]')
-    if status != "ok" or not html:
-        print(f"  investing status={status}")
+    html, sel = fetch_page(p, url, "inv", wait_ms=7000,
+                           wait_selector='[data-test="instrument-price-last"]')
+    if not html:
         return None
-    patterns = [
+    candidates = []
+    if sel and sel.get("val"):
+        v = _to_float(sel["val"])
+        if sanity_ok(v):
+            candidates.append(("selector:" + sel["sel"], v))
+    for pat in [
         r'data-test="instrument-price-last"[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
+        r'"last"\s*:\s*"?(\d{3,4}(?:\.\d{1,2})?)"?',
+        r'id="last_last"[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
         r'class="[^"]*last-price[^"]*"[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
-        r'"last"\s*:\s*"?(\d{3,4}(?:\.\d{1,2})?)',
-        r'instrumentPrice[^0-9]{0,40}(\d{3,4}(?:\.\d{1,2})?)',
-    ]
-    for pat in patterns:
-        m = re.search(pat, html, flags=re.I)
+    ]:
+        m = re.search(pat, html, re.I)
         if m:
-            v = _valid(m.group(1).replace(",", ""))
-            if v is not None:
-                snippet = m.group(0)[:120]
-                print(f"  investing matched: {v}")
-                return {"value": v, "source": "investing.com", "url": url, "matched": snippet}
-    print("  investing: no BDTI value matched")
+            v = _to_float(m.group(1))
+            if sanity_ok(v):
+                candidates.append((pat[:40], v))
+                break
+    if candidates:
+        print(f"  INV: {candidates[0][1]} ({candidates[0][0]})")
+        return candidates[0][1]
+    print("  INV: no value extracted")
     return None
+
+
+# ─────────────────── Source 3: Macrotrends ───────────────────
+def scrape_macrotrends(p):
+    """Macrotrends historical chart page — most recent value at top of table."""
+    url = "https://www.macrotrends.net/2519/baltic-dirty-tanker-index-bdti-historical-chart"
+    html, sel = fetch_page(p, url, "mt", wait_ms=5000)
+    if not html:
+        return None
+    candidates = []
+    if sel and sel.get("val"):
+        v = _to_float(sel["val"])
+        if sanity_ok(v):
+            candidates.append(("selector:" + sel["sel"], v))
+    # Macrotrends historical tables typically render row-per-date with the
+    # most recent date first. Try to grab the first numeric cell after the
+    # first date-like row.
+    for pat in [
+        r'<span[^>]*class="[^"]*historical_data_table_value[^"]*"[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
+        # date cell followed by value cell — first row
+        r'<td[^>]*>\s*\d{4}-\d{2}-\d{2}\s*</td>\s*<td[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
+        r'<td[^>]*>\s*[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*</td>\s*<td[^>]*>\s*(\d{3,4}(?:[\.,]\d{1,2})?)',
+        # JSON blob with "value" or "y" first entry
+        r'"y"\s*:\s*(\d{3,4}(?:\.\d{1,2})?)',
+        # Headline number near "Baltic Dirty Tanker"
+        r'(?:Baltic\s*Dirty\s*Tanker|BDTI)[^<]{0,300}?(\d{3,4}(?:\.\d{1,2})?)',
+    ]:
+        m = re.search(pat, html, re.I)
+        if m:
+            v = _to_float(m.group(1))
+            if sanity_ok(v):
+                candidates.append((pat[:40], v))
+                break
+    if candidates:
+        print(f"  MT: {candidates[0][1]} ({candidates[0][0]})")
+        return candidates[0][1]
+    print("  MT: no value extracted")
+    return None
+
+
+def cross_verify(values):
+    """values: list of floats. Returns (median, min, max, confidence)."""
+    clean = sorted([v for v in values if sanity_ok(v)])
+    n = len(clean)
+    if n == 0:
+        return None, None, None, "none"
+    mn, mx = clean[0], clean[-1]
+    median = clean[n // 2] if n % 2 == 1 else (clean[n // 2 - 1] + clean[n // 2]) / 2.0
+    if n == 1:
+        return median, mn, mx, "medium"
+    spread_pct = (mx - mn) / mn * 100.0 if mn > 0 else 0
+    if spread_pct <= 5.0:
+        return median, mn, mx, "high"
+    if spread_pct <= 15.0:
+        return median, mn, mx, "medium"
+    return median, mn, mx, "low"
 
 
 def kv_put(key, value):
@@ -202,30 +251,20 @@ def kv_put(key, value):
     return r.status_code == 200
 
 
-def post_bdti(data):
-    """POST scraped value to /api/bdti (preferred path — Pages function writes KV)."""
+def post_bdti(payload):
     if not SNAPSHOT_TOKEN:
         print("  SNAPSHOT_TOKEN missing — skipping POST /api/bdti")
         return False
     try:
         r = requests.post(
             f"{SITE_URL}/api/bdti",
-            headers={
-                "X-Snapshot-Token": SNAPSHOT_TOKEN,
-                "Content-Type": "application/json",
-            },
-            json={
-                "value": data["value"],
-                "source": data["source"],
-                "url": data.get("url"),
-                "matched": data.get("matched"),
-            },
-            timeout=20,
+            headers={"X-Snapshot-Token": SNAPSHOT_TOKEN, "Content-Type": "application/json"},
+            json=payload, timeout=25,
         )
         if r.ok:
-            print(f"  POST /api/bdti OK: {r.text[:160]}")
+            print(f"  POST /api/bdti OK: {r.text[:200]}")
             return True
-        print(f"  POST /api/bdti {r.status_code}: {r.text[:200]}")
+        print(f"  POST /api/bdti {r.status_code}: {r.text[:240]}")
         return False
     except Exception as e:
         print(f"  POST error: {e}")
@@ -235,52 +274,71 @@ def post_bdti(data):
 def main():
     dry_run = "--dry-run" in sys.argv
     mode = "DRY RUN" if dry_run else "LIVE"
-    print(f"=== BDTI scrape [{mode}] at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
-    sources = [
-        ("trading-economics",      trading_economics),
-        ("hellenic-shipping-news", hellenic_shipping_news),
-        ("investing.com",          investing_com),
-    ]
-    for name, fn in sources:
-        print(f"\n--- Trying {name} ---")
-        try:
-            result = fn()
-        except Exception as e:
-            print(f"  {name} crashed: {e}")
-            result = None
-        if not result:
-            continue
-        print(f"\nGot BDTI = {result['value']} from {result['source']}")
-        if dry_run:
-            print(f"DRY RUN — found BDTI from {result['source']}: {result['value']}")
-            return 0
-
-        # Direct KV write for traceability (source URL + matched snippet)
-        payload = {
-            "value": result["value"],
-            "source": result["source"],
-            "url": result.get("url"),
-            "matched": result.get("matched"),
-            "ts": int(time.time()),
-            "asOf": time.strftime("%Y-%m-%d", time.gmtime()),
-        }
-        kv_ok = kv_put("bdti_latest", json.dumps(payload, separators=(",", ":")))
-        print(f"  KV bdti_latest write: {'OK' if kv_ok else 'SKIPPED/FAILED'}")
-
-        # Also POST to /api/bdti (idempotent — Pages function may overwrite KV)
-        post_ok = post_bdti(result)
-        if kv_ok or post_ok:
-            print("Updated successfully")
-            return 0
-        print("All update paths failed but value was found")
+    print(f"=== BDTI 3-source web scrape [{mode}] at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("ERROR: playwright not installed")
         return 1
+
+    per_source = {}
+    with sync_playwright() as p:
+        for fn, key in [
+            (scrape_trading_economics, "trading-economics"),
+            (scrape_investing,         "investing.com"),
+            (scrape_macrotrends,       "macrotrends"),
+        ]:
+            print(f"\n--- {key} ---")
+            try:
+                per_source[key] = fn(p)
+            except Exception as e:
+                print(f"  ! {key} crashed: {str(e)[:200]}")
+                per_source[key] = None
+
+    good = [(k, v) for k, v in per_source.items() if sanity_ok(v)]
+    median, mn, mx, conf = cross_verify([v for _, v in good])
+    sources_used = [k for k, _ in good]
+
+    print(f"\n--- result ---")
+    print(f"  per-source: {per_source}")
+    print(f"  median={median}  min={mn}  max={mx}  confidence={conf}  sources={sources_used}")
+
+    if median is None:
+        print("\n✗ Zero sources succeeded — keeping existing KV (no write)")
+        print("  /admin/bdti remains as manual fallback.")
+        return 1
+
+    value_rounded = round(median, 1)
+    as_of = time.strftime("%Y-%m-%d", time.gmtime())
 
     if dry_run:
-        print("\nDRY RUN — no sources returned a value")
-        return 1
-    print("\nAll BDTI sources failed. /admin/bdti remains as manual fallback.")
-    print("  Watchdog will alert if BDTI ages past 9 days.")
-    return 0  # Don't fail the workflow — manual fallback is expected
+        print(f"\nDRY RUN — would update BDTI={value_rounded} confidence={conf} sources={sources_used}")
+        return 0
+
+    payload = {
+        "value": value_rounded,
+        "source": "web-scrape-3-source",
+        "asOf": as_of,
+        "confidence": conf,
+        "sources": sources_used,
+        "min": round(mn, 1) if mn is not None else None,
+        "max": round(mx, 1) if mx is not None else None,
+    }
+
+    post_ok = post_bdti(payload)
+    if not post_ok:
+        # Fallback: direct KV write so we don't lose the value
+        kv_payload = {
+            **payload,
+            "ts": int(time.time()),
+        }
+        kv_ok = kv_put("bdti_latest", json.dumps(kv_payload, separators=(",", ":")))
+        print(f"  Fallback KV write: {'OK' if kv_ok else 'FAILED'}")
+        if not kv_ok:
+            return 1
+
+    print(f"\n✓ Updated BDTI = {value_rounded}  confidence={conf}  sources={sources_used}")
+    return 0
 
 
 if __name__ == "__main__":

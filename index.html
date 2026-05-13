@@ -875,6 +875,19 @@ header{
       <div class="conclusion" id="concEvents" style="display:none"></div>
     </div>
 
+    <!-- HEADLINE PULSE (Phase 2 — RSS news aggregator) -->
+    <div class="rblock" id="newsBlock">
+      <div class="rhead">
+        Headline pulse
+        <span class="rhead-src src-eia" style="color:var(--blue)" id="newsSrc">NEWS FEED</span>
+      </div>
+      <div id="newsSubtitle" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px">Loading headlines&hellip;</div>
+      <div id="newsList" style="font-family:var(--mono);font-size:11px;line-height:1.55"></div>
+      <div style="margin-top:8px;font-family:var(--mono);font-size:9px;color:var(--muted)">
+        <a id="newsMore" href="#" style="color:var(--blue);text-decoration:none;display:none">show all 20 &rsaquo;</a>
+      </div>
+    </div>
+
     <!-- TENSION GAUGE -->
     <div class="rblock">
       <div class="rhead">Hormuz tension level</div>
@@ -3633,6 +3646,82 @@ if(document.readyState === "loading"){
 } else {
   setTimeout(initSigTooltipTaps, 0);
 }
+
+// ─────────────────── Headline pulse (RSS news aggregator) ───────────────────
+// /api/news returns up to 20 already-filtered, scored, newest-first headlines.
+// Tile shows top 5; "show all 20" reveals the rest inline.
+function _timeAgo(iso){
+  if(!iso) return "";
+  var t = Date.parse(iso);
+  if(!isFinite(t)) return "";
+  var s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if(s < 60) return s + "s ago";
+  if(s < 3600) return Math.floor(s/60) + "m ago";
+  if(s < 86400) return Math.floor(s/3600) + "h ago";
+  return Math.floor(s/86400) + "d ago";
+}
+function _escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c];
+  });
+}
+function _renderHeadlines(items, limit){
+  return items.slice(0, limit).map(function(h){
+    var src = _escapeHtml(h.source || "");
+    var ago = _timeAgo(h.published);
+    var meta = src + (ago ? " &middot; " + ago : "");
+    var title = _escapeHtml(h.title || "");
+    var link = _escapeHtml(h.link || "#");
+    return '<div style="margin-bottom:7px">' +
+             '<span style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.04em">[' + meta + ']</span> ' +
+             '<a href="' + link + '" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none">' + title + '</a>' +
+           '</div>';
+  }).join("");
+}
+function loadNewsTile(){
+  fetch("/api/news?limit=20")
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      var list = document.getElementById("newsList");
+      var sub  = document.getElementById("newsSubtitle");
+      var more = document.getElementById("newsMore");
+      if(!list || !sub) return;
+      if(!d || !Array.isArray(d.headlines) || d.headlines.length === 0){
+        sub.textContent = "No matching headlines yet — scraper runs every 30 min.";
+        list.innerHTML = "";
+        if(more) more.style.display = "none";
+        return;
+      }
+      var c24 = d.count_24h != null ? d.count_24h : d.count;
+      var srcN = d.sources_succeeded || 0;
+      sub.innerHTML = c24 + " headline" + (c24 === 1 ? "" : "s") + " &middot; last 24h &middot; " + srcN + "-source";
+      list.innerHTML = _renderHeadlines(d.headlines, 5);
+      if(d.headlines.length > 5 && more){
+        more.style.display = "inline";
+        more.textContent = "show all " + d.headlines.length + " ›";
+        var expanded = false;
+        more.onclick = function(e){
+          e.preventDefault();
+          expanded = !expanded;
+          list.innerHTML = _renderHeadlines(d.headlines, expanded ? d.headlines.length : 5);
+          more.textContent = expanded ? "show fewer ‹" : ("show all " + d.headlines.length + " ›");
+        };
+      } else if(more){
+        more.style.display = "none";
+      }
+    })
+    .catch(function(){
+      var sub = document.getElementById("newsSubtitle");
+      if(sub) sub.textContent = "Headline feed unavailable.";
+    });
+}
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", loadNewsTile);
+} else {
+  setTimeout(loadNewsTile, 0);
+}
+// Refresh every 30 min — matches scraper cadence
+setInterval(loadNewsTile, 30 * 60 * 1000);
 
 </script>
 <!-- First-visit onboarding overlay (auto-hides for return visitors via localStorage) -->

@@ -34,6 +34,11 @@ async function _handleBdtiGet({ env }) {
       ageDays,
       stale: ageDays > 9,        // BDTI publishes weekly — >9d means missed a publish
       origin: "kv",
+      // Scraper-supplied cross-verify metadata (optional · null for admin-form posts)
+      confidence: kv_data.confidence ?? null,
+      sources: kv_data.sources ?? null,
+      min: kv_data.min ?? null,
+      max: kv_data.max ?? null,
     });
   }
   // Fallback: legacy env-var default (was set manually by Claude scheduled task)
@@ -93,6 +98,14 @@ async function _handleBdtiPost({ request, env }) {
     wow_pct,
     ts: now,
   };
+  // Optional cross-verify metadata from multi-source scraper (preserved
+  // verbatim — admin-form posts simply omit these fields).
+  if (body.confidence != null) payload.confidence = String(body.confidence);
+  if (Array.isArray(body.sources)) payload.sources = body.sources.slice(0, 8).map(String);
+  if (body.min != null && isFinite(parseFloat(body.min))) payload.min = Math.round(parseFloat(body.min) * 10) / 10;
+  if (body.max != null && isFinite(parseFloat(body.max))) payload.max = Math.round(parseFloat(body.max) * 10) / 10;
+  if (body.url) payload.url = String(body.url).slice(0, 500);
+  if (body.matched) payload.matched = String(body.matched).slice(0, 500);
   await env.OIL_KV.put("bdti_latest", JSON.stringify(payload));
   return json({ ok: true, ...payload, prev: prev?.value || null });
 }

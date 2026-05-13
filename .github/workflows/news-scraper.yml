@@ -1,0 +1,35 @@
+name: news-scraper
+
+on:
+  schedule:
+    # Every 30 minutes — RSS feeds update frequently for breaking news.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install --quiet requests
+      - name: Run news scraper
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+        run: python scripts/scrape_news.py 2>&1 | tee /tmp/news-scrape.log
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: news-scrape-${{ github.run_id }}
+          path: /tmp/news-scrape.log
+          retention-days: 14
