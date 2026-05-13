@@ -91,7 +91,7 @@ def _valid(v):
 
 def trading_economics():
     """Trading Economics commodity page renders the BDTI headline value in JS."""
-    url = "https://tradingeconomics.com/commodity/baltic"
+    url = "https://tradingeconomics.com/commodity/baltic-exchange-dirty-tanker-index"
     print(f"  GET {url}")
     html, title, status = open_browser_page(url, wait_ms=5000)
     if status != "ok" or not html:
@@ -167,7 +167,7 @@ def hellenic_shipping_news():
 
 def investing_com():
     """Investing.com BDTI page — heavy & Cloudflare-protected, give it more time."""
-    url = "https://www.investing.com/indices/baltic-exchange-dirty-tanker"
+    url = "https://www.investing.com/indices/baltic-dirty-tanker"
     print(f"  GET {url}")
     html, title, status = open_browser_page(url, wait_ms=8000,
                                             wait_selector='[data-test="instrument-price-last"]')
