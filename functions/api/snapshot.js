@@ -57,19 +57,20 @@ export async function onRequestGet({ request, env }) {
 
   // ─── Composite signals · Path D (May 2026) ────────────────────────────────
   // Read 5 KV keys; surface counts in snapshot for downstream consumers.
-  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null;
+  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null;
   if (env.OIL_KV) {
     const safeGet = async (k) => {
       try { const r = await env.OIL_KV.get(k); return r ? JSON.parse(r) : null; }
       catch { return null; }
     };
-    [aircraft, seismic, gdelt, weather, vesselScrape, news] = await Promise.all([
+    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency] = await Promise.all([
       safeGet("aircraft_state"),
       safeGet("seismic_state"),
       safeGet("gdelt_state"),
       safeGet("weather_state"),
       safeGet("vessel_count_scraped"),
       safeGet("news_headlines"),
+      safeGet("currency_irr"),
     ]);
   }
 
@@ -178,6 +179,13 @@ export async function onRequestGet({ request, env }) {
     news_top_keywords:       Array.isArray(news?.top_keywords) ? news.top_keywords.slice(0, 3).map(x => Array.isArray(x) ? x[0] : x) : null,
     news_sources_succeeded:  news?.sources_succeeded ?? null,
     news_age_sec:            news?.fetchedAt ? Math.floor(Date.now()/1000 - news.fetchedAt) : null,
+    // Iranian Rial FX (capital-flight / sanction-pressure proxy, hourly)
+    irr_usd_official:        currency?.official?.usd_irr ?? null,
+    irr_usd_blackmarket:     currency?.blackMarket?.usd_irr ?? null,
+    irr_spread_pct:          currency?.spread_pct ?? null,
+    aed_usd:                 currency?.aed_usd ?? null,
+    currency_age_sec:        currency?.fetchedAt ? Math.floor(Date.now()/1000 - currency.fetchedAt) : null,
+    currency_interpretation: currency?.interpretation ?? null,
     upgrade_note: debug
       ? `Reads ais_state from OIL_KV (written by scrape_ais.py every 5 min). Live mode when age < ${AIS_STATE_FRESH_SECONDS}s AND transits24h > 0. Otherwise env-var fallback.`
       : undefined

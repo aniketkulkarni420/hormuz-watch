@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
-"""BDTI 3-source web scraper (Playwright) — cross-verified.
+"""BDTI 2-source web scraper (Playwright) — cross-verified.
 
 Why this exists:
   - Previous scraper relied on text-pattern parsing of Trading Economics and
     Hellenic Shipping News articles. Both started returning empty for weeks,
     leaving /api/bdti stuck on stale `bdti_latest` (or env-var fallback).
-  - This rewrite mirrors scripts/scrape_oil_web.py: three independent sources,
+  - This rewrite mirrors scripts/scrape_oil_web.py: independent sources,
     selector-first extraction with regex fallback, median + cross-verify with
     a confidence rating.
 
-Sources (all browser-rendered):
-  1. Trading Economics — /commodity/baltic-exchange-dirty-tanker-index
-  2. Investing.com     — /indices/baltic-dirty-tanker
-  3. Macrotrends       — /2519/baltic-dirty-tanker-index-bdti-historical-chart
+Sources (browser-rendered):
+  1. Investing.com     — /indices/baltic-dirty-tanker
+  2. Macrotrends       — /2519/baltic-dirty-tanker-index-bdti-historical-chart
                           (historical table — newest row first)
+
+  Trading Economics is DROPPED (2026-05-13): its `#p` selector on
+  /commodity/baltic-exchange-dirty-tanker-index returns the wrong element
+  (~101.88, unrelated metric on the page) rather than the BDTI headline.
+  The scrape_trading_economics() function is preserved but commented out
+  of the source list so it can be reinstated cleanly if TE's markup is fixed.
 
 Sanity bounds: 100 <= BDTI <= 5000.
 Cross-verify:
-  - <=5%   spread → high
-  - 5-15%  spread → medium
-  - >15%   spread → low
+  - <=5%   spread → high       (2 sources agree closely)
+  - 5-15%  spread → medium     (2 sources, modest disagreement)
+  - >15%   spread → low        (2 sources, wide disagreement)
   - 1 src         → medium
   - 0 src         → keep existing KV, exit non-zero
 
@@ -274,7 +279,7 @@ def post_bdti(payload):
 def main():
     dry_run = "--dry-run" in sys.argv
     mode = "DRY RUN" if dry_run else "LIVE"
-    print(f"=== BDTI 3-source web scrape [{mode}] at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
+    print(f"=== BDTI 2-source web scrape [{mode}] at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -284,7 +289,7 @@ def main():
     per_source = {}
     with sync_playwright() as p:
         for fn, key in [
-            (scrape_trading_economics, "trading-economics"),
+            # (scrape_trading_economics, "trading-economics"),  # disabled 2026-05-13: #p selector returns wrong element
             (scrape_investing,         "investing.com"),
             (scrape_macrotrends,       "macrotrends"),
         ]:
@@ -317,7 +322,7 @@ def main():
 
     payload = {
         "value": value_rounded,
-        "source": "web-scrape-3-source",
+        "source": "web-scrape-2-source",
         "asOf": as_of,
         "confidence": conf,
         "sources": sources_used,

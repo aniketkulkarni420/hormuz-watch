@@ -769,8 +769,8 @@ header{
         <span class="rhead-src src-live" style="color:var(--green)" id="mixSrc">LIVE FEED</span>
       </div>
       <div class="traffic-grid" style="font-size:14px">
-        <div class="tcard"><div class="tc-val" id="inboundCount" style="color:var(--blue);font-size:14px">0</div><div class="tc-lbl">Inbound</div></div>
-        <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber);font-size:14px">0</div><div class="tc-lbl">Outbound</div></div>
+        <div class="tcard"><div class="tc-val" id="inboundCount" style="color:var(--blue);font-size:14px">0</div><div class="tc-lbl" id="inboundLbl">Inbound</div></div>
+        <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber);font-size:14px">0</div><div class="tc-lbl" id="outboundLbl">Outbound</div></div>
       </div>
       <div class="type-bars" id="typeBars"></div>
       <div class="conclusion" id="concMix" style="display:none"></div>
@@ -927,6 +927,34 @@ header{
       <div class="india-rows" id="indiaRows"></div>
       <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         ~62% of India's crude imports flow through Hormuz. Each $10/bbl crude rise = ~&#8377;85K Cr import bill increase. Petronet LNG nearly entirely Hormuz-dependent.
+      </div>
+    </div>
+
+    <!-- CURRENCY PRESSURE (Iranian Rial — capital-flight / sanction-pressure proxy) -->
+    <div class="rblock" id="currencyBlock">
+      <div class="rhead">
+        <abbr title="Iran runs a dual exchange rate. The official rate is state-controlled; the black-market rate is what Iranians actually pay for hard currency. Wide spread = sanction pressure / capital flight. Sharp black-market depreciation historically precedes Iranian escalation by 2-4 weeks.">Currency pressure</abbr>
+        <span class="rhead-src src-live" style="color:var(--blue)" id="currencySrc">LIVE · 1h</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:6px;font-family:var(--mono);font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--muted)">USD &rarr; IRR (official)</span>
+        <span style="color:var(--text)" id="irrOfficial">&mdash;</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;font-family:var(--mono);font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--muted)">USD &rarr; IRR (black market)</span>
+        <span style="color:var(--amber)" id="irrBlack">&mdash;</span>
+        <span style="color:var(--red);font-size:10px" id="irrMultiple"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:6px;font-family:var(--mono);font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--muted)">Spread</span>
+        <span style="color:var(--amber);font-weight:700" id="irrSpread">&mdash;</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:6px;font-family:var(--mono);font-size:11px;padding:4px 0">
+        <span style="color:var(--muted)">USD &rarr; AED (pegged)</span>
+        <span style="color:var(--text)" id="aedUsd">&mdash;</span>
+      </div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5" id="currencyNote">
+        Wide spread = capital flight from Iran. Historical signal: precedes escalation by 2&ndash;4w.
       </div>
     </div>
 
@@ -1600,13 +1628,15 @@ async function _fetchXvData(){
     fetch("/api/aircraft").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
     fetch("/api/events").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
     fetch("/api/weather").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
-    fetch("/api/seismic").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+    fetch("/api/seismic").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+    fetch("/api/currency").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
   ]);
   _xvCache = {
     ts: now,
     snapshot: results[0], bdti: results[1],
     aircraft: results[2], events: results[3],
-    weather: results[4], seismic: results[5]
+    weather: results[4], seismic: results[5],
+    currency: results[6]
   };
   return _xvCache;
 }
@@ -2147,28 +2177,38 @@ function updateTypeBars(){
 
   // Inbound / outbound counts — real if available, else port-count under scrape mode, else simulated
   var inb, outb;
+  var inbLblText = "Inbound", outbLblText = "Outbound";
   if(realInbound != null && realOutbound != null){
     inb = realInbound; outb = realOutbound;
   } else if(scrapedMode){
-    // In scrape mode there's no inbound/outbound direction — show port summary
+    // In scrape mode there's no inbound/outbound direction — relabel tiles
+    // to Ports / Vessels so numbers match labels honestly.
     var portCnt = scrapedPerPort ? Object.keys(scrapedPerPort).length : 5;
-    inb = portCnt + " ports";
-    outb = (function(){
-      if(!scrapedPerPort) return "—";
-      var tot = 0;
+    var vesselTot = 0;
+    if(scrapedPerPort){
       Object.keys(scrapedPerPort).forEach(function(k){
         var v = scrapedPerPort[k];
-        if(typeof v === "number") tot += v;
-        else if(v && typeof v === "object" && isFinite(v.total)) tot += v.total;
+        if(typeof v === "number") vesselTot += v;
+        else if(v && typeof v === "object" && isFinite(v.total)) vesselTot += v.total;
       });
-      return tot > 0 ? (tot + " vessels") : "—";
-    })();
+    }
+    if(!vesselTot && _snapshotData && isFinite(_snapshotData.scraped_vessel_total)){
+      vesselTot = _snapshotData.scraped_vessel_total;
+    }
+    inb = portCnt;
+    outb = vesselTot || "—";
+    inbLblText = "Ports";
+    outbLblText = "Vessels";
   } else {
     inb = loggedVessels.filter(function(v){return v.lane==="in";}).length;
     outb = loggedVessels.filter(function(v){return v.lane==="out";}).length;
   }
   if(inboundEl)  inboundEl.textContent = inb;
   if(outboundEl) outboundEl.textContent = outb;
+  var inboundLbl = document.getElementById("inboundLbl");
+  var outboundLbl = document.getElementById("outboundLbl");
+  if(inboundLbl)  inboundLbl.textContent  = inbLblText;
+  if(outboundLbl) outboundLbl.textContent = outbLblText;
 
   // Flip the card's source badge based on data mode
   var mixBlock = document.getElementById("mixBlock");
@@ -2390,8 +2430,16 @@ function updateVesselUI(){
   }
 
   // Vessel Movement card
+  // Detect scrape-mode lockout — applyAisDegradedMode() owns the headline
+  // when the snapshot is in web-scrape mode, so we must not overwrite it
+  // with the 0 we'd compute from the empty transits24h log.
+  var _snap = (typeof _snapshotData === "object") ? _snapshotData : null;
+  var _scrapeOwned = !!(_snap && (_snap.data_source === "web_scrape"
+                       || (_snap.is_static && isFinite(_snap.scraped_vessel_total) && _snap.scraped_vessel_total > 0)));
+  var _hdEl = document.getElementById("mvTransit24h");
+  var _scrapeLocked = _scrapeOwned || (_hdEl && _hdEl.dataset.scrapeMode === "1");
   var setTxt = function(id, v){ var el=document.getElementById(id); if(el) el.textContent = v; };
-  setTxt("mvTransit24h", total24h);
+  if (!_scrapeLocked) setTxt("mvTransit24h", total24h);
   setTxt("mvWest", west);
   setTxt("mvEast", east);
   setTxt("mvTransit", t);
@@ -2415,7 +2463,10 @@ function updateVesselUI(){
     }
     var totalVessels = (t + a + ap) + total24h;
     var hasNoData = totalVessels === 0;
-    if (hasNoData) {
+    if (_scrapeLocked) {
+      // Scrape-mode owns the badge — applyAisDegradedMode() set it to "WEB FEED · 4h"
+      // Don't overwrite to INITIALISING just because the AIS transit log is empty.
+    } else if (hasNoData) {
       // C1 — no data yet: show init state, not "0/0/0"
       srcEl.textContent = "INITIALISING · awaiting first scrape";
       srcEl.style.color = "var(--muted)";
@@ -2678,6 +2729,59 @@ function renderCompositeTiles(data){
     } else {
       summary.textContent = "Routine weather and seismic conditions support normal shipping operations.";
       summary.style.color = "var(--muted)";
+    }
+  }
+  // ─── Currency pressure (Iranian Rial dual rate) ─────────────────────────
+  if(data.currency){
+    var cur = data.currency;
+    var fmt = function(n){ return n == null ? "—" : Number(n).toLocaleString("en-US", {maximumFractionDigits:0}); };
+    var offV  = cur.official && cur.official.usd_irr;
+    var blkV  = cur.blackMarket && cur.blackMarket.usd_irr;
+    var spread = cur.spread_pct;
+    var elOff = document.getElementById("irrOfficial");
+    var elBlk = document.getElementById("irrBlack");
+    var elMul = document.getElementById("irrMultiple");
+    var elSpr = document.getElementById("irrSpread");
+    var elAed = document.getElementById("aedUsd");
+    var elSrc = document.getElementById("currencySrc");
+    var elNote= document.getElementById("currencyNote");
+    if(elOff) elOff.textContent = offV ? fmt(offV) : "—";
+    if(elBlk) elBlk.textContent = blkV ? fmt(blkV) : "—";
+    if(elMul){
+      if(offV && blkV && offV > 0){
+        var mult = blkV / offV;
+        elMul.textContent = "▲ " + mult.toFixed(1) + "x";
+      } else {
+        elMul.textContent = "";
+      }
+    }
+    if(elSpr){
+      if(spread != null){
+        elSpr.textContent = fmt(Math.round(spread)) + "%";
+        elSpr.style.color = spread >= 500 ? "var(--red)"
+                          : spread >= 200 ? "var(--amber)"
+                          : "var(--green)";
+      } else {
+        elSpr.textContent = "—";
+      }
+    }
+    if(elAed) elAed.textContent = (cur.aed_usd != null) ? Number(cur.aed_usd).toFixed(4) : "—";
+    if(elSrc){
+      var ageMin = (cur.ageSec != null) ? Math.round(cur.ageSec/60) : null;
+      if(ageMin != null && ageMin > 180){
+        elSrc.textContent = "STALE · " + ageMin + "m";
+        elSrc.style.color = "var(--amber)";
+      } else if(cur.sources_succeeded && cur.sources_succeeded > 0){
+        elSrc.textContent = "LIVE · 1h";
+        elSrc.style.color = "var(--blue)";
+      } else {
+        elSrc.textContent = "AWAITING DATA";
+        elSrc.style.color = "var(--muted)";
+      }
+    }
+    if(elNote && cur.interpretation){
+      elNote.textContent = cur.interpretation.charAt(0).toUpperCase() + cur.interpretation.slice(1)
+        + " · historical signal: Rial collapse precedes Iranian escalation by 2–4w.";
     }
   }
 }
