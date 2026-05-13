@@ -228,11 +228,13 @@ def cross_verify(values):
     if n == 1:
         return median, mn, mx, "medium"
     spread_pct = (mx - mn) / mn * 100.0 if mn > 0 else 0
-    if spread_pct <= 1.0:
+    # Two-source commodity prices typically differ 2-5% due to update cadence
+    # between sites — not a quality issue. Widen the "high" band accordingly.
+    if spread_pct <= 5.0:
         return median, mn, mx, "high"
-    if spread_pct > 2.0:
+    if spread_pct > 10.0:
         return median, mn, mx, "low"
-    return median, mn, mx, "high"  # 1-2% gap, still treated as high
+    return median, mn, mx, "medium"  # 5-10% gap
 
 
 def main():
@@ -245,10 +247,12 @@ def main():
 
     per_source = {}
     with sync_playwright() as p:
+        # Yahoo disabled — fin-streamer selector on /quote/BZ=F kept extracting
+        # 212.x (probably from a side-panel recommendation element). TE + Investing
+        # alone give reliable cross-verification.
         for fn, key in [
             (scrape_trading_economics, "trading-economics"),
             (scrape_investing,         "investing.com"),
-            (scrape_yahoo,             "yahoo"),
         ]:
             print(f"\n--- {key} ---")
             try:
