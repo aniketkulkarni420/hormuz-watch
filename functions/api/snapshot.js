@@ -63,19 +63,41 @@ export async function onRequestGet({ request, env }) {
   const dark = numFromEnv(env.HORMUZ_DARK, 947);
 
   // ─── Composite signals · Path D (May 2026) ────────────────────────────────
-  // Read 4 new KV keys; surface counts in snapshot for downstream consumers.
-  let aircraft = null, seismic = null, gdelt = null, weather = null;
+  // Read 5 KV keys; surface counts in snapshot for downstream consumers.
+  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null;
   if (env.OIL_KV) {
     const safeGet = async (k) => {
       try { const r = await env.OIL_KV.get(k); return r ? JSON.parse(r) : null; }
       catch { return null; }
     };
-    [aircraft, seismic, gdelt, weather] = await Promise.all([
+    [aircraft, seismic, gdelt, weather, vesselScrape] = await Promise.all([
       safeGet("aircraft_state"),
       safeGet("seismic_state"),
       safeGet("gdelt_state"),
       safeGet("weather_state"),
+      safeGet("vessel_count_scraped"),
     ]);
+  }
+
+  // Web-scraped vessel count fallback when AIS is unavailable.
+  // 137 vessels across 5 Gulf ports ≈ Persian Gulf traffic proxy.
+  // Used only when (1) AIS not flowing AND (2) scraped data is fresh (< 6h) AND (3) not blocked.
+  if (!aisLive && vesselScrape && !vesselScrape.blocked) {
+    const scrapeAgeSec = vesselScrape.fetchedAt ? Math.floor(Date.now() / 1000 - vesselScrape.fetchedAt) : null;
+    const scrapeTotal = vesselScrape?.totals?.all ?? null;
+    if (scrapeAgeSec != null && scrapeAgeSec < 6 * 3600 && Number.isFinite(scrapeTotal) && scrapeTotal > 0) {
+      aisLive = {
+        transits24h: scrapeTotal,
+        inbound: 0, outbound: 0,
+        vesselCount: scrapeTotal,
+        eastbound: 0, westbound: 0,
+        uniqueImos: scrapeTotal,
+        typeBreakdown: null, categories: null,
+        ageSec: scrapeAgeSec,
+        source: `Web scrape · VesselFinder Gulf ports (${vesselScrape.sites_succeeded}/2 sites · confidence ${vesselScrape.confidence})`,
+        dataSource: "web_scrape",
+      };
+    }
   }
 
   // BDTI: existing OIL_KV lookup · preserved unchanged
@@ -130,6 +152,13 @@ export async function onRequestGet({ request, env }) {
     vessel_count_in_bbox: aisLive?.vesselCount ?? null,
     type_breakdown: aisLive?.typeBreakdown ?? null,
     // ── Composite signals (Path D) ─────────────────────────────────────────
+    // Scraped vessel data — web fallback when AIS is unavailable
+    scraped_vessel_total:    vesselScrape?.totals?.all ?? null,
+    scraped_vessel_perport:  vesselScrape?.perSite?.vesselfinder?.perPort
+                              ? Object.fromEntries(Object.entries(vesselScrape.perSite.vesselfinder.perPort).map(([k,v]) => [k, v?.data?.total ?? null]))
+                              : null,
+    scraped_confidence:      vesselScrape?.confidence ?? null,
+    data_source:             aisLive?.dataSource ?? (aisLive ? "ais" : "static"),
     aircraft_count:          aircraft?.count ?? null,
     military_aircraft_count: aircraft?.militaryCount ?? null,
     earthquake_count_7d:     seismic?.count_7d ?? null,
