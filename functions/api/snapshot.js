@@ -55,13 +55,6 @@ export async function onRequestGet({ request, env }) {
     } catch { /* fall through to static */ }
   }
 
-  // Resolve final values · live wins when available
-  const transits24h = aisLive ? aisLive.transits24h : numFromEnv(env.HORMUZ_TRANSITS_24H, 84);
-  const baseline = numFromEnv(env.HORMUZ_BASELINE_30D, 140);
-  const inbound = aisLive ? aisLive.inbound : numFromEnv(env.HORMUZ_INBOUND, 38);
-  const outbound = aisLive ? aisLive.outbound : numFromEnv(env.HORMUZ_OUTBOUND, 42);
-  const dark = numFromEnv(env.HORMUZ_DARK, 947);
-
   // ─── Composite signals · Path D (May 2026) ────────────────────────────────
   // Read 5 KV keys; surface counts in snapshot for downstream consumers.
   let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null;
@@ -99,6 +92,13 @@ export async function onRequestGet({ request, env }) {
       };
     }
   }
+
+  // Resolve final values · live (AIS or scraped) wins when available
+  const transits24h = aisLive ? aisLive.transits24h : numFromEnv(env.HORMUZ_TRANSITS_24H, 84);
+  const baseline = numFromEnv(env.HORMUZ_BASELINE_30D, 140);
+  const inbound = aisLive ? aisLive.inbound : numFromEnv(env.HORMUZ_INBOUND, 38);
+  const outbound = aisLive ? aisLive.outbound : numFromEnv(env.HORMUZ_OUTBOUND, 42);
+  const dark = numFromEnv(env.HORMUZ_DARK, 947);
 
   // BDTI: existing OIL_KV lookup · preserved unchanged
   let bdti = numFromEnv(env.HORMUZ_BDTI, 14);
