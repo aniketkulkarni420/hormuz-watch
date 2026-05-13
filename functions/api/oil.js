@@ -103,6 +103,47 @@ export async function onRequestGet({ env }) {
     } catch (e) { /* fall through */ }
   }
 
+  // Tier 1.5: KV `oil_scraped` (multi-source web scraper, cross-verified)
+  // Used when `latest` is empty or very stale. Fresh threshold: 45 min.
+  if (env.OIL_KV) {
+    try {
+      const raw = await env.OIL_KV.get("oil_scraped");
+      if (raw) {
+        const data = JSON.parse(raw);
+        const ageMin = (Date.now() / 1000 - data.fetchedAt) / 60;
+        if (ageMin <= 45 && data.brent && data.wti) {
+          const b = data.brent, w = data.wti;
+          const confSuffix = (b.confidence === "high" && w.confidence === "high")
+            ? "cross-verified"
+            : `${b.confidence || "?"}-conf`;
+          const lowConf = (b.confidence === "low" || w.confidence === "low");
+          return json({
+            source: "Web scrape · " + confSuffix,
+            tier: "scrape",
+            stale: false,
+            staleMin: 0,
+            brent: {
+              level: b.value, change: null, changePct: null,
+              src: "web-scrape",
+              sources: b.sources, confidence: b.confidence,
+              median: b.median, min: b.min, max: b.max,
+            },
+            wti: {
+              level: w.value, change: null, changePct: null,
+              src: "web-scrape",
+              sources: w.sources, confidence: w.confidence,
+              median: w.median, min: w.min, max: w.max,
+            },
+            fetchedAt: data.fetchedAt * 1000,
+            ageMin: Math.round(ageMin * 10) / 10,
+            scrapeSources: data.sources_succeeded,
+            ...(lowConf ? { lowConfidence: true } : {}),
+          });
+        }
+      }
+    } catch (e) { /* fall through */ }
+  }
+
   // Tier 2 (Twelve Data) removed — free tier doesn't support commodity futures
 
   // Tier 3: FinnHub BNO/USO ETF intraday %

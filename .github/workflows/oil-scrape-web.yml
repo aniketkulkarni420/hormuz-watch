@@ -1,0 +1,37 @@
+name: oil-scrape-web
+
+on:
+  schedule:
+    # Every 15 minutes. Multi-source web scrape, cross-verified.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install playwright
+        run: |
+          pip install --quiet playwright requests
+          playwright install --with-deps chromium
+      - name: Run scraper
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+        run: python scripts/scrape_oil_web.py 2>&1 | tee /tmp/scrape.log
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oil-scrape-web-${{ github.run_id }}
+          path: /tmp/scrape.log
+          retention-days: 14

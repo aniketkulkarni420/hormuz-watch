@@ -859,13 +859,6 @@ header{
     <!-- ═══════════ SECTION 2: SYNTHESIS ═══════════ -->
     <div class="rsection">Synthesis</div>
 
-    <!-- CROSS-VERIFICATION -->
-    <div class="rblock">
-      <div class="rhead">Cross-signal verification</div>
-      <div class="xv-rows" id="xvRows"></div>
-      <div class="conclusion" id="concCross" style="display:none"></div>
-    </div>
-
     <!-- GEOPOLITICAL EVENTS (Path D — composite signal) -->
     <div class="rblock" id="eventsBlock">
       <div class="rhead">
@@ -978,6 +971,17 @@ header{
       <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         Flag = ship registry. Liberia/Marshall Islands/Panama = <span title="Ship registered in a country other than its owner's — typically Liberia, Marshall Islands, Panama">flag of convenience</span>, predominantly Gulf crude. Indian-flag = IOC/SCI/BPCL tankers direct.
       </div>
+    </div>
+
+    <!-- ═══════════ SECTION 5: SYNTHESIS (multi-source verification) ═══════════ -->
+    <div class="rsection">Synthesis</div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin:-4px 0 8px 0;letter-spacing:.04em;text-transform:uppercase">Multi-source signal verification</div>
+
+    <!-- CROSS-VERIFICATION (moved from Section 2 to bottom of sidebar) -->
+    <div class="rblock">
+      <div class="rhead">Cross-signal verification</div>
+      <div class="xv-rows" id="xvRows"></div>
+      <div class="conclusion" id="concCross" style="display:none"></div>
     </div>
 
   </div>
@@ -2067,6 +2071,12 @@ function updateTypeBars(){
 
   tb.innerHTML = "";
   var simulated = false;
+  var scrapedMode = false;
+
+  // Scraped-types snapshot path — used when AIS is down but web feed is fresh
+  var scrapedTypes = (typeof _snapshotData === "object" && _snapshotData && _snapshotData.scraped_vessel_types) || null;
+  var scrapedPerPort = (typeof _snapshotData === "object" && _snapshotData) ? _snapshotData.scraped_vessel_perport : null;
+  var hasScrapedTypes = scrapedTypes && Object.keys(scrapedTypes).length > 0;
 
   if(typeBreakdown && Object.keys(typeBreakdown).length){
     // ── Real AIS path ──
@@ -2081,6 +2091,24 @@ function updateTypeBars(){
       row.innerHTML = '<div class="tbar-label">'+e.label+'</div>'
         +'<div class="tbar-track"><div class="tbar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
         +'<div class="tbar-pct">'+pct+'%</div>';
+      tb.appendChild(row);
+    });
+  } else if(hasScrapedTypes){
+    // ── Scraped types fallback (AIS down, web feed fresh) ──
+    scrapedMode = true;
+    tb.removeAttribute("data-simulated");
+    tb.dataset.scraped = "1";
+    var keys = Object.keys(scrapedTypes);
+    var totalS = keys.reduce(function(s,k){ return s + (scrapedTypes[k]||0); }, 0) || 1;
+    keys.sort(function(a,b){ return (scrapedTypes[b]||0) - (scrapedTypes[a]||0); });
+    keys.forEach(function(k){
+      var cnt = scrapedTypes[k]||0;
+      var pct = Math.round(cnt / totalS * 100);
+      var color = SHIP_CLASS_COLORS[k] || "#3b82f6";
+      var row = document.createElement("div"); row.className="tbar-row";
+      row.innerHTML = '<div class="tbar-label">'+k+'</div>'
+        +'<div class="tbar-track"><div class="tbar-fill" style="width:'+Math.max(2,pct)+'%;background:'+color+'"></div></div>'
+        +'<div class="tbar-pct">'+cnt+' · '+pct+'%</div>';
       tb.appendChild(row);
     });
   } else {
@@ -2104,10 +2132,24 @@ function updateTypeBars(){
     });
   }
 
-  // Inbound / outbound counts — real if available, else simulated
+  // Inbound / outbound counts — real if available, else port-count under scrape mode, else simulated
   var inb, outb;
   if(realInbound != null && realOutbound != null){
     inb = realInbound; outb = realOutbound;
+  } else if(scrapedMode){
+    // In scrape mode there's no inbound/outbound direction — show port summary
+    var portCnt = scrapedPerPort ? Object.keys(scrapedPerPort).length : 5;
+    inb = portCnt + " ports";
+    outb = (function(){
+      if(!scrapedPerPort) return "—";
+      var tot = 0;
+      Object.keys(scrapedPerPort).forEach(function(k){
+        var v = scrapedPerPort[k];
+        if(typeof v === "number") tot += v;
+        else if(v && typeof v === "object" && isFinite(v.total)) tot += v.total;
+      });
+      return tot > 0 ? (tot + " vessels") : "—";
+    })();
   } else {
     inb = loggedVessels.filter(function(v){return v.lane==="in";}).length;
     outb = loggedVessels.filter(function(v){return v.lane==="out";}).length;
@@ -2115,11 +2157,14 @@ function updateTypeBars(){
   if(inboundEl)  inboundEl.textContent = inb;
   if(outboundEl) outboundEl.textContent = outb;
 
-  // Flip the card's source badge based on whether we're real or simulated
+  // Flip the card's source badge based on data mode
   var mixBlock = document.getElementById("mixBlock");
   var mixBadge = document.getElementById("mixSrc");
   if(mixBadge){
-    if(simulated){
+    if(scrapedMode){
+      mixBadge.textContent = "WEB FEED · 4h";
+      mixBadge.style.color = "var(--blue)";
+    } else if(simulated){
       mixBadge.textContent = "DATA PENDING";
       mixBadge.style.color = "var(--muted)";
     } else {
@@ -2511,26 +2556,10 @@ function applyAisDegradedMode(snap){
     var bars = document.getElementById("typeBars");
     var typeKeys = scrapedTypes ? Object.keys(scrapedTypes) : [];
     if(scrapedTypes && typeKeys.length){
-      if(mixSrc){
-        mixSrc.textContent = "WEB FEED · 4h";
-        mixSrc.style.color = "var(--blue)";
-      }
-      if(bars){
-        bars.dataset.composite = "scraped";
-        var totalT = typeKeys.reduce(function(s,k){ return s + (scrapedTypes[k]||0); }, 0) || 1;
-        var rows = typeKeys.map(function(k){ return [k, scrapedTypes[k]||0]; })
-                           .sort(function(a,b){ return b[1]-a[1]; });
-        bars.innerHTML =
-          '<div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-bottom:6px">Persian Gulf port mix (5 ports · scraped):</div>' +
-          rows.map(function(r){
-            var pct = Math.round(r[1]/totalT*100);
-            return '<div class="tbar-row" style="display:grid;grid-template-columns:120px 1fr 60px;gap:6px;align-items:center;font-family:var(--mono);font-size:10px;padding:2px 0">'
-              + '<span>'+r[0]+'</span>'
-              + '<div style="height:8px;background:var(--panel2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+Math.max(4,pct)+'%;background:var(--amber)"></div></div>'
-              + '<span class="tbar-pct" style="text-align:right">'+r[1]+' · '+pct+'%</span>'
-              + '</div>';
-          }).join('');
-      }
+      // Scraped types rendering is now handled by updateTypeBars() which sees
+      // _snapshotData.scraped_vessel_types and writes the bars + WEB FEED badge
+      // on a 20s cadence. Just trigger an immediate refresh.
+      try { updateTypeBars(); } catch(e){}
     } else {
       if(mixSrc){
         mixSrc.textContent = "GLOBAL FLEET REF";
@@ -2641,10 +2670,11 @@ function renderCompositeTiles(data){
 }
 
 // Pull /api/snapshot every 90s to drive the AIS-degraded reframe.
+var _snapshotData = null;
 function pollSnapshotForDegradedMode(){
   fetch("/api/snapshot")
     .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(d){ if(d) applyAisDegradedMode(d); })
+    .then(function(d){ if(d){ _snapshotData = d; applyAisDegradedMode(d); try { updateTypeBars(); } catch(e){} } })
     .catch(function(){});
 }
 setTimeout(pollSnapshotForDegradedMode, 4000);
