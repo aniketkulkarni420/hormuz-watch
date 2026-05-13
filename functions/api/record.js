@@ -112,13 +112,18 @@ function scoreInventory(sprWow) {
   if (sprWow < 0) return 1;
   return 0;
 }
-function scoreProduction(mbpd, target = 29.5) {
-  if (mbpd == null || !isFinite(mbpd)) return null;
-  const dev = Math.abs(mbpd - target);
-  if (dev >= 2.0) return 4;
-  if (dev >= 1.0) return 3;
-  if (dev >= 0.5) return 2;
-  if (dev >= 0.25) return 1;
+function scoreProduction(mbpd, momPct) {
+  // EIA STEO 'PAPR_OPEC' currently reads 20.16 — likely a sub-component series
+  // (real OPEC total petroleum supply is ~27-32 mbpd). Absolute-level scoring
+  // against a static target gave a false-positive extreme signal.
+  // Switched to MoM% change: production REGIME SHIFTS are what matter, not
+  // arbitrary baselines. Missing MoM → score 0 (neutral) instead of penalizing.
+  if (momPct == null || !isFinite(momPct)) return 0;
+  const abs = Math.abs(momPct);
+  if (abs >= 10) return 4;   // 10%+ MoM swing — major supply disruption
+  if (abs >= 5)  return 3;   // 5-10% — meaningful change
+  if (abs >= 2)  return 2;   // 2-5% — notable but not crisis
+  if (abs >= 1)  return 1;   // 1-2% — minor flex
   return 0;
 }
 
@@ -203,7 +208,7 @@ function computeVerdict(snapshot) {
   const currencyScore   = scoreCurrency(snapshot.irr_spread_pct);
   const newsScore       = scoreNews(snapshot.news_count_24h);
   const inventoryScore  = scoreInventory(snapshot.spr_wow_pct);
-  const productionScore = scoreProduction(snapshot.opec_production_mbpd);
+  const productionScore = scoreProduction(snapshot.opec_production_mbpd, snapshot.opec_production_mom_pct);
 
   // AIS-primary weights (when AIS working — adds transits, reduces others proportionally)
   // Composite-fallback weights (when AIS down — current state)
