@@ -109,6 +109,34 @@ def fetch_page(p, url, label):
 
 
 # ─────────────────── Source 1: Trading Economics ───────────────────
+def scrape_oilpriceapi_demo(_p):
+    """OilPriceAPI demo endpoint — confirmed accurate (~0.3% of Investing.com).
+    Free HTTP, no browser needed. Different infrastructure failure mode from
+    Playwright-based scrapes — adds genuine third-source diversity.
+    Returns {brent: float, wti: float}.
+    """
+    out = {"brent": None, "wti": None}
+    url = "https://api.oilpriceapi.com/v1/demo/prices"
+    try:
+        r = requests.get(url, timeout=15, headers={"User-Agent": UA})
+        if r.status_code != 200:
+            print(f"  OPA HTTP {r.status_code}")
+            return out
+        data = r.json()
+        prices = data.get("data", {}).get("prices", [])
+        b_raw = next((p for p in prices if p.get("code") == "BRENT_CRUDE_USD"), None)
+        w_raw = next((p for p in prices if p.get("code") == "WTI_USD"), None)
+        if b_raw and sanity_ok(b_raw.get("price")):
+            out["brent"] = float(b_raw["price"])
+            print(f"  OPA brent: {out['brent']} (oilpriceapi-demo)")
+        if w_raw and sanity_ok(w_raw.get("price")):
+            out["wti"] = float(w_raw["price"])
+            print(f"  OPA wti: {out['wti']} (oilpriceapi-demo)")
+    except Exception as e:
+        print(f"  OPA exception: {str(e)[:120]}")
+    return out
+
+
 def scrape_trading_economics(p):
     """Trading Economics commodity pages. Headline value usually in
     <span class="commodity-value"> or in a #p-value type element."""
@@ -247,10 +275,13 @@ def main():
 
     per_source = {}
     with sync_playwright() as p:
-        # Yahoo disabled — fin-streamer selector on /quote/BZ=F kept extracting
-        # 212.x (probably from a side-panel recommendation element). TE + Investing
-        # alone give reliable cross-verification.
+        # Three sources, different infrastructure:
+        #   1. OilPriceAPI demo — HTTP JSON, confirmed accurate (within 0.3% of Investing)
+        #   2. Trading Economics — Playwright + selector
+        #   3. Investing.com — Playwright + selector
+        # Yahoo dropped — fin-streamer selector kept extracting wrong element.
         for fn, key in [
+            (scrape_oilpriceapi_demo,  "oilpriceapi-demo"),
             (scrape_trading_economics, "trading-economics"),
             (scrape_investing,         "investing.com"),
         ]:
