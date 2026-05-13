@@ -232,29 +232,38 @@ def main():
     aed_usd = None
     succeeded = 0
 
-    with sync_playwright() as p:
-        print("\n--- yahoo USD/IRR ---")
-        v = scrape_yahoo_irr(p)
-        if sanity_irr(v):
-            official_irr, official_src = v, "yahoo"
-            succeeded += 1
-        else:
-            print("\n--- xe USD/IRR (fallback) ---")
-            v = scrape_xe_irr(p)
-            if sanity_irr(v):
-                official_irr, official_src = v, "xe.com"
+    # Free FX API — no auth, clean JSON. Faster + more reliable than Playwright scrapes.
+    print("\n--- open.er-api.com (free FX API: free-market IRR + AED + SAR + OMR) ---")
+    try:
+        r = requests.get("https://open.er-api.com/v6/latest/USD", timeout=15, headers={"User-Agent": UA})
+        if r.status_code == 200:
+            d = r.json()
+            rates = d.get("rates", {})
+            irr_rate = rates.get("IRR")
+            aed_rate = rates.get("AED")
+            if irr_rate and sanity_irr(irr_rate):
+                official_irr = float(irr_rate)
+                official_src = "open.er-api.com (free-market reference)"
                 succeeded += 1
+                print(f"  ✓ USD/IRR (free-market): {official_irr:,.0f}")
+            if aed_rate and sanity_aed(aed_rate):
+                aed_usd = float(aed_rate)
+                succeeded += 1
+                print(f"  ✓ USD/AED: {aed_usd:.4f}")
+            # Bonus: track Saudi Riyal + Omani Rial as additional Gulf currency context
+            sar = rates.get("SAR"); omr = rates.get("OMR")
+            if sar: print(f"  ✓ USD/SAR: {sar:.4f}")
+            if omr: print(f"  ✓ USD/OMR: {omr:.4f}")
+        else:
+            print(f"  open.er-api HTTP {r.status_code}")
+    except Exception as e:
+        print(f"  open.er-api exception: {str(e)[:120]}")
 
-        print("\n--- bonbast (black market) ---")
+    with sync_playwright() as p:
+        print("\n--- bonbast (black-market USD/IRR — Iranian unofficial rate) ---")
         v = scrape_bonbast(p)
         if sanity_irr(v):
             black_irr, black_src = v, "bonbast.com"
-            succeeded += 1
-
-        print("\n--- yahoo USD/AED ---")
-        v = scrape_yahoo_aed(p)
-        if sanity_aed(v):
-            aed_usd = v
             succeeded += 1
 
     spread_pct = None
