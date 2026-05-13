@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hormuz Watch — Mockups (pick options)</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;--orange:#ff8c2e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;padding:20px 0}
+.page{max-width:1400px;margin:0 auto;padding:0 24px}
+h1{font-size:28px;margin:0 0 8px;font-weight:900}
+.subtitle{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:32px}
+.section{margin-bottom:48px}
+.section-title{font-family:var(--mono);font-size:13px;color:var(--amber);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.section-desc{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:18px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px}
+
+/* ───── sidebar tile styles (matches main dashboard) ───── */
+.rblock{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+.rsection{font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:.12em;text-transform:uppercase;margin:16px 0 8px;padding-left:8px;border-left:2px solid var(--amber)}
+.rhead{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;font-weight:700}
+.rhead-src{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:.06em;background:rgba(56,170,255,.1);border:1px solid rgba(56,170,255,.2)}
+.src-blue{color:var(--blue);background:rgba(56,170,255,.1);border:1px solid rgba(56,170,255,.25)}
+.src-green{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.25)}
+.src-amber{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.25)}
+.src-red{color:var(--red);background:rgba(255,62,82,.1);border:1px solid rgba(255,62,82,.25)}
+
+/* ───── 1. Cross-Signal Verification (10 rows) ───── */
+.xv-rows{display:flex;flex-direction:column;gap:6px}
+.xv-row{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:9px 11px}
+.xv-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+.xv-label{font-family:var(--mono);font-size:10px;color:var(--text);letter-spacing:.04em;font-weight:700}
+.xv-status{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em}
+.xv-body{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5}
+
+/* ───── 2. Two-stage verdict ───── */
+.verdict-wrap{display:flex;flex-direction:column;gap:12px}
+.verdict-card{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:14px 16px}
+.verdict-title{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.verdict-level{font-family:var(--sans);font-size:24px;font-weight:800;letter-spacing:-.005em;line-height:1.1}
+.verdict-meta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px}
+.verdict-override{background:rgba(255,140,46,.08);border:1px solid rgba(255,140,46,.3);border-radius:5px;padding:8px 11px;margin-top:8px}
+.verdict-override-title{font-family:var(--mono);font-size:9px;color:var(--orange);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:4px}
+.verdict-trigger{font-family:var(--mono);font-size:10px;color:var(--text);padding:2px 0}
+.verdict-arrow{font-family:var(--mono);font-size:14px;color:var(--orange);text-align:center;margin:8px 0}
+.gauge-wrap{display:flex;align-items:center;gap:14px}
+.gauge-arc{width:80px;height:50px;flex-shrink:0}
+.gauge-meta{flex:1}
+.gauge-final{font-family:var(--sans);font-size:18px;font-weight:800;color:var(--red);line-height:1}
+.gauge-explain{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+/* ───── 3. Tile cleanup demo ───── */
+.tile-demo{display:flex;flex-direction:column;gap:10px}
+.tile{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.tile-head{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:11px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.tile-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px}
+.tile-row:last-child{border-bottom:0}
+.tile-row-label{color:var(--muted)}
+.tile-row-val{color:var(--text);font-weight:700}
+.tile-row-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.dot-green{background:var(--green)}
+.dot-amber{background:var(--amber)}
+.dot-orange{background:var(--orange)}
+.dot-red{background:var(--red)}
+
+/* Hierarchy preview (option C reorder) */
+.tier{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--panel2);border-radius:5px;font-family:var(--mono);font-size:10px;color:var(--text);border-left:3px solid var(--amber)}
+.tier.t-top{border-left-color:var(--red)}
+.tier.t-mid{border-left-color:var(--amber)}
+.tier.t-bot{border-left-color:var(--muted2)}
+.tier-num{font-family:var(--mono);font-size:9px;color:var(--muted2);background:var(--border);padding:2px 6px;border-radius:3px}
+
+/* Footer */
+.divider{border-top:1px solid var(--border);margin:32px 0}
+.note{font-family:var(--mono);font-size:10px;color:var(--muted);padding:14px 18px;background:var(--panel);border-radius:6px;border-left:2px solid var(--amber)}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Hormuz Watch — Option Mockups</h1>
+<div class="subtitle">Visual preview of the 3 recommended changes · pick mix-and-match · 2026-05-14</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 1. CROSS-SIGNAL VERIFICATION — 10 ROWS (Option A) -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="section-title">1. Cross-Signal Verification — Option A (10 rows)</div>
+<div class="section-desc">
+  Expanded from 6 → 10 rows. Adds Sanctions / Inventory / Production / Currency rows.<br>
+  Color coding: green = aligned/normal · amber = caution · red = elevated / triggering.
+</div>
+
+<div class="rblock" style="max-width:520px">
+  <div class="rhead">
+    Cross-Signal Verification
+    <span class="rhead-src src-blue">10 signals · live</span>
+  </div>
+  <div class="xv-rows">
+    <div class="xv-row">
+      <div class="xv-top">
+        <div class="xv-label">Flow reconciliation</div>
+        <div class="xv-status" style="color:var(--green)">ALIGNED</div>
+      </div>
+      <div class="xv-body">Web scrape 148 vs EIA baseline 140 (+5.7%). No anomaly in throughput.</div>
+    </div>
+    <div class="xv-row">
+      <div class="xv-top">
+        <div class="xv-label">Dark traffic share</div>
+        <div class="xv-status" style="color:var(--amber)">11%</div>
+      </div>
+      <div class="xv-body">Est. 19 dark vessels vs 148 visible. Above 8% normal, below 15% elevated.</div>
+    </div>
+    <div class="xv-row">
+      <div class="xv-top">
+        <div class="xv-label">Rate-volume divergence</div>
+        <div class="xv-status" style="color:var(--amber)">FEAR PREMIUM</div>
+      </div>
+      <div class="xv-body">BDTI +18% WoW while transit count holds. Rates rising on risk premium, not real disruption.</div>
+    </div>
+    <div class="xv-row">
+      <div class="xv-top">
+        <div class="xv-label">Aerial activity</div>
+        <div class="xv-status" style="color:var(--green)">NORMAL</div>
+      </div>
+      <div class="xv-body">28 aircraft, 2 military. Baseline 25-35. No anomaly.</div>
+    </div>
+    <div class="xv-row">
+      <div class="xv-top">
+        <div class="xv-label">Geopolitical pressure</div>
+        <div class="xv-status" style="color:var(--amber)">ELEVATED</div>
+      </div>
+      <div class="xv-body">GDELT 22 articles · 24h, negative tone 64% (baseline 30%). Tension language rising.</div>
+    </div>
+    <div class="xv-row">
+      <div class="xv-top">
+        <div class="xv-label">Environmental conditions</div>
+        <div class="xv-status" style="color:var(--green)">CALM</div>
+      </div>
+      <div class="xv-body">Wind 8kn, visibility &gt;15km. No seismic activity &gt;mag 4. Shipping conditions normal.</div>
+    </div>
+    <!-- NEW ROWS -->
+    <div class="xv-row" style="border-left:2px solid var(--orange)">
+      <div class="xv-top">
+        <div class="xv-label">Sanctions activity</div>
+        <div class="xv-status" style="color:var(--red)">ACTIVE</div>
+      </div>
+      <div class="xv-body">3 Iran-related OFAC actions in 30d. Latest 2026-05-11 "Counter Terrorism · Iran-related Designations".</div>
+    </div>
+    <div class="xv-row" style="border-left:2px solid var(--orange)">
+      <div class="xv-top">
+        <div class="xv-label">Inventory pressure</div>
+        <div class="xv-status" style="color:var(--green)">STABLE</div>
+      </div>
+      <div class="xv-body">SPR 408M bbl (-0.3% WoW). Commercial crude 432M bbl (+1.1%). No abnormal drawdown.</div>
+    </div>
+    <div class="xv-row" style="border-left:2px solid var(--orange)">
+      <div class="xv-top">
+        <div class="xv-label">Production stability</div>
+        <div class="xv-status" style="color:var(--green)">ON-TARGET</div>
+      </div>
+      <div class="xv-body">OPEC 29.4 mbpd (target ~29.5). Saudi steady. Iran exports affected by sanctions.</div>
+    </div>
+    <div class="xv-row" style="border-left:2px solid var(--orange)">
+      <div class="xv-top">
+        <div class="xv-label">Currency pressure</div>
+        <div class="xv-status" style="color:var(--amber)">51% SPREAD</div>
+      </div>
+      <div class="xv-body">USD/IRR free-market 1,187K vs black-market 1,796K (51% gap). Moderate sanction-regime conditions.</div>
+    </div>
+  </div>
+</div>
+
+<div class="note" style="margin-top:14px;max-width:520px">
+  Rows added in this option: <b>Sanctions, Inventory, Production, Currency</b> · each highlighted with orange left-border indicating new addition. In production these will visually match existing rows (no border distinction).
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 2. TWO-STAGE VERDICT (Option C) -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="section-title">2. Two-stage Verdict — Option C (structural + override triggers)</div>
+<div class="section-desc">
+  Stage 1: weighted-average from slow signals → baseline ELEVATED/HIGH.<br>
+  Stage 2: acute triggers (OFAC, currency jump, news spike, military aircraft, seismic) — each fires escalates verdict by +1 level.
+</div>
+
+<div class="rblock" style="max-width:520px">
+  <div class="rhead">
+    Hormuz Risk Verdict
+    <span class="rhead-src src-amber">composite · 2-stage</span>
+  </div>
+
+  <!-- Stage 1 -->
+  <div class="verdict-wrap">
+    <div class="verdict-card">
+      <div class="verdict-title">Stage 1 · Structural baseline</div>
+      <div class="verdict-level" style="color:var(--amber)">ELEVATED</div>
+      <div class="verdict-meta">
+        score 2.1 / 4.0 · weighted avg of:<br>
+        oil 0.18 · stocks 0.13 · BDTI 0.07 · production 0.02 · inventory 0.05 ·<br>
+        aircraft 0.13 · GDELT 0.10 · seismic 0.03 · weather 0.03 · news 0.05 ·<br>
+        OFAC 0.10 · currency 0.06 · transits 0.30 (AIS unavail)
+      </div>
+    </div>
+
+    <!-- Override triggers -->
+    <div class="verdict-card" style="border:1px solid rgba(255,140,46,.4)">
+      <div class="verdict-title" style="color:var(--orange)">Stage 2 · Override triggers (last 48h)</div>
+      <div class="verdict-override">
+        <div class="verdict-override-title">🔴 OFAC trigger fired</div>
+        <div class="verdict-trigger">New Iran-related designation (Counter Terrorism · 2026-05-11). Escalation event. <b>+1 level</b></div>
+      </div>
+      <div class="verdict-override">
+        <div class="verdict-override-title">🟡 News volume trigger</div>
+        <div class="verdict-trigger">22 Hormuz/Iran headlines in last 24h (threshold: 10+ in 6h not yet hit). <b>+0 levels</b></div>
+      </div>
+      <div class="verdict-override" style="opacity:0.5">
+        <div class="verdict-override-title">⚪ Currency trigger (idle)</div>
+        <div class="verdict-trigger">Black-market IRR +1.2% in 24h (threshold: &gt;10%). Not fired.</div>
+      </div>
+      <div class="verdict-override" style="opacity:0.5">
+        <div class="verdict-override-title">⚪ Aircraft trigger (idle)</div>
+        <div class="verdict-trigger">Military aircraft 2 (baseline 2-3, no doubling). Not fired.</div>
+      </div>
+    </div>
+
+    <!-- Final -->
+    <div class="verdict-card" style="background:rgba(255,62,82,.06);border:1px solid rgba(255,62,82,.3)">
+      <div class="verdict-title" style="color:var(--red)">Final composite verdict</div>
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 120 72" class="gauge-arc">
+          <path d="M 10 66 A 50 50 0 0 1 110 66" fill="none" stroke="#222d3f" stroke-width="8" stroke-linecap="round"/>
+          <path d="M 10 66 A 50 50 0 0 1 95 30" fill="none" stroke="#ff3e52" stroke-width="8" stroke-linecap="round"/>
+          <circle cx="95" cy="30" r="4" fill="#ff3e52"/>
+        </svg>
+        <div class="gauge-meta">
+          <div class="gauge-final">HIGH</div>
+          <div class="gauge-explain">Structural <b>ELEVATED</b> + 1 override fired = <b>HIGH</b>.<br>Concrete escalation event (OFAC designation) on top of building baseline pressure.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note" style="margin-top:14px;max-width:520px">
+  Override triggers shown explicitly · each has a fired/idle state visible. Analysts can SEE why verdict moved beyond the baseline. Triggers reset when their condition clears (e.g. no new OFAC action in 7 days → -1).
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 3. TILE CLEANUP (Combo C + D) -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="section-title">3. Tile Cleanup — Combo Option C + D (reorder + consolidate)</div>
+<div class="section-desc">
+  Reorder by analytical importance (top = headline-actionable) AND consolidate related tiles. 13+ tiles → ~9-10 with clear hierarchy.<br>
+  Below shows the new ordering with importance tier indicators.
+</div>
+
+<div class="grid">
+
+<!-- LEFT — old vs new tile list -->
+<div>
+  <div class="rsection">PROPOSED ORDER (top → bottom)</div>
+  <div class="tile-demo">
+    <div class="tier t-top"><span class="tier-num">01</span> Tension Gauge + Verdict (headline)</div>
+    <div class="tier t-top"><span class="tier-num">02</span> Market Pulse (oil prices)</div>
+    <div class="tier t-top"><span class="tier-num">03</span> Vessel Movement (port activity)</div>
+    <div class="tier t-mid"><span class="tier-num">04</span> Cross-Signal Verification (10 rows)</div>
+    <div class="tier t-mid"><span class="tier-num">05</span> Vessel Type Mix</div>
+    <div class="tier t-mid"><span class="tier-num">06</span> Tanker Plays (stocks + BDTI)</div>
+    <div class="tier t-mid"><span class="tier-num">07</span> Political Signals 🆕 (consolidated)</div>
+    <div class="tier t-bot"><span class="tier-num">08</span> Macro Context 🆕 (consolidated)</div>
+    <div class="tier t-bot"><span class="tier-num">09</span> Conditions 🆕 (consolidated)</div>
+    <div class="tier t-bot"><span class="tier-num">10</span> Closure Scenario + India Watch</div>
+    <div class="tier t-bot"><span class="tier-num">11</span> Vessel Traffic Trend (historical)</div>
+    <div class="tier t-bot"><span class="tier-num">12</span> Flag State Flow (slowest)</div>
+  </div>
+</div>
+
+<!-- RIGHT — Sample consolidated tile -->
+<div>
+  <div class="rsection">SAMPLE CONSOLIDATED TILE</div>
+
+  <!-- Political signals consolidated -->
+  <div class="tile">
+    <div class="tile-head">
+      Political Signals
+      <span class="rhead-src src-amber">live · multi-source</span>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-red"></span>OFAC Iran actions / 30d</div>
+      <div class="tile-row-val">3</div>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-amber"></span>News headlines / 24h</div>
+      <div class="tile-row-val">22 · negative tone 64%</div>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-amber"></span>GDELT events / 24h</div>
+      <div class="tile-row-val">47 · escalation lang +18%</div>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-amber"></span>Currency IRR spread</div>
+      <div class="tile-row-val">51% (moderate)</div>
+    </div>
+  </div>
+
+  <!-- Conditions consolidated -->
+  <div class="tile" style="margin-top:14px">
+    <div class="tile-head">
+      Conditions
+      <span class="rhead-src src-green">live · multi-source</span>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-green"></span>Aerial activity</div>
+      <div class="tile-row-val">28 aircraft · 2 mil</div>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-green"></span>Weather (4 waypoints)</div>
+      <div class="tile-row-val">wind 8kn · clear</div>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-green"></span>Seismic (7d, mag 4+)</div>
+      <div class="tile-row-val">2 events · max 4.4</div>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-green"></span>Dark vessel share</div>
+      <div class="tile-row-val">11%</div>
+    </div>
+  </div>
+
+  <!-- Macro consolidated -->
+  <div class="tile" style="margin-top:14px">
+    <div class="tile-head">
+      Macro Context
+      <span class="rhead-src src-blue">slow · daily/weekly</span>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-green"></span>OPEC production</div>
+      <div class="tile-row-val">29.4 mbpd · on-target</div>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-green"></span>US SPR</div>
+      <div class="tile-row-val">408M bbl (-0.3% WoW)</div>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-amber"></span>Commercial crude inv.</div>
+      <div class="tile-row-val">432M bbl (+1.1%)</div>
+    </div>
+    <div class="tile-row">
+      <div class="tile-row-label"><span class="tile-row-dot dot-amber"></span>Persian Gulf imports</div>
+      <div class="tile-row-val">12.3M bbl/mo (Apr)</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="note" style="margin-top:14px">
+  Consolidation reduces tile count from 13+ to ~10 · each "consolidated" tile shows 4 related signals in compact 4-row table format. Color dots = signal severity. Tier tags (left): <b>red</b> = top-priority (always above fold) · <b>amber</b> = mid · <b>grey</b> = context/reference.
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="divider"></div>
+<div class="note">
+  <b>Pick any combination:</b> "1A + 2C + 3D" · or just one · or modifications ("1A but only 8 rows", "2C but keep simple weighted avg", etc.) · I'll build whatever you confirm.<br><br>
+  This mockup file is at <code>C:\Users\anike\Desktop\hormuz-watch\mockups.html</code> · open in browser to see · won't deploy (not in functions/ or routed path).
+</div>
+
+</div>
+</body>
+</html>

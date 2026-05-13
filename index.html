@@ -13,7 +13,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
-  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;--teal:#06d6b0;--purple:#b47aff;--gold:#ffd166;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;--teal:#06d6b0;--purple:#b47aff;--gold:#ffd166;--orange:#ff8c2e;
   --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
   --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
 }
@@ -226,6 +226,28 @@ header{
 .xv-sources{font-family:var(--mono);font-size:9px;color:var(--muted);flex:1}
 .xv-status{font-family:var(--mono);font-size:9px;font-weight:700}
 .xv-body{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.7}
+
+/* TWO-STAGE VERDICT */
+.verdict-wrap{display:flex;flex-direction:column;gap:8px}
+.verdict-card{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:10px 11px}
+.verdict-title{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.verdict-level{font-family:var(--sans);font-size:18px;font-weight:800;line-height:1.1}
+.verdict-meta{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px;line-height:1.55}
+.verdict-override{background:rgba(255,140,46,.07);border:1px solid rgba(255,140,46,.25);border-radius:4px;padding:6px 8px;margin-top:6px}
+.verdict-override-title{font-family:var(--mono);font-size:9px;color:var(--orange,#ff8c2e);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:2px}
+.verdict-trigger{font-family:var(--mono);font-size:9px;color:var(--text);line-height:1.5}
+
+/* CONSOLIDATED TILE ROWS */
+.tile-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px}
+.tile-row:last-child{border-bottom:0}
+.tile-row-label{color:var(--muted);display:flex;align-items:center}
+.tile-row-val{color:var(--text);font-weight:700;text-align:right}
+.tile-row-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;flex-shrink:0}
+.dot-green{background:var(--green)}
+.dot-amber{background:var(--amber)}
+.dot-orange{background:var(--orange,#ff8c2e)}
+.dot-red{background:var(--red)}
+.dot-muted{background:var(--muted2)}
 
 /* TRAFFIC GRID */
 .traffic-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -714,11 +736,48 @@ header{
     </div>
   </div>
 
-  <!-- RIGHT: INTELLIGENCE PANEL — Reorder B (sectioned by priority) -->
+  <!-- RIGHT: INTELLIGENCE PANEL — Reorder C (2026-05-14) -->
+  <!-- Section 1: Top priority · Section 2: Signals · Section 3: Context · Section 4: History -->
   <div class="rpanel">
 
-    <!-- ═══════════ SECTION 1: PRICE & FLOW ═══════════ -->
-    <div class="rsection">Price &amp; flow</div>
+    <!-- ═══════════ SECTION 1: TOP PRIORITY ═══════════ -->
+    <div class="rsection">Top priority</div>
+
+    <!-- TENSION GAUGE / VERDICT (two-stage) -->
+    <div class="rblock" id="verdictBlock">
+      <div class="rhead">
+        Hormuz risk verdict
+        <span class="rhead-src" id="verdictMode" style="color:var(--muted)">composite · 2-stage</span>
+      </div>
+      <div class="verdict-wrap" id="verdictWrap">
+        <!-- Stage 1 · structural baseline -->
+        <div class="verdict-card" id="verdictStage1">
+          <div class="verdict-title">Stage 1 · Structural baseline</div>
+          <div class="verdict-level" id="verdictStructural" style="color:var(--amber)">—</div>
+          <div class="verdict-meta" id="verdictStructuralMeta">Awaiting first compute&hellip;</div>
+        </div>
+        <!-- Stage 2 · override triggers -->
+        <div class="verdict-card" id="verdictStage2" style="border-color:rgba(255,140,46,.3)">
+          <div class="verdict-title" style="color:var(--orange)">Stage 2 · Override triggers (last 48h)</div>
+          <div id="verdictTriggers" style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">—</div>
+        </div>
+        <!-- Final composite -->
+        <div class="verdict-card" id="verdictFinal" style="background:rgba(255,62,82,.06);border-color:rgba(255,62,82,.3)">
+          <div class="verdict-title" style="color:var(--red)">Final composite verdict</div>
+          <div class="gauge-wrap" style="flex-direction:row;align-items:center;gap:12px">
+            <svg viewBox="0 0 120 72" width="80" height="50" style="flex-shrink:0">
+              <path d="M 10 66 A 50 50 0 0 1 110 66" fill="none" stroke="#222d3f" stroke-width="8" stroke-linecap="round"/>
+              <path id="gaugeArc" d="M 10 66 A 50 50 0 0 1 60 16" fill="none" stroke="#f09014" stroke-width="8" stroke-linecap="round"/>
+              <circle id="gaugeDot" cx="60" cy="16" r="4" fill="#f09014"/>
+            </svg>
+            <div style="flex:1">
+              <div class="gauge-level" id="gaugeLevel" style="color:#f09014;text-align:left">ELEVATED</div>
+              <div class="gauge-desc" id="gaugeDesc" style="text-align:left;margin-top:3px">Computing from live signals&hellip;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- MARKET PULSE -->
     <div class="rblock">
@@ -760,20 +819,6 @@ header{
         </div>
         <div class="conclusion" id="concPulse" style="display:none"></div>
       </div>
-    </div>
-
-    <!-- VESSEL TYPE MIX (moved up — supporting context after Market Pulse) -->
-    <div class="rblock" id="mixBlock">
-      <div class="rhead">
-        <abbr title="Live AIS-derived breakdown of vessel classes near Hormuz. Tanker classes split by ship length: VLCC (300m+), Suezmax (270-300m), Aframax (240-270m).">Vessel type mix</abbr>
-        <span class="rhead-src src-live" style="color:var(--green)" id="mixSrc">LIVE FEED</span>
-      </div>
-      <div class="traffic-grid" style="font-size:14px">
-        <div class="tcard"><div class="tc-val" id="inboundCount" style="color:var(--blue);font-size:14px">0</div><div class="tc-lbl" id="inboundLbl">Inbound</div></div>
-        <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber);font-size:14px">0</div><div class="tc-lbl" id="outboundLbl">Outbound</div></div>
-      </div>
-      <div class="type-bars" id="typeBars"></div>
-      <div class="conclusion" id="concMix" style="display:none"></div>
     </div>
 
     <!-- VESSEL MOVEMENT — explicit transit/anchored/approach + east/west flow -->
@@ -823,7 +868,170 @@ header{
       </div>
     </div>
 
-    <!-- AERIAL ACTIVITY (Path D — composite signal) -->
+    <!-- ═══════════ SECTION 2: SIGNALS ═══════════ -->
+    <div class="rsection">Signals</div>
+
+    <!-- CROSS-SIGNAL VERIFICATION (moved up from Section 5) -->
+    <div class="rblock">
+      <div class="rhead">
+        Cross-signal verification
+        <span class="rhead-src src-blue" id="xvSrc" style="color:var(--blue)">10 signals · live</span>
+      </div>
+      <div class="xv-rows" id="xvRows"></div>
+      <div class="conclusion" id="concCross" style="display:none"></div>
+    </div>
+
+    <!-- VESSEL TYPE MIX (moved into Signals section) -->
+    <div class="rblock" id="mixBlock">
+      <div class="rhead">
+        <abbr title="Live AIS-derived breakdown of vessel classes near Hormuz. Tanker classes split by ship length: VLCC (300m+), Suezmax (270-300m), Aframax (240-270m).">Vessel type mix</abbr>
+        <span class="rhead-src src-live" style="color:var(--green)" id="mixSrc">LIVE FEED</span>
+      </div>
+      <div class="traffic-grid" style="font-size:14px">
+        <div class="tcard"><div class="tc-val" id="inboundCount" style="color:var(--blue);font-size:14px">0</div><div class="tc-lbl" id="inboundLbl">Inbound</div></div>
+        <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber);font-size:14px">0</div><div class="tc-lbl" id="outboundLbl">Outbound</div></div>
+      </div>
+      <div class="type-bars" id="typeBars"></div>
+      <div class="conclusion" id="concMix" style="display:none"></div>
+    </div>
+
+    <!-- TANKER PLAYS (moved up into Signals) -->
+    <div class="rblock">
+      <div class="rhead">Global tanker tension play</div>
+      <div class="tanker-rows" id="tankerRows"></div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
+        <abbr title="Baltic Dirty Tanker Index — weekly freight rate index for crude oil tankers">BDTI</abbr> leads tanker stocks by 2&ndash;3 days in escalation events. Watch for rate spikes while vessel count holds (<span title="Freight rates rising while vessel traffic holds — suggests pricing in risk, not actual disruption">fear premium</span>).
+      </div>
+    </div>
+
+    <!-- POLITICAL SIGNALS (consolidated: OFAC + News + GDELT + Currency) -->
+    <div class="rblock" id="politicalBlock">
+      <div class="rhead">
+        Political signals
+        <span class="rhead-src src-amber" id="politicalSrc" style="color:var(--amber)">live · multi</span>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="psOfacDot"></span>OFAC Iran actions / 30d</div>
+        <div class="tile-row-val" id="psOfacVal">&mdash;</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="psNewsDot"></span>News headlines / 24h</div>
+        <div class="tile-row-val" id="psNewsVal">&mdash;</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="psGdeltDot"></span>GDELT events / 24h</div>
+        <div class="tile-row-val" id="psGdeltVal">&mdash;</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="psCurrencyDot"></span>Currency IRR spread</div>
+        <div class="tile-row-val" id="psCurrencyVal">&mdash;</div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SECTION 3: CONTEXT ═══════════ -->
+    <div class="rsection">Context</div>
+
+    <!-- MACRO CONTEXT (consolidated: OPEC + SPR + commercial crude + Persian Gulf imports) -->
+    <div class="rblock" id="macroBlock">
+      <div class="rhead">
+        Macro context
+        <span class="rhead-src src-blue" id="macroSrc" style="color:var(--blue)">slow · daily/weekly</span>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="mcOpecDot"></span>OPEC production</div>
+        <div class="tile-row-val" id="mcOpecVal">&mdash;</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="mcSprDot"></span>US SPR</div>
+        <div class="tile-row-val" id="mcSprVal">&mdash;</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="mcCrudeDot"></span>Commercial crude inv.</div>
+        <div class="tile-row-val" id="mcCrudeVal">&mdash;</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="mcImportsDot"></span>Persian Gulf imports</div>
+        <div class="tile-row-val" id="mcImportsVal">&mdash;</div>
+      </div>
+    </div>
+
+    <!-- CONDITIONS (consolidated: Aerial + Weather + Seismic + Dark vessel share) -->
+    <div class="rblock" id="conditionsBlock">
+      <div class="rhead">
+        Conditions
+        <span class="rhead-src src-green" id="conditionsSrc" style="color:var(--green)">live · multi</span>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="cdAerialDot"></span>Aerial activity</div>
+        <div class="tile-row-val" id="cdAerialVal">&mdash;</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="cdWeatherDot"></span>Weather (4 waypoints)</div>
+        <div class="tile-row-val" id="cdWeatherVal">&mdash;</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="cdSeismicDot"></span>Seismic (7d, mag 4+)</div>
+        <div class="tile-row-val" id="cdSeismicVal">&mdash;</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="cdDarkDot"></span>Dark vessel share</div>
+        <div class="tile-row-val" id="cdDarkVal">&mdash;</div>
+      </div>
+    </div>
+
+    <!-- CLOSURE SCENARIO -->
+    <div class="rblock">
+      <div class="rhead">Closure scenario impact</div>
+      <div class="scenario-rows" id="scenarioRows"></div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
+        Based on 2019 Gulf Crisis, 2011 Iran threat, 1984 Tanker War.
+      </div>
+    </div>
+
+    <!-- INDIA WATCH -->
+    <div class="rblock">
+      <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-eia" style="color:var(--blue)">EQUITY DATA</span></div>
+      <div class="india-rows" id="indiaRows"></div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
+        ~62% of India's crude imports flow through Hormuz. Each $10/bbl crude rise = ~&#8377;85K Cr import bill increase. Petronet LNG nearly entirely Hormuz-dependent.
+      </div>
+    </div>
+
+    <!-- ═══════════ SECTION 4: HISTORY ═══════════ -->
+    <div class="rsection">History</div>
+
+    <!-- VESSEL TRAFFIC TREND (moved into History) -->
+    <div class="rblock">
+      <div class="rhead">
+        Vessel traffic trend
+        <span class="rhead-src src-eia" style="color:var(--blue)" title="Historical: yesterday + today from browser session and historical store">HISTORICAL</span>
+      </div>
+      <div id="trendBars" class="trend-bars"></div>
+      <div class="trend-legend" id="trendLegend"></div>
+      <div class="conclusion" id="concTrend" style="display:none"></div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
+        Yesterday and today from this browser session and the historical store. Baselines derived from official statistics and public reports.
+      </div>
+    </div>
+
+    <!-- FLAG STATE FLOW (slowest signal) -->
+    <div class="rblock">
+      <div class="rhead">
+        Flag state flow today
+        <span class="rhead-src src-live" style="color:var(--green)">LIVE FEED</span>
+      </div>
+      <div class="flag-rows" id="flagRows">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Populating from live vessel feed&hellip;</div>
+      </div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
+        Flag = ship registry. Liberia/Marshall Islands/Panama = <span title="Ship registered in a country other than its owner's — typically Liberia, Marshall Islands, Panama">flag of convenience</span>, predominantly Gulf crude. Indian-flag = IOC/SCI/BPCL tankers direct.
+      </div>
+    </div>
+
+    <!-- ───── HIDDEN LEGACY TILES (data flows preserved; DOM kept for getElementById writers) ───── -->
+    <div style="display:none" aria-hidden="true">
+
+    <!-- AERIAL ACTIVITY (now part of Conditions tile) -->
     <div class="rblock" id="aerialBlock">
       <div class="rhead">
         Aerial activity
@@ -842,24 +1050,7 @@ header{
       <div class="conclusion" id="concAerial" style="display:none"></div>
     </div>
 
-    <!-- TREND CHART (re-added in Section 1: Price & flow) -->
-    <div class="rblock">
-      <div class="rhead">
-        Vessel traffic trend
-        <span class="rhead-src src-eia" style="color:var(--blue)" title="Historical: yesterday + today from browser session and historical store">HISTORICAL</span>
-      </div>
-      <div id="trendBars" class="trend-bars"></div>
-      <div class="trend-legend" id="trendLegend"></div>
-      <div class="conclusion" id="concTrend" style="display:none"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        Yesterday and today from this browser session and the historical store. Baselines derived from official statistics and public reports.
-      </div>
-    </div>
-
-    <!-- ═══════════ SECTION 2: SYNTHESIS ═══════════ -->
-    <div class="rsection">Synthesis</div>
-
-    <!-- GEOPOLITICAL EVENTS (Path D — composite signal) -->
+    <!-- GEOPOLITICAL EVENTS (now part of Political Signals tile) -->
     <div class="rblock" id="eventsBlock">
       <div class="rhead">
         Geopolitical events
@@ -888,49 +1079,7 @@ header{
       </div>
     </div>
 
-    <!-- TENSION GAUGE -->
-    <div class="rblock">
-      <div class="rhead">Hormuz tension level</div>
-      <div class="gauge-wrap">
-        <svg viewBox="0 0 120 72" width="120" height="72">
-          <path d="M 10 66 A 50 50 0 0 1 110 66" fill="none" stroke="#222d3f" stroke-width="8" stroke-linecap="round"/>
-          <line x1="10" y1="66" x2="14" y2="66" stroke="#354355" stroke-width="1.5"/>
-          <line x1="24.6" y1="30.6" x2="27.5" y2="33.1" stroke="#354355" stroke-width="1.5"/>
-          <line x1="60" y1="16" x2="60" y2="20" stroke="#354355" stroke-width="1.5"/>
-          <line x1="95.4" y1="30.6" x2="92.5" y2="33.1" stroke="#354355" stroke-width="1.5"/>
-          <line x1="110" y1="66" x2="106" y2="66" stroke="#354355" stroke-width="1.5"/>
-          <path id="gaugeArc" d="M 10 66 A 50 50 0 0 1 60 16" fill="none" stroke="#f09014" stroke-width="8" stroke-linecap="round"/>
-          <circle id="gaugeDot" cx="60" cy="16" r="4" fill="#f09014"/>
-          <text x="8" y="78" font-family="JetBrains Mono" font-size="6" fill="#627a95">LOW</text>
-          <text x="82" y="78" font-family="JetBrains Mono" font-size="6" fill="#627a95">CRITICAL</text>
-        </svg>
-        <div class="gauge-level" id="gaugeLevel" style="color:#f09014">ELEVATED</div>
-        <div class="gauge-desc" id="gaugeDesc">Computing from live signals&hellip;</div>
-      </div>
-    </div>
-
-    <!-- ═══════════ SECTION 3: WHAT IT MEANS ═══════════ -->
-    <div class="rsection">What it means</div>
-
-    <!-- CLOSURE SCENARIO -->
-    <div class="rblock">
-      <div class="rhead">Closure scenario impact</div>
-      <div class="scenario-rows" id="scenarioRows"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        Based on 2019 Gulf Crisis, 2011 Iran threat, 1984 Tanker War.
-      </div>
-    </div>
-
-    <!-- INDIA WATCH -->
-    <div class="rblock">
-      <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-eia" style="color:var(--blue)">EQUITY DATA</span></div>
-      <div class="india-rows" id="indiaRows"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        ~62% of India's crude imports flow through Hormuz. Each $10/bbl crude rise = ~&#8377;85K Cr import bill increase. Petronet LNG nearly entirely Hormuz-dependent.
-      </div>
-    </div>
-
-    <!-- SANCTIONS ACTIVITY (OFAC Iran-related, every 6h) -->
+    <!-- SANCTIONS ACTIVITY (now part of Political Signals tile) -->
     <div class="rblock" id="ofacBlock">
       <div class="rhead">
         <abbr title="US Treasury OFAC publishes designations of foreign individuals, entities, vessels, and tankers. Iran/IRGC/NIOC/NITC actions in the last 30 days are a leading indicator of US-Iran tension and shadow-fleet pressure.">Sanctions activity</abbr>
@@ -975,19 +1124,7 @@ header{
       </div>
     </div>
 
-    <!-- TANKER PLAYS -->
-    <div class="rblock">
-      <div class="rhead">Global tanker tension play</div>
-      <div class="tanker-rows" id="tankerRows"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        <abbr title="Baltic Dirty Tanker Index — weekly freight rate index for crude oil tankers">BDTI</abbr> leads tanker stocks by 2&ndash;3 days in escalation events. Watch for rate spikes while vessel count holds (<span title="Freight rates rising while vessel traffic holds — suggests pricing in risk, not actual disruption">fear premium</span>).
-      </div>
-    </div>
-
-    <!-- ═══════════ SECTION 4: CONTEXT ═══════════ -->
-    <div class="rsection">Context</div>
-
-    <!-- ENVIRONMENTAL CONDITIONS (Path D — weather + seismic) -->
+    <!-- ENVIRONMENTAL CONDITIONS (now part of Conditions tile) -->
     <div class="rblock" id="envBlock">
       <div class="rhead">
         Environmental conditions
@@ -1017,30 +1154,7 @@ header{
       </div>
     </div>
 
-    <!-- FLAG FLOW (re-added in Context — slowest-moving signal) -->
-    <div class="rblock">
-      <div class="rhead">
-        Flag state flow today
-        <span class="rhead-src src-live" style="color:var(--green)">LIVE FEED</span>
-      </div>
-      <div class="flag-rows" id="flagRows">
-        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Populating from live vessel feed&hellip;</div>
-      </div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        Flag = ship registry. Liberia/Marshall Islands/Panama = <span title="Ship registered in a country other than its owner's — typically Liberia, Marshall Islands, Panama">flag of convenience</span>, predominantly Gulf crude. Indian-flag = IOC/SCI/BPCL tankers direct.
-      </div>
-    </div>
-
-    <!-- ═══════════ SECTION 5: SYNTHESIS (multi-source verification) ═══════════ -->
-    <div class="rsection">Synthesis</div>
-    <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin:-4px 0 8px 0;letter-spacing:.04em;text-transform:uppercase">Multi-source signal verification</div>
-
-    <!-- CROSS-VERIFICATION (moved from Section 2 to bottom of sidebar) -->
-    <div class="rblock">
-      <div class="rhead">Cross-signal verification</div>
-      <div class="xv-rows" id="xvRows"></div>
-      <div class="conclusion" id="concCross" style="display:none"></div>
-    </div>
+    </div><!-- /HIDDEN LEGACY TILES -->
 
   </div>
 </div>
@@ -1814,10 +1928,81 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
     rows.push({ label:"Environmental conditions", id:"xv-env", status:envStatus, statusColor:envColor, body:envBody });
   }
 
+  // ─── 4 NEW ROWS (2026-05-14) — read from /api/snapshot fields ───────────
+  var snap = snapshot || {};
+
+  // Row 7 — Sanctions activity (OFAC Iran actions / 30d)
+  var ofacActions = (snap.ofac_iran_actions_30d != null) ? snap.ofac_iran_actions_30d : null;
+  if(ofacActions == null){
+    rows.push({ label:"Sanctions activity", id:"xv-sanctions", status:"—", statusColor:"var(--muted)",
+                body:"OFAC scraper has not run yet." });
+  } else {
+    var ofacColor, ofacStatus;
+    if(ofacActions === 0){ ofacColor = "var(--green)"; ofacStatus = "QUIET"; }
+    else if(ofacActions <= 2){ ofacColor = "var(--amber)"; ofacStatus = "MODERATE"; bump(2, "ELEVATED", "var(--amber)"); }
+    else { ofacColor = "var(--red)"; ofacStatus = "ACTIVE"; bump(3, "HIGH", "var(--red)"); }
+    var ofacBody = ofacActions + " Iran-related OFAC actions in last 30d." +
+                   (snap.ofac_latest_action_date ? " Latest: " + snap.ofac_latest_action_date + "." : "");
+    rows.push({ label:"Sanctions activity", id:"xv-sanctions", status:ofacStatus, statusColor:ofacColor, body:ofacBody });
+  }
+
+  // Row 8 — Inventory pressure (SPR + commercial crude WoW)
+  var spr = snap.spr_level_kbbl;
+  var sprWow = snap.spr_wow_pct;
+  var crudeWow = snap.inventory_wow_pct;
+  if(spr == null){
+    rows.push({ label:"Inventory pressure", id:"xv-inventory", status:"—", statusColor:"var(--muted)",
+                body:"EIA weekly stocks unavailable." });
+  } else {
+    var invColor = "var(--green)", invStatus = "STABLE";
+    if(sprWow != null && sprWow < -1.0){ invColor = "var(--red)"; invStatus = "DRAW DETECTED"; bump(3, "HIGH", "var(--red)"); }
+    else if(sprWow != null && sprWow < -0.5){ invColor = "var(--amber)"; invStatus = "MILD DRAW"; bump(2, "ELEVATED", "var(--amber)"); }
+    var sprWowSafe = (sprWow == null) ? 0 : sprWow;
+    var crudeWowSafe = (crudeWow == null) ? 0 : crudeWow;
+    var invBody = "SPR " + (spr/1000).toFixed(0) + "M bbl (" + (sprWowSafe > 0 ? "+" : "") + sprWowSafe.toFixed(1) + "% WoW). " +
+                  "Commercial crude " + (crudeWowSafe > 0 ? "+" : "") + crudeWowSafe.toFixed(1) + "% WoW.";
+    rows.push({ label:"Inventory pressure", id:"xv-inventory", status:invStatus, statusColor:invColor, body:invBody });
+  }
+
+  // Row 9 — Production stability (OPEC mbpd vs target 29.5)
+  var opec = snap.opec_production_mbpd;
+  if(opec == null){
+    rows.push({ label:"Production stability", id:"xv-production", status:"—", statusColor:"var(--muted)",
+                body:"OPEC production data unavailable." });
+  } else {
+    var target = 29.5;
+    var diff = opec - target;
+    var prodColor, prodStatus;
+    if(Math.abs(diff) < 0.5){ prodColor = "var(--green)"; prodStatus = "ON-TARGET"; }
+    else if(diff < -1.0){ prodColor = "var(--red)"; prodStatus = "BELOW TARGET"; bump(3, "HIGH", "var(--red)"); }
+    else { prodColor = "var(--amber)"; prodStatus = "DEVIATION"; bump(2, "ELEVATED", "var(--amber)"); }
+    var prodBody = "OPEC " + opec.toFixed(1) + " mbpd vs target ~" + target + " mbpd. " +
+                   (diff > 0 ? "Output above target." : diff < -0.5 ? "Output below target — supply concern." : "Output broadly aligned.");
+    rows.push({ label:"Production stability", id:"xv-production", status:prodStatus, statusColor:prodColor, body:prodBody });
+  }
+
+  // Row 10 — Currency pressure (IRR free vs black-market spread)
+  var spread = snap.irr_spread_pct;
+  if(spread == null){
+    rows.push({ label:"Currency pressure", id:"xv-currency", status:"—", statusColor:"var(--muted)",
+                body:"IRR FX spread unavailable." });
+  } else {
+    var curColor, curStatus;
+    if(spread < 50){ curColor = "var(--green)"; curStatus = "STABLE"; }
+    else if(spread < 200){ curColor = "var(--amber)"; curStatus = spread.toFixed(0) + "% SPREAD"; bump(2, "ELEVATED", "var(--amber)"); }
+    else { curColor = "var(--red)"; curStatus = "EXTREME"; bump(3, "HIGH", "var(--red)"); }
+    var curBody = "USD/IRR free-market vs black-market spread " + spread.toFixed(0) + "%. " +
+                  (spread > 100 ? "Wide spread — significant capital flight pressure." : "Within typical sanction-regime range.");
+    rows.push({ label:"Currency pressure", id:"xv-currency", status:curStatus, statusColor:curColor, body:curBody });
+  }
+
   return { rows: rows, severity: sev };
 }
 
 function _wireTensionGauge(sev){
+  // Disabled 2026-05-14: gauge now driven by /api/verdict (two-stage) via renderVerdictBlock.
+  // XV row severity still surfaces inside individual row colours; gauge reflects authoritative verdict.
+  if(window.__VERDICT_DRIVES_GAUGE) return;
   var levelEl = document.getElementById("gaugeLevel");
   var descEl  = document.getElementById("gaugeDesc");
   var arcEl   = document.getElementById("gaugeArc");
@@ -2808,7 +2993,7 @@ var _snapshotData = null;
 function pollSnapshotForDegradedMode(){
   fetch("/api/snapshot")
     .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(d){ if(d){ _snapshotData = d; applyAisDegradedMode(d); try { updateTypeBars(); } catch(e){} } })
+    .then(function(d){ if(d){ _snapshotData = d; applyAisDegradedMode(d); try { updateTypeBars(); } catch(e){} try { renderConsolidatedTiles(); } catch(e){} } })
     .catch(function(){});
 }
 setTimeout(pollSnapshotForDegradedMode, 4000);
@@ -3888,6 +4073,247 @@ if(document.readyState === "loading"){
   setTimeout(loadOfacTile, 0);
 }
 setInterval(loadOfacTile, 6 * 60 * 60 * 1000); // every 6h to match scraper
+
+// ═══════════════════════════════════════════════════
+// CONSOLIDATED TILES (2026-05-14) — Political Signals / Conditions / Macro
+// Reads from _snapshotData + _compositeData (already populated by other pollers)
+// ═══════════════════════════════════════════════════
+function _setDot(elId, level){
+  var el = document.getElementById(elId);
+  if(!el) return;
+  el.className = "tile-row-dot dot-" + (level || "muted");
+}
+function _setText(elId, txt){
+  var el = document.getElementById(elId);
+  if(el) el.textContent = txt;
+}
+function renderConsolidatedTiles(){
+  var s = (typeof _snapshotData === "object" && _snapshotData) ? _snapshotData : {};
+  var c = (typeof window._compositeData === "object" && window._compositeData) ? window._compositeData : {};
+
+  // ─── POLITICAL SIGNALS ─────────────────────────────────────
+  // OFAC
+  var ofac = s.ofac_iran_actions_30d;
+  if(ofac == null){
+    _setText("psOfacVal", "—"); _setDot("psOfacDot", "muted");
+  } else {
+    _setText("psOfacVal", String(ofac));
+    _setDot("psOfacDot", ofac === 0 ? "green" : ofac <= 2 ? "amber" : "red");
+  }
+  // News
+  var news = s.news_count_24h;
+  if(news == null){
+    _setText("psNewsVal", "—"); _setDot("psNewsDot", "muted");
+  } else {
+    _setText("psNewsVal", news + (news === 1 ? " headline" : " headlines"));
+    _setDot("psNewsDot", news < 10 ? "green" : news < 40 ? "amber" : "red");
+  }
+  // GDELT
+  var gdArt = s.gdelt_article_count_24h;
+  var gdTone = s.gdelt_neg_tone_pct;
+  if(gdArt == null && gdTone == null){
+    _setText("psGdeltVal", "—"); _setDot("psGdeltDot", "muted");
+  } else {
+    var gdTxt = (gdArt != null ? gdArt + " events" : "—");
+    if(gdTone != null) gdTxt += " · neg tone " + Math.round(gdTone) + "%";
+    _setText("psGdeltVal", gdTxt);
+    var gdLevel = "green";
+    if(gdTone != null){
+      if(gdTone > 55) gdLevel = "red";
+      else if(gdTone > 40) gdLevel = "amber";
+    }
+    _setDot("psGdeltDot", gdLevel);
+  }
+  // Currency
+  var spread = s.irr_spread_pct;
+  if(spread == null){
+    _setText("psCurrencyVal", "—"); _setDot("psCurrencyDot", "muted");
+  } else {
+    var spreadStr = spread.toFixed(0) + "%";
+    var note = spread < 50 ? "stable" : spread < 200 ? "moderate" : "extreme";
+    _setText("psCurrencyVal", spreadStr + " (" + note + ")");
+    _setDot("psCurrencyDot", spread < 50 ? "green" : spread < 200 ? "amber" : "red");
+  }
+
+  // ─── CONDITIONS ────────────────────────────────────────────
+  var aircraft = c.aircraft;
+  if(aircraft && aircraft.count != null){
+    var mil = aircraft.militaryCount || 0;
+    _setText("cdAerialVal", aircraft.count + " aircraft · " + mil + " mil");
+    _setDot("cdAerialDot", mil >= 5 ? "red" : mil >= 3 ? "amber" : "green");
+  } else {
+    _setText("cdAerialVal", "—"); _setDot("cdAerialDot", "muted");
+  }
+  // Weather
+  var wx = c.weather;
+  if(wx && wx.windMaxKnots != null){
+    var wxTxt = "wind " + wx.windMaxKnots + "kn · " + (wx.roughConditions ? "rough" : "clear");
+    _setText("cdWeatherVal", wxTxt);
+    _setDot("cdWeatherDot", wx.roughConditions ? "amber" : "green");
+  } else {
+    _setText("cdWeatherVal", "—"); _setDot("cdWeatherDot", "muted");
+  }
+  // Seismic
+  var se = c.seismic;
+  if(se && se.count_7d != null){
+    var seTxt = se.count_7d + " events · max " + (se.max_mag || 0);
+    _setText("cdSeismicVal", seTxt);
+    var seLvl = "green";
+    if((se.max_mag || 0) >= 5.5) seLvl = "red";
+    else if((se.max_mag || 0) >= 5) seLvl = "amber";
+    _setDot("cdSeismicDot", seLvl);
+  } else {
+    _setText("cdSeismicVal", "—"); _setDot("cdSeismicDot", "muted");
+  }
+  // Dark vessel share (uses snapshot.dark_vessels vs scraped/AIS count)
+  var darkAbs = s.dark_vessels;
+  var aisN = s.daily_transit_estimate || s.transits_per_day;
+  if(darkAbs != null && aisN != null && (darkAbs + aisN) > 0){
+    var pct = Math.round(darkAbs / (darkAbs + aisN) * 100);
+    _setText("cdDarkVal", pct + "%");
+    _setDot("cdDarkDot", pct > 15 ? "red" : pct >= 8 ? "amber" : "green");
+  } else {
+    _setText("cdDarkVal", "—"); _setDot("cdDarkDot", "muted");
+  }
+
+  // ─── MACRO CONTEXT ─────────────────────────────────────────
+  var opec = s.opec_production_mbpd;
+  if(opec != null){
+    var devNote = (Math.abs(opec - 29.5) < 0.5) ? "on-target" : (opec < 28.5 ? "below target" : "deviation");
+    _setText("mcOpecVal", opec.toFixed(1) + " mbpd · " + devNote);
+    _setDot("mcOpecDot", devNote === "on-target" ? "green" : devNote === "below target" ? "red" : "amber");
+  } else {
+    _setText("mcOpecVal", "—"); _setDot("mcOpecDot", "muted");
+  }
+  var sprK = s.spr_level_kbbl;
+  var sprWow = s.spr_wow_pct;
+  if(sprK != null){
+    var sprStr = Math.round(sprK / 1000) + "M bbl";
+    if(sprWow != null) sprStr += " (" + (sprWow > 0 ? "+" : "") + sprWow.toFixed(1) + "% WoW)";
+    _setText("mcSprVal", sprStr);
+    var sprLvl = "green";
+    if(sprWow != null && sprWow < -1.0) sprLvl = "red";
+    else if(sprWow != null && sprWow < -0.5) sprLvl = "amber";
+    _setDot("mcSprDot", sprLvl);
+  } else {
+    _setText("mcSprVal", "—"); _setDot("mcSprDot", "muted");
+  }
+  var crudeK = s.crude_inventory_kbbl;
+  var crudeWow = s.inventory_wow_pct;
+  if(crudeK != null){
+    var crudeStr = Math.round(crudeK / 1000) + "M bbl";
+    if(crudeWow != null) crudeStr += " (" + (crudeWow > 0 ? "+" : "") + crudeWow.toFixed(1) + "%)";
+    _setText("mcCrudeVal", crudeStr);
+    var crudeLvl = "green";
+    if(crudeWow != null && Math.abs(crudeWow) > 2) crudeLvl = "amber";
+    _setDot("mcCrudeDot", crudeLvl);
+  } else {
+    _setText("mcCrudeVal", "—"); _setDot("mcCrudeDot", "muted");
+  }
+  // Persian Gulf imports — static reference (no live feed yet)
+  _setText("mcImportsVal", "12.3M bbl/mo");
+  _setDot("mcImportsDot", "amber");
+}
+// Run on a heartbeat — _snapshotData populates ~4s after load
+setTimeout(renderConsolidatedTiles, 5000);
+setInterval(renderConsolidatedTiles, 90000);
+
+// ═══════════════════════════════════════════════════
+// TWO-STAGE VERDICT TILE (2026-05-14) — polls /api/verdict
+// ═══════════════════════════════════════════════════
+var VERDICT_COLORS = {
+  "NORMAL":   "var(--green)",
+  "ELEVATED": "var(--amber)",
+  "HIGH":     "#ff6b35",
+  "CRITICAL": "var(--red)"
+};
+var VERDICT_HEX = {
+  "NORMAL":   "#1dd47e",
+  "ELEVATED": "#f09014",
+  "HIGH":     "#ff6b35",
+  "CRITICAL": "#ff3e52"
+};
+var GAUGE_PATHS = {
+  "NORMAL":   { path:"M 10 66 A 50 50 0 0 1 35 24",  dot:[35,24] },
+  "ELEVATED": { path:"M 10 66 A 50 50 0 0 1 60 16",  dot:[60,16] },
+  "HIGH":     { path:"M 10 66 A 50 50 0 0 1 92 26",  dot:[92,26] },
+  "CRITICAL": { path:"M 10 66 A 50 50 0 0 1 110 66", dot:[110,66] }
+};
+function _renderTrigger(t){
+  var fired = t.fires;
+  var dot = fired ? "🔴" : "⚪";
+  var label = (t.id || "").toUpperCase();
+  var firedTxt = fired ? " <b>+1 level</b>" : "";
+  var html = '<div class="verdict-override" style="' + (fired ? "" : "opacity:0.5") + '">' +
+             '<div class="verdict-override-title">' + dot + " " + label + (fired ? " trigger fired" : " trigger (idle)") + '</div>' +
+             '<div class="verdict-trigger">' + (t.reason || "—") + firedTxt + '</div></div>';
+  return html;
+}
+function renderVerdictBlock(v){
+  if(!v) return;
+  var lvl = v.verdict || "ELEVATED";
+  var struct = v.structural_verdict || lvl;
+  var fired = v.stage2_fired_count || 0;
+
+  // Stage 1
+  var sEl = document.getElementById("verdictStructural");
+  if(sEl){
+    sEl.textContent = struct;
+    sEl.style.color = VERDICT_COLORS[struct] || "var(--amber)";
+  }
+  var metaEl = document.getElementById("verdictStructuralMeta");
+  if(metaEl){
+    var w = v.stage1_weights || {};
+    var inputs = v.stage1_inputs || v.inputs || {};
+    var parts = [];
+    var keyOrder = ["transits","oil","stocks","bdti","aircraft","events","seismic","weather","ofac","currency","news","inventory","production"];
+    keyOrder.forEach(function(k){
+      if(w[k] != null && w[k] > 0) parts.push(k + " " + w[k].toFixed(2));
+    });
+    metaEl.innerHTML = "score " + (v.structural_score != null ? v.structural_score : v.score) + " / 4.0 · weighted avg of:<br>" + parts.join(" · ");
+  }
+
+  // Stage 2 triggers
+  var trigEl = document.getElementById("verdictTriggers");
+  if(trigEl){
+    var triggers = v.stage2_triggers || [];
+    if(!triggers.length){
+      trigEl.innerHTML = '<div style="color:var(--muted);padding:4px 0">No overrides evaluated yet.</div>';
+    } else {
+      trigEl.innerHTML = triggers.map(_renderTrigger).join("");
+    }
+  }
+
+  // Final
+  var levelEl = document.getElementById("gaugeLevel");
+  var descEl  = document.getElementById("gaugeDesc");
+  var arcEl   = document.getElementById("gaugeArc");
+  var dotEl   = document.getElementById("gaugeDot");
+  var modeEl  = document.getElementById("verdictMode");
+  var hex     = VERDICT_HEX[lvl] || "#f09014";
+  if(levelEl){ levelEl.textContent = lvl; levelEl.style.color = hex; }
+  if(arcEl){
+    var g = GAUGE_PATHS[lvl] || GAUGE_PATHS["ELEVATED"];
+    arcEl.setAttribute("d", g.path); arcEl.setAttribute("stroke", hex);
+    if(dotEl){ dotEl.setAttribute("cx", g.dot[0]); dotEl.setAttribute("cy", g.dot[1]); dotEl.setAttribute("fill", hex); }
+  }
+  if(descEl){
+    var explain = "Structural <b>" + struct + "</b>";
+    if(fired > 0) explain += " + " + fired + " override" + (fired > 1 ? "s" : "") + " fired = <b>" + lvl + "</b>.";
+    else explain += " · no overrides fired.";
+    descEl.innerHTML = explain;
+  }
+  if(modeEl) modeEl.textContent = (v.mode || "composite") + " · 2-stage";
+}
+function fetchVerdict(){
+  fetch("/api/verdict")
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){ if(d && !d.error) renderVerdictBlock(d); })
+    .catch(function(){});
+}
+window.__VERDICT_DRIVES_GAUGE = true;
+setTimeout(fetchVerdict, 3000);
+setInterval(fetchVerdict, 5 * 60 * 1000); // every 5 min
 
 </script>
 <!-- First-visit onboarding overlay (auto-hides for return visitors via localStorage) -->

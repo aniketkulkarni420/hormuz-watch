@@ -4,14 +4,14 @@
 // Designed to be safe to call multiple times an hour (INSERT OR REPLACE by ts to nearest hour).
 //
 // ─── DATA WRITES (for grepability) ────────────────────────────────────────
-// KV: writes "verdict_latest" = { verdict: "NORMAL"|"ELEVATED"|"HIGH"|"CRITICAL", ts }
+// KV: writes "verdict_latest" = full two-stage breakdown (see end of file)
 // KV: writes "last_snapshot_ts" = unix seconds (used by scraper's maybe_snapshot guard)
-// D1: INSERT INTO snapshots(ts, transits_24h, vessels_transiting, brent_price, wti_price,
-//      bw_spread, brent_source, bdti, bdti_wow, gfw_encounters, gfw_loitering, dark_pct,
-//      india_via_hormuz_pct, source_health, verdict)
+// D1: INSERT INTO snapshots(...) — verdict column stores JSON.stringify(verdict_latest)
 // ──────────────────────────────────────────────────────────────────────────
 //
-// TODO: read thresholds from /config/verdict_thresholds.json once Worker can import JSON
+// 2026-05-14 — Two-stage verdict:
+//   Stage 1: structural weighted-average over 13 inputs (5 new scorers added)
+//   Stage 2: override triggers — OFAC/currency/news/aircraft/seismic; each +1 level
 
 import { reportError } from "../_lib/sentry.js";
 
@@ -37,11 +37,10 @@ function scoreOilSpike(price, dp24h) {
 }
 function scoreTankerStocks(tankerIndex) {
   if (tankerIndex == null || !isFinite(tankerIndex)) return null;
-  // positive dp = healthy; negative dp = freight panic discount
   if (tankerIndex < -5) return 4;
   if (tankerIndex < -3) return 3;
   if (tankerIndex < -1.5) return 2;
-  if (tankerIndex > 5) return 2; // sudden spike also abnormal
+  if (tankerIndex > 5) return 2;
   return 0;
 }
 function scoreAircraft(milCount) {
@@ -80,49 +79,183 @@ function scoreBdti(bdti, wow) {
   return 0;
 }
 
-function computeVerdict(snapshot) {
-  const transitsScore = snapshot.transits_24h != null && snapshot.transits_24h > 0
-    ? scoreTransits(snapshot.transits_24h, BASELINE_TRANSITS)
-    : null; // SKIP when no AIS data
-  const oilScore = scoreOilSpike(snapshot.brent_price, snapshot.brent_dp_24h);
-  const stocksScore = scoreTankerStocks(snapshot.tanker_index);
-  const aircraftScore = scoreAircraft(snapshot.military_aircraft_count);
-  const eventsScore = scoreEvents(snapshot.gdelt_neg_tone);
-  const seismicScore = scoreSeismic(snapshot.earthquake_count_7d, snapshot.max_mag);
-  const weatherScore = scoreWeather(snapshot.rough_conditions);
-  const bdtiScore = scoreBdti(snapshot.bdti, snapshot.bdti_wow);
+// ─── NEW SCORERS (2026-05-14) ────────────────────────────────────────────
+function scoreOfac(actions) {
+  if (actions == null || !isFinite(actions)) return null;
+  if (actions >= 10) return 4;
+  if (actions >= 6) return 3;
+  if (actions >= 3) return 2;
+  if (actions >= 1) return 1;
+  return 0;
+}
+function scoreCurrency(spread) {
+  if (spread == null || !isFinite(spread)) return null;
+  if (spread >= 500) return 4;
+  if (spread >= 200) return 3;
+  if (spread >= 100) return 2;
+  if (spread >= 50) return 1;
+  return 0;
+}
+function scoreNews(count24h) {
+  if (count24h == null || !isFinite(count24h)) return null;
+  if (count24h >= 100) return 4;
+  if (count24h >= 50) return 3;
+  if (count24h >= 25) return 2;
+  if (count24h >= 10) return 1;
+  return 0;
+}
+function scoreInventory(sprWow) {
+  if (sprWow == null || !isFinite(sprWow)) return null;
+  if (sprWow < -3) return 4;
+  if (sprWow < -1.5) return 3;
+  if (sprWow < -0.5) return 2;
+  if (sprWow < 0) return 1;
+  return 0;
+}
+function scoreProduction(mbpd, target = 29.5) {
+  if (mbpd == null || !isFinite(mbpd)) return null;
+  const dev = Math.abs(mbpd - target);
+  if (dev >= 2.0) return 4;
+  if (dev >= 1.0) return 3;
+  if (dev >= 0.5) return 2;
+  if (dev >= 0.25) return 1;
+  return 0;
+}
 
-  // Weight switches based on whether AIS is alive
-  const weights = transitsScore !== null
-    ? { transits: 0.30, oil: 0.20, stocks: 0.15, aircraft: 0.10, events: 0.10, seismic: 0.05, weather: 0.05, bdti: 0.05 }
-    : { transits: 0,    oil: 0.25, stocks: 0.20, aircraft: 0.20, events: 0.15, seismic: 0.05, weather: 0.05, bdti: 0.10 };
+// ─── STAGE 2 · override triggers ────────────────────────────────────────
+function computeOverrides(snapshot) {
+  const triggers = [];
+
+  // OFAC: new Iran action in last 48h
+  const ofacLatest = snapshot.ofac_latest_action_date;
+  if (ofacLatest) {
+    const t = new Date(ofacLatest + "T00:00:00Z").getTime();
+    const ageSec = isFinite(t) ? (Date.now() - t) / 1000 : Infinity;
+    if (ageSec < 48 * 3600) {
+      triggers.push({ id: "ofac", reason: "OFAC Iran-related designation in last 48h", fires: true });
+    } else {
+      triggers.push({ id: "ofac", reason: "OFAC last action: " + ofacLatest, fires: false });
+    }
+  } else {
+    triggers.push({ id: "ofac", reason: "No OFAC date available", fires: false });
+  }
+
+  // Currency: absolute spread > 150%
+  const spread = snapshot.irr_spread_pct;
+  if (spread != null && isFinite(spread)) {
+    if (spread > 150) {
+      triggers.push({ id: "currency", reason: "IRR spread > 150% (severe capital flight)", fires: true });
+    } else {
+      triggers.push({ id: "currency", reason: "IRR spread " + Math.round(spread) + "%", fires: false });
+    }
+  } else {
+    triggers.push({ id: "currency", reason: "IRR spread unavailable", fires: false });
+  }
+
+  // News volume: 40+ headlines in 24h ≈ 10+ in 6h
+  const news24 = snapshot.news_count_24h || 0;
+  if (news24 >= 40) {
+    triggers.push({ id: "news", reason: news24 + " headlines in 24h", fires: true });
+  } else {
+    triggers.push({ id: "news", reason: news24 + " headlines in 24h (threshold 40)", fires: false });
+  }
+
+  // Aircraft: >5 military aircraft
+  const milAir = snapshot.military_aircraft_count || 0;
+  if (milAir > 5) {
+    triggers.push({ id: "aircraft", reason: milAir + " military aircraft (anomalous)", fires: true });
+  } else {
+    triggers.push({ id: "aircraft", reason: milAir + " military aircraft", fires: false });
+  }
+
+  // Seismic: 5.5+ magnitude
+  const maxMag = snapshot.seismic_max_mag || 0;
+  if (maxMag >= 5.5) {
+    triggers.push({ id: "seismic", reason: "Mag " + maxMag + " earthquake (significant)", fires: true });
+  } else {
+    triggers.push({ id: "seismic", reason: "Max mag " + maxMag, fires: false });
+  }
+
+  return triggers;
+}
+
+function applyOverrides(baseVerdict, triggers) {
+  const firedCount = triggers.filter(t => t.fires).length;
+  const levels = ["NORMAL", "ELEVATED", "HIGH", "CRITICAL"];
+  let idx = levels.indexOf(baseVerdict);
+  if (idx < 0) idx = 0;
+  idx = Math.min(idx + firedCount, levels.length - 1);
+  return levels[idx];
+}
+
+// ─── STAGE 1 · structural weighted average (13 inputs) ──────────────────
+function computeVerdict(snapshot) {
+  const transitsScore   = (snapshot.transits_24h != null && snapshot.transits_24h > 0)
+                            ? scoreTransits(snapshot.transits_24h, BASELINE_TRANSITS) : null;
+  const oilScore        = scoreOilSpike(snapshot.brent_price, snapshot.brent_dp_24h);
+  const stocksScore     = scoreTankerStocks(snapshot.tanker_index);
+  const aircraftScore   = scoreAircraft(snapshot.military_aircraft_count);
+  const eventsScore     = scoreEvents(snapshot.gdelt_neg_tone);
+  const seismicScore    = scoreSeismic(snapshot.earthquake_count_7d, snapshot.max_mag);
+  const weatherScore    = scoreWeather(snapshot.rough_conditions);
+  const bdtiScore       = scoreBdti(snapshot.bdti, snapshot.bdti_wow);
+  const ofacScore       = scoreOfac(snapshot.ofac_iran_actions_30d);
+  const currencyScore   = scoreCurrency(snapshot.irr_spread_pct);
+  const newsScore       = scoreNews(snapshot.news_count_24h);
+  const inventoryScore  = scoreInventory(snapshot.spr_wow_pct);
+  const productionScore = scoreProduction(snapshot.opec_production_mbpd);
+
+  // AIS-primary weights (when AIS working — adds transits, reduces others proportionally)
+  // Composite-fallback weights (when AIS down — current state)
+  const W_AIS = {
+    transits: 0.30, oil: 0.13, stocks: 0.09, bdti: 0.05,
+    aircraft: 0.09, events: 0.07, seismic: 0.02, weather: 0.02,
+    ofac: 0.07, currency: 0.04, news: 0.04, inventory: 0.04, production: 0.04
+  };
+  const W_COMPOSITE = {
+    transits: 0,
+    oil: 0.18, stocks: 0.13, bdti: 0.07,
+    aircraft: 0.13, events: 0.10, seismic: 0.03, weather: 0.03,
+    ofac: 0.10, currency: 0.06, news: 0.05, inventory: 0.05, production: 0.02
+  };
+  const weights = transitsScore !== null ? W_AIS : W_COMPOSITE;
 
   const inputs = {
     transits: transitsScore, oil: oilScore, stocks: stocksScore,
     aircraft: aircraftScore, events: eventsScore, seismic: seismicScore,
-    weather: weatherScore, bdti: bdtiScore
+    weather: weatherScore, bdti: bdtiScore,
+    ofac: ofacScore, currency: currencyScore, news: newsScore,
+    inventory: inventoryScore, production: productionScore
   };
   let weighted = 0;
   let used = 0;
   for (const k in weights) {
-    if (inputs[k] != null) {
+    if (inputs[k] != null && weights[k] > 0) {
       weighted += inputs[k] * weights[k];
       used += weights[k];
     }
   }
-  // Re-normalise so missing inputs don't bias low
   if (used > 0 && used < 1) weighted = weighted / used;
 
-  const verdict = weighted > 3 ? "CRITICAL"
-                : weighted > 2 ? "HIGH"
-                : weighted > 1 ? "ELEVATED"
-                : "NORMAL";
+  const structural = weighted >= 3.0 ? "CRITICAL"
+                   : weighted >= 2.0 ? "HIGH"
+                   : weighted >= 1.0 ? "ELEVATED"
+                   : "NORMAL";
+
+  const triggers = computeOverrides(snapshot);
+  const firedCount = triggers.filter(t => t.fires).length;
+  const final = applyOverrides(structural, triggers);
 
   return {
-    verdict,
+    verdict: final,
+    structural_verdict: structural,
+    structural_score: Math.round(weighted * 100) / 100,
     score: Math.round(weighted * 100) / 100,
-    inputs,
+    stage1_inputs: inputs,
     weights,
+    stage2_triggers: triggers,
+    stage2_fired_count: firedCount,
+    inputs,
     mode: transitsScore !== null ? "ais-primary" : "composite-fallback"
   };
 }
@@ -146,10 +279,9 @@ async function _handleRecord({ request, env }) {
   }
 
   const origin = new URL(request.url).origin;
-  // Bucket timestamp to nearest hour so multiple calls within an hour collapse to one row
   const tsHour = Math.floor(Date.now() / 3600000) * 3600;
 
-  const [oilR, stooqR, eiaR, gfwEncR, gfwLoiR, aisR] = await Promise.allSettled([
+  const [oilR, stooqR, eiaR, gfwEncR, gfwLoiR, aisR, snapshotR] = await Promise.allSettled([
     fetch(origin + "/api/oil"),
     fetch(origin + "/api/stooq"),
     fetch(origin + "/api/eia?series=RBRTE&length=2"),
@@ -171,18 +303,18 @@ async function _handleRecord({ request, env }) {
         geometry: { type: "Polygon", coordinates: [[[52, 24], [59.5, 24], [59.5, 28.5], [52, 28.5], [52, 24]]] }
       })
     }),
-    fetch(origin + "/api/ais")
+    fetch(origin + "/api/ais"),
+    fetch(origin + "/api/snapshot")
   ]);
 
   const parseJson = async (r) => {
     if (r.status !== "fulfilled" || !r.value.ok) return null;
     try { return await r.value.json(); } catch { return null; }
   };
-  const [oilD, stooqD, eiaD, gfwEncD, gfwLoiD, aisD] = await Promise.all([
-    parseJson(oilR), parseJson(stooqR), parseJson(eiaR), parseJson(gfwEncR), parseJson(gfwLoiR), parseJson(aisR)
+  const [oilD, stooqD, eiaD, gfwEncD, gfwLoiD, aisD, snapshotD] = await Promise.all([
+    parseJson(oilR), parseJson(stooqR), parseJson(eiaR), parseJson(gfwEncR), parseJson(gfwLoiR), parseJson(aisR), parseJson(snapshotR)
   ]);
 
-  // C3 — pull vessel counts from /api/ais so backtest has non-null transits_24h
   const aisSummary = (aisD && aisD.summary) || {};
   const vTransit24h = isFinite(aisSummary.transits24h) ? aisSummary.transits24h : null;
   const vTransiting = isFinite(aisSummary.categories?.transit)  ? aisSummary.categories.transit  : null;
@@ -205,7 +337,7 @@ async function _handleRecord({ request, env }) {
   let gfwEnc = (gfwEncD && Array.isArray(gfwEncD.entries)) ? gfwEncD.entries.length : null;
   let gfwLoi = (gfwLoiD && Array.isArray(gfwLoiD.entries)) ? gfwLoiD.entries.length : null;
 
-  // ─── Composite signals · read 4 new KV keys for verdict computation ──────
+  // KV side-load for verdict inputs (preserves prior behaviour when /api/snapshot is incomplete)
   let aircraftKv = null, seismicKv = null, gdeltKv = null, weatherKv = null;
   if (env.OIL_KV) {
     try {
@@ -222,13 +354,13 @@ async function _handleRecord({ request, env }) {
     } catch { /* best effort */ }
   }
 
-  const milAircraft = aircraftKv?.militaryCount ?? null;
-  const totalAircraft = aircraftKv?.count ?? null;
-  const eqCount7d = seismicKv?.count_7d ?? null;
-  const maxMag = seismicKv?.max_mag ?? null;
-  const negTone = gdeltKv?.neg_tone_pct ?? null;
-  const articleCount = gdeltKv?.article_count_24h ?? null;
-  const roughWeather = weatherKv?.roughConditions ?? null;
+  const milAircraft = aircraftKv?.militaryCount ?? snapshotD?.military_aircraft_count ?? null;
+  const totalAircraft = aircraftKv?.count ?? snapshotD?.aircraft_count ?? null;
+  const eqCount7d = seismicKv?.count_7d ?? snapshotD?.earthquake_count_7d ?? null;
+  const maxMag = seismicKv?.max_mag ?? snapshotD?.seismic_max_mag ?? null;
+  const negTone = gdeltKv?.neg_tone_pct ?? snapshotD?.gdelt_neg_tone_pct ?? null;
+  const articleCount = gdeltKv?.article_count_24h ?? snapshotD?.gdelt_article_count_24h ?? null;
+  const roughWeather = weatherKv?.roughConditions ?? snapshotD?.weather_rough ?? null;
   const tankerIdx = oilD?.tankerActivityIndex?.value ?? null;
   const brentDp = (oilD?.brent?.changePct != null) ? oilD.brent.changePct : null;
 
@@ -244,23 +376,71 @@ async function _handleRecord({ request, env }) {
     weather:  weatherKv  ? "ok" : "fail",
   };
 
-  // Compute composite-aware risk verdict server-side
-  const verdictResult = computeVerdict({
-    transits_24h:            vTransit24h,
-    brent_price:             brent,
-    brent_dp_24h:            brentDp,
-    tanker_index:            tankerIdx,
-    military_aircraft_count: milAircraft,
-    gdelt_neg_tone:          negTone,
-    earthquake_count_7d:     eqCount7d,
-    max_mag:                 maxMag,
-    rough_conditions:        roughWeather,
-    bdti:                    2841, // legacy default; real BDTI in KV bdti_latest
-    bdti_wow:                3.2,
-  });
+  // Build verdict input bundle — includes NEW signals
+  const verdictInput = {
+    transits_24h:               vTransit24h,
+    brent_price:                brent,
+    brent_dp_24h:               brentDp,
+    tanker_index:               tankerIdx,
+    military_aircraft_count:    milAircraft,
+    gdelt_neg_tone:             negTone,
+    earthquake_count_7d:        eqCount7d,
+    max_mag:                    maxMag,
+    seismic_max_mag:            maxMag,
+    rough_conditions:           roughWeather,
+    bdti:                       2841, bdti_wow: 3.2,
+    // NEW
+    ofac_iran_actions_30d:      snapshotD?.ofac_iran_actions_30d ?? null,
+    ofac_latest_action_date:    snapshotD?.ofac_latest_action_date ?? null,
+    irr_spread_pct:             snapshotD?.irr_spread_pct ?? null,
+    news_count_24h:             snapshotD?.news_count_24h ?? null,
+    spr_wow_pct:                snapshotD?.spr_wow_pct ?? null,
+    opec_production_mbpd:       snapshotD?.opec_production_mbpd ?? null,
+  };
+
+  const verdictResult = computeVerdict(verdictInput);
   const verdict = verdictResult.verdict;
+  const now = Math.floor(Date.now() / 1000);
+
+  const verdictPayload = {
+    verdict,
+    structural_verdict: verdictResult.structural_verdict,
+    structural_score:   verdictResult.structural_score,
+    stage1_inputs:      verdictResult.stage1_inputs,
+    stage1_weights:     verdictResult.weights,
+    stage2_triggers:    verdictResult.stage2_triggers,
+    stage2_fired_count: verdictResult.stage2_fired_count,
+    mode:               verdictResult.mode,
+    ts:                 now,
+    signals: {
+      transits_24h: vTransit24h,
+      brent_price: brent,
+      brent_dp_24h: brentDp,
+      tanker_index: tankerIdx,
+      military_aircraft_count: milAircraft,
+      total_aircraft_count: totalAircraft,
+      gdelt_article_count_24h: articleCount,
+      gdelt_neg_tone_pct: negTone,
+      earthquake_count_7d: eqCount7d,
+      max_mag: maxMag,
+      weather_rough: roughWeather,
+      ofac_iran_actions_30d: verdictInput.ofac_iran_actions_30d,
+      ofac_latest_action_date: verdictInput.ofac_latest_action_date,
+      irr_spread_pct: verdictInput.irr_spread_pct,
+      news_count_24h: verdictInput.news_count_24h,
+      spr_wow_pct: verdictInput.spr_wow_pct,
+      opec_production_mbpd: verdictInput.opec_production_mbpd,
+    }
+  };
 
   try {
+    // Store full breakdown as JSON in D1 verdict column (legacy column kept)
+    const verdictColumnPayload = JSON.stringify({
+      verdict,
+      structural_verdict: verdictResult.structural_verdict,
+      structural_score:   verdictResult.structural_score,
+      triggers_fired:     verdictResult.stage2_fired_count,
+    });
     await env.DB.prepare(`
       INSERT OR REPLACE INTO snapshots (
         ts, transits_24h, vessels_transiting, vessels_anchored, vessels_approach,
@@ -279,38 +459,17 @@ async function _handleRecord({ request, env }) {
       gfwEnc, gfwLoi, null,
       62.0,
       JSON.stringify(sourceHealth),
-      verdict
+      verdictColumnPayload
     ).run();
 
-    // Write latest verdict (full composite breakdown) to KV for fast access
     if (env.OIL_KV) {
-      await env.OIL_KV.put("verdict_latest", JSON.stringify({
-        verdict,
-        score: verdictResult.score,
-        inputs: verdictResult.inputs,
-        weights: verdictResult.weights,
-        mode: verdictResult.mode,
-        ts: Math.floor(Date.now() / 1000),
-        signals: {
-          transits_24h: vTransit24h,
-          brent_price: brent,
-          brent_dp_24h: brentDp,
-          tanker_index: tankerIdx,
-          military_aircraft_count: milAircraft,
-          total_aircraft_count: totalAircraft,
-          gdelt_article_count_24h: articleCount,
-          gdelt_neg_tone_pct: negTone,
-          earthquake_count_7d: eqCount7d,
-          max_mag: maxMag,
-          weather_rough: roughWeather,
-        }
-      }));
+      await env.OIL_KV.put("verdict_latest", JSON.stringify(verdictPayload));
     }
 
     return json({
       ok: true, tsHour, brent, wti, gfwEnc, gfwLoi, brentSource, sourceHealth,
       vTransit24h, vTransiting, vAnchored, vApproach,
-      verdict, verdictBreakdown: verdictResult
+      verdict, verdictBreakdown: verdictPayload
     });
   } catch (e) {
     return json({ error: "D1 write failed", detail: String(e) }, 500);
