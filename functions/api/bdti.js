@@ -26,11 +26,20 @@ async function _handleBdtiGet({ env }) {
   if (kv_data && kv_data.value) {
     const ageMs = Date.now() - (kv_data.ts || 0) * 1000;
     const ageDays = Math.floor(ageMs / 86400000);
+    // Sanity guard on read: BDTI is a weekly index — a real week-over-week
+    // move is physically bounded. Anything beyond ±60% is a data artifact
+    // (wrong index scraped, comparison against an unrelated prior value),
+    // not a freight move. Suppress it rather than serve a false signal —
+    // this also neutralises any bad wow_pct already frozen in KV without
+    // needing a re-POST.
+    const rawWow = kv_data.wow_pct;
+    const wow_pct = (typeof rawWow === "number" && isFinite(rawWow) && Math.abs(rawWow) <= 60)
+      ? rawWow : null;
     return json({
       value: kv_data.value,
       asOf: kv_data.asOf,
       source: kv_data.source || "kv",
-      wow_pct: kv_data.wow_pct ?? null,
+      wow_pct,
       ageDays,
       stale: ageDays > 9,        // BDTI publishes weekly — >9d means missed a publish
       origin: "kv",
@@ -121,14 +130,53 @@ async function _handleBdtiPost({ request, env }) {
     }
   }
 
-  const wow_pct = (prev && prev.value)
-    ? Math.round(((value - prev.value) / prev.value) * 1000) / 10
-    : null;
+  // ── Week-over-week, computed honestly ──────────────────────────────────
+  // BDTI publishes weekly, so "WoW" must compare against a value roughly one
+  // publish ago — NOT against "whatever was last in KV", which could be a
+  // same-day re-scrape or an unrelated bad value. (That bug produced a
+  // +219% "WoW" on the live site: a 3063 manual entry diffed against a ~960
+  // value left by an earlier scrape that hit the wrong index.)
+  // We keep a small dated history and compare against the entry closest to
+  // 7 days prior, accepting a 4–11 day gap. No suitable prior entry → null.
+  const newAsOf = body.asOf || new Date().toISOString().slice(0, 10);
+  const newValue = Math.round(value * 10) / 10;
+
+  let history = [];
+  try {
+    const rawH = await env.OIL_KV.get("bdti_history");
+    if (rawH) history = JSON.parse(rawH);
+  } catch { /* ignore */ }
+  if (!Array.isArray(history)) history = [];
+
+  const newAsOfMs = Date.parse(newAsOf + "T00:00:00Z");
+  let wow_pct = null;
+  if (isFinite(newAsOfMs)) {
+    let best = null, bestGap = Infinity;
+    for (const h of history) {
+      if (!h || typeof h.value !== "number" || !h.asOf) continue;
+      const hMs = Date.parse(h.asOf + "T00:00:00Z");
+      if (!isFinite(hMs)) continue;
+      const gapDays = (newAsOfMs - hMs) / 86400000;
+      if (gapDays < 4 || gapDays > 11) continue;        // not ~1 publish apart
+      if (Math.abs(gapDays - 7) < bestGap) { bestGap = Math.abs(gapDays - 7); best = h; }
+    }
+    if (best && best.value > 0) {
+      const w = Math.round(((newValue - best.value) / best.value) * 1000) / 10;
+      wow_pct = Math.abs(w) <= 60 ? w : null;           // same physical bound as the GET guard
+    }
+  }
+
+  // Upsert this publish into history (one entry per asOf date), keep last 20.
+  history = history.filter((h) => h && h.asOf !== newAsOf);
+  history.push({ value: newValue, asOf: newAsOf, ts: Math.floor(Date.now() / 1000) });
+  history.sort((a, b) => (Date.parse(a.asOf) || 0) - (Date.parse(b.asOf) || 0));
+  if (history.length > 20) history = history.slice(-20);
+  await env.OIL_KV.put("bdti_history", JSON.stringify(history));
 
   const now = Math.floor(Date.now() / 1000);
   const payload = {
-    value: Math.round(value * 10) / 10,
-    asOf: body.asOf || new Date().toISOString().slice(0, 10),
+    value: newValue,
+    asOf: newAsOf,
     source: body.source || "admin-form",
     wow_pct,
     ts: now,
