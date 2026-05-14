@@ -1454,6 +1454,8 @@ if(document.readyState === "loading"){
 
 var DOLLARS_PER_SEC = (21000000 * 80) / 86400;
 var _brentPrice = 80;         // updated by EIA
+var _wtiPrice = null;         // headline WTI — set by renderEIA() alongside _brentPrice so the
+                              // Brent-WTI spread verdict uses the SAME source as the panel header
 var _yesterdayDollars = null; // derived from DOLLARS_PER_SEC at yesterday's close (86400s)
 var _sevenDayAvg = null;      // set after EIA loads
 
@@ -3323,6 +3325,11 @@ function renderEIA() {
     headlineWti   = wti;
   }
   _brentPrice = headlineBrent;
+  // Keep the headline WTI in a global so the spread VERDICT (renderConclusions)
+  // uses the exact same numbers as the spread shown in the panel header below —
+  // never a second source. (Fixed 2026-05-14: header showed 4.2 from the live
+  // feed while the verdict showed 3.6 from EIA weekly spot.)
+  _wtiPrice = isFinite(headlineWti) ? headlineWti : null;
 
   var ctSub = document.getElementById("ctSub");
   if(ctSub) ctSub.textContent = "21M bbl/day × $" + headlineBrent.toFixed(1) + "/bbl Brent";
@@ -3800,10 +3807,11 @@ function renderConclusions(){
   var todayBars = (typeof TREND_DATA !== "undefined") && TREND_DATA[3] ? TREND_DATA[3].val : null;
   renderVerdict("concTrend", vTrend(todayBars));
 
-  if(eiaState.loaded){
-    var brent = eiaState.brent[0] && eiaState.brent[0].val;
-    var wti = eiaState.wti[0] && eiaState.wti[0].val;
-    renderVerdict("concPulse", vSpread(brent, wti));
+  // Brent-WTI spread verdict — uses the SAME headline values rendered in the
+  // Market Pulse header (_brentPrice / _wtiPrice), not EIA weekly spot, so the
+  // verdict number and the displayed spread can never diverge.
+  if(isFinite(_brentPrice) && isFinite(_wtiPrice)){
+    renderVerdict("concPulse", vSpread(_brentPrice, _wtiPrice));
   }
 
   // Vessel type mix — read VLCC % from rendered .tbar-pct in #typeBars
@@ -3815,7 +3823,9 @@ function renderConclusions(){
       var lbl = r.querySelector(".tbar-label");
       if(lbl && /VLCC|crude/i.test(lbl.textContent)){
         var p = r.querySelector(".tbar-pct");
-        if(p) vlccPct = parseFloat(p.textContent);
+        // The pct column may read "P%" (wide bars) or "N · P%" (narrow bars) —
+        // match the %-token specifically so we never grab the count by mistake.
+        if(p){ var pm = p.textContent.match(/(\d+(?:\.\d+)?)\s*%/); if(pm) vlccPct = parseFloat(pm[1]); }
       }
     });
     if(vlccPct != null && isFinite(vlccPct)) renderVerdict("concMix", vMix(vlccPct));
