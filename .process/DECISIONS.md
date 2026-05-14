@@ -4,6 +4,59 @@ Append-only. Each entry follows the template. Sorted newest-first.
 
 ---
 
+## 2026-05-14 — Batch D (crisis-time accuracy + recalibration) + Batch G opened
+
+**Batch D — done (crisis-time accuracy + honesty fixes):**
+- `scrape_currency.py`: **bonbast toman→rial** — was conditional `×10` only for
+  values in [10k,250k], so it silently STOPPED converting above 250k toman,
+  under-reporting the rate 10× exactly in a crisis. Now unconditional (bonbast
+  always publishes toman). Widened `IRR_MAX` 2M→5M for crisis headroom. Also
+  relabelled `official` honestly: open.er-api is a mid-market aggregate, NOT
+  the CBI official rate — added `spread_basis` field; `spread_pct` is a
+  black-vs-mid-market premium, not black-vs-official.
+- `record.js`: **verdict confidence surfacing** — a verdict computed from 2 of
+  13 signals previously looked identical to a full one. Added `confidence`
+  (none/low/medium/high), `inputs_used_count`, `inputs_total`, `coverage_pct`
+  to `computeVerdict()` and the KV `verdict_latest` payload. Consumers gate on
+  `confidence`.
+- `scrape_aircraft.py`: relabelled `militaryCount` — `MIL_PREFIXES` are US/NATO
+  callsigns; Iran rarely broadcasts ADS-B, so it's a coalition-posture proxy,
+  NOT regional military activity. Added `militaryNote` field + comment.
+- `scrape_gdelt.py`: GDELT doc API ArtList mode returns no per-article tone, so
+  `avg_tone`/`neg_tone_pct` were ~always null/0. Now emitted as explicit null
+  with `tone_available:false`; GDELT treated as a coverage-VOLUME signal
+  (`article_count_24h`). Real tone needs the TimelineTone API → Batch G.
+
+**Deferred from Batch D into Batch G** (recalibration, not crisis-time; each
+needs verification work that shouldn't be rushed):
+- EIA OPEC series swap — `PAPR_OPEC` returns a ~20 mbpd sub-total not ~29;
+  candidate `PROD_OPEC_T_PETROLEUM.M` unverified, needs live EIA-key testing.
+  Verdict is already protected (record.js uses MoM%, not the absolute value).
+- BDTI Macrotrends staleness — needs the scraper restructured to capture the
+  table row date so a weeks-stale value can be rejected.
+- Stooq as independent oil cross-verify partner — new source function in
+  scrape_oil_web.py (Stooq confirmed working: cb.f / cl.f return live OHLC).
+
+## Batch G — pending + new (the catch-all bucket)
+Opened per user request. Contents (from the audit's "not in any batch" bucket
++ Batch D deferrals + Batch A deferral):
+1. AIS key hardcoded in client JS (Batch A deferral) — needs a WS-proxy Worker.
+2. EIA OPEC series swap (Batch D deferral).
+3. BDTI Macrotrends staleness / row-date capture (Batch D deferral).
+4. Stooq independent oil cross-verify source (Batch D deferral).
+5. record.js discards cross-verified tier0 oil, uses fallback for D1.
+6. record.js `last_snapshot_ts` header lie + two snapshot writers race.
+7. Auth: no constant-time compare, `?token=` in query string (logs leak).
+8. GFW cache key truncated to 20 chars → collision risk.
+9. `health/index.html` hardcoded GFW date window (not Date.now()-relative).
+10. `subscribe.js` swallows email-send errors silently — add reportError.
+11. `IP_HASH_SALT` defaults to a public string.
+12. No `package.json` / reproducible dev setup.
+13. GDELT TimelineTone API (real tone signal) — from Batch D #6.
+14. Frontend: surface verdict `confidence` / `coverage_pct` in the UI.
+
+---
+
 ## 2026-05-14 — Batch C (operational visibility) — part 1
 
 **Root-cause finding:** ALL scheduled GitHub Actions stopped ~2026-05-13 23:43Z (~9h gap). Not billing (repo is public → free unlimited), not disabled workflows (all `active`), not broken code — manual `workflow_dispatch` runs succeed fine. Cause: GitHub Actions scheduled-event throttling/delay. The watchdog couldn't catch it because the watchdog is *itself* a GHA scheduled workflow — it stopped too. This is the exact silent-failure mode the audit predicted.

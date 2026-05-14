@@ -25,7 +25,11 @@ if not all([CF_ACCOUNT_ID, CF_API_TOKEN, KV_NS]):
 
 OPENSKY_URL = "https://opensky-network.org/api/states/all?lamin=23&lomin=51&lamax=29&lomax=60"
 
-# Common military / state-aircraft callsign prefixes
+# NATO / coalition military callsign prefixes.
+# IMPORTANT (Batch D · 2026-05-14): these are predominantly US/NATO tactical
+# callsigns. Iranian / IRGC aircraft rarely broadcast ADS-B at all, so
+# `militaryCount` is a COALITION-POSTURE proxy — a rising count signals US/
+# allied build-up, NOT Iranian or regional military activity. Read it that way.
 MIL_PREFIXES = ("CNV", "RCH", "KING", "HOG", "BTR", "SHELL", "EYE", "TIGER",
                 "GLEX", "PAT", "BLUE", "REACH", "JAKE", "BOXER", "MAGMA",
                 "SNAKE", "TRAIN", "VENUS", "HAVOC", "RANGER", "PYTHON")
@@ -154,6 +158,7 @@ def main():
         "fetchedAt": int(time.time()),
         "count": count,
         "militaryCount": mil,
+        "militaryNote": "NATO/coalition ADS-B callsigns only — coalition-posture proxy, not Iranian/regional military activity",
         "commercialCount": com,
         "byAltitude": bands,
         "movement24h": movement_24h,

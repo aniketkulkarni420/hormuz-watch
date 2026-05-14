@@ -233,14 +233,28 @@ function computeVerdict(snapshot) {
     inventory: inventoryScore, production: productionScore
   };
   let weighted = 0;
-  let used = 0;
+  let used = 0;          // sum of WEIGHTS of inputs that had data
+  let usedCount = 0;     // COUNT of inputs that had data
+  let totalCount = 0;    // COUNT of inputs with a positive weight in this mode
   for (const k in weights) {
-    if (inputs[k] != null && weights[k] > 0) {
-      weighted += inputs[k] * weights[k];
-      used += weights[k];
+    if (weights[k] > 0) {
+      totalCount++;
+      if (inputs[k] != null) {
+        weighted += inputs[k] * weights[k];
+        used += weights[k];
+        usedCount++;
+      }
     }
   }
   if (used > 0 && used < 1) weighted = weighted / used;
+
+  // Verdict confidence (Batch D · 2026-05-14): a verdict computed from 2 of 13
+  // signals must NOT be presented identically to a full one. `used` is the
+  // fraction of total weight that actually had data. Consumers gate on this.
+  const confidence = (usedCount === 0) ? "none"
+                   : (used < 0.5 || usedCount < 4) ? "low"
+                   : (used < 0.8 || usedCount < 7) ? "medium"
+                   : "high";
 
   const structural = weighted >= 3.0 ? "CRITICAL"
                    : weighted >= 2.0 ? "HIGH"
@@ -261,6 +275,12 @@ function computeVerdict(snapshot) {
     stage2_triggers: triggers,
     stage2_fired_count: firedCount,
     inputs,
+    // Confidence surfacing — consumers MUST gate on this. A "low"/"none"
+    // confidence verdict is computed from too few live signals to trust.
+    confidence,
+    inputs_used_count: usedCount,
+    inputs_total: totalCount,
+    coverage_pct: totalCount > 0 ? Math.round(usedCount / totalCount * 100) : 0,
     mode: transitsScore !== null ? "ais-primary" : "composite-fallback"
   };
 }
@@ -429,6 +449,10 @@ async function _handleRecord({ request, env }) {
     stage2_triggers:    verdictResult.stage2_triggers,
     stage2_fired_count: verdictResult.stage2_fired_count,
     mode:               verdictResult.mode,
+    confidence:         verdictResult.confidence,
+    inputs_used_count:  verdictResult.inputs_used_count,
+    inputs_total:       verdictResult.inputs_total,
+    coverage_pct:       verdictResult.coverage_pct,
     ts:                 now,
     signals: {
       transits_24h: vTransit24h,

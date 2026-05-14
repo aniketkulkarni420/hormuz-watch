@@ -94,14 +94,21 @@ def main():
     top_sources = [{"domain": d, "count": c} for d, c in Counter(sources).most_common(5)]
     top_locations = [{"name": d, "count": c} for d, c in Counter(locations).most_common(5)]
 
+    # GDELT 2.0 doc API in ArtList mode does NOT return per-article tone — the
+    # old avg_tone / neg_tone_pct were therefore ~always null / 0. Emit them as
+    # explicitly null and treat GDELT as a coverage-VOLUME signal
+    # (article_count_24h is real and reliable), not a tone signal. A genuine
+    # tone read needs the TimelineTone API — deferred to Batch G.
+    # (Batch D · 2026-05-14)
     payload = {
         "fetchedAt": int(time.time()),
         "article_count_24h": count,
-        "avg_tone": avg_tone,
-        "neg_tone_pct": neg_pct,
+        "avg_tone": None,
+        "neg_tone_pct": None,
+        "tone_available": False,
         "top_sources": top_sources,
         "top_locations": top_locations,
-        "source": "GDELT 2.0 Doc API (24h window)",
+        "source": "GDELT 2.0 Doc API (24h window) — coverage volume only, no tone",
         "query": QUERY,
     }
     body = json.dumps(payload, separators=(",", ":"))

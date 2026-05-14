@@ -2,11 +2,16 @@
 """Iranian Rial (IRR) + UAE Dirham (AED) FX scraper — capital flight proxy.
 
 Rationale:
-  Iran runs a dual exchange rate. The "official" rate (CBI / Yahoo) is the
-  state-controlled rate. The "black-market" / "free-market" rate (bonbast.com,
-  alanchand.com) reflects what Iranians actually pay for hard currency.
-  Wide spread = sanction pressure / capital flight. Historically, sharp
-  black-market depreciation precedes Iranian escalation by ~2-4 weeks.
+  Iran runs a dual exchange rate. The "black-market" / "free-market" rate
+  (bonbast.com) reflects what Iranians actually pay for hard currency. Sharp
+  black-market depreciation has historically preceded Iranian escalation by
+  ~2-4 weeks.
+
+  NOTE on the spread baseline (Batch D · 2026-05-14): the `official` field is
+  open.er-api.com — a MID-MARKET AGGREGATE, not the CBI state-controlled rate.
+  So `spread_pct` measures "black-market vs mid-market premium", NOT "black vs
+  official". A true CBI-official comparison would show a much larger spread.
+  See `spread_basis` in the output.
 
 Sources (Playwright, browser-rendered):
   1. Yahoo Finance       — finance.yahoo.com/quote/IRR=X  (official USD/IRR)
@@ -15,7 +20,8 @@ Sources (Playwright, browser-rendered):
   4. Yahoo / XE for AED  — USD/AED (sanity check + companion FX)
 
 Sanity bounds:
-  IRR/USD: 30,000 - 2,000,000 (covers theoretical floor + extreme crisis)
+  IRR/USD: 30,000 - 5,000,000 (covers theoretical floor + deep-crisis ceiling;
+           5M rial ≈ 500k toman leaves headroom above current ~600k-1M rial)
   AED/USD: 3.5 - 4.0 (pegged ≈ 3.6725)
 
 Output to KV `currency_irr` (JSON):
@@ -44,7 +50,7 @@ KV_NS         = os.environ.get("CF_KV_NAMESPACE_ID", "")
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
 
-IRR_MIN, IRR_MAX = 30_000, 2_000_000
+IRR_MIN, IRR_MAX = 30_000, 5_000_000
 AED_MIN, AED_MAX = 3.5, 4.0
 
 
@@ -168,9 +174,13 @@ def scrape_bonbast(p):
             v = _to_float(m.group(1))
             if v is None:
                 continue
-            # If value looks like toman (typical bonbast 50,000-200,000), convert to rial
-            if 10_000 <= v <= 250_000:
-                v = v * 10  # toman → rial
+            # bonbast.com publishes the USD rate in TOMAN, always (1 toman =
+            # 10 rial) → convert unconditionally. The old heuristic only
+            # multiplied when v was in [10k,250k], so it SILENTLY STOPPED
+            # converting above 250k toman — under-reporting the rate 10x
+            # exactly during a crisis, when this signal matters most.
+            # (Batch D · 2026-05-14)
+            v = v * 10  # toman → rial
             if sanity_irr(v):
                 print(f"  BONBAST IRR (black-market): {v}")
                 return v
@@ -243,9 +253,12 @@ def main():
             aed_rate = rates.get("AED")
             if irr_rate and sanity_irr(irr_rate):
                 official_irr = float(irr_rate)
-                official_src = "open.er-api.com (free-market reference)"
+                # NOT the CBI official rate — open.er-api is a mid-market
+                # aggregate. spread_pct below is therefore "black vs mid-market
+                # premium", not "black vs official". (Batch D · 2026-05-14)
+                official_src = "open.er-api.com (mid-market aggregate — NOT CBI official)"
                 succeeded += 1
-                print(f"  ✓ USD/IRR (free-market): {official_irr:,.0f}")
+                print(f"  ✓ USD/IRR (mid-market aggregate): {official_irr:,.0f}")
             if aed_rate and sanity_aed(aed_rate):
                 aed_usd = float(aed_rate)
                 succeeded += 1
@@ -288,6 +301,9 @@ def main():
         "official":    {"usd_irr": official_irr, "src": official_src} if official_irr else None,
         "blackMarket": {"usd_irr": black_irr,    "src": black_src}    if black_irr    else None,
         "spread_pct":  spread_pct,
+        # Honest label for what spread_pct actually measures (Batch D · 2026-05-14):
+        # the `official` leg is a mid-market aggregate, not the CBI official rate.
+        "spread_basis": "black-market (bonbast) vs mid-market aggregate (open.er-api) — NOT the CBI official rate",
         "aed_usd":     aed_usd,
         "sources_succeeded": succeeded,
         "interpretation": interpretation,
