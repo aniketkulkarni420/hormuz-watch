@@ -2851,19 +2851,11 @@ function applyAisDegradedMode(snap){
   // already using it as transit-count fallback.
   var aisBroken = isStatic || isWebScrape || (isFinite(snap.transits_per_day) && snap.transits_per_day === 0);
   var portActivityMode = aisBroken && (isWebScrape || (scrapedTotal && scrapedTotal > 0) || scrapedPerPort);
-  // 1) Top banner
-  var bannerId = "compositeBanner";
-  var existing = document.getElementById(bannerId);
-  if((isStatic || isWebScrape) && !existing){
-    var b = document.createElement("div");
-    b.id = bannerId;
-    b.style.cssText = "background:#3a2a0c;border:1px solid #8a6a2a;color:#f1c14c;font-family:var(--mono);font-size:11px;padding:8px 12px;border-radius:5px;margin:8px 0;line-height:1.5";
-    b.innerHTML = "AIS feed degraded · using port-activity proxy (VesselFinder · 5 Gulf ports). <a href='/methodology#composite' style='color:#f1c14c;text-decoration:underline'>more info</a>";
-    var cmt = document.querySelector(".main") || document.body;
-    cmt.insertBefore(b, cmt.firstChild);
-  } else if(!isStatic && !isWebScrape && existing){
-    existing.remove();
-  }
+  // Top banner removed — degraded state is already surfaced on the Vessel Movement
+  // card itself (WEB FEED badge + scrape-mode reframe below). A full-width amber
+  // banner was visually disproportionate for a known, persistent provider outage.
+  var existing = document.getElementById("compositeBanner");
+  if(existing) existing.remove();
 
   // 2) Vessel Movement card — Port Activity mode when web-scraped data is fresh
   if(portActivityMode){
