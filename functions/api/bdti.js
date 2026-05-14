@@ -148,6 +148,20 @@ async function _handleBdtiPost({ request, env }) {
   } catch { /* ignore */ }
   if (!Array.isArray(history)) history = [];
 
+  // Merge any scraper-supplied dated history (StockQ ships ~20 recent daily
+  // rows on the page). This makes WoW computable on the very first run instead
+  // of accumulating one entry per scrape over weeks.
+  if (Array.isArray(body.history)) {
+    const tsNow = Math.floor(Date.now() / 1000);
+    for (const h of body.history) {
+      if (!h || typeof h.value !== "number" || !isFinite(h.value)) continue;
+      if (h.value < 100 || h.value > 5000) continue;
+      if (!h.asOf || !/^\d{4}-\d{2}-\d{2}$/.test(h.asOf)) continue;
+      history = history.filter((x) => x && x.asOf !== h.asOf);
+      history.push({ value: Math.round(h.value * 10) / 10, asOf: h.asOf, ts: tsNow });
+    }
+  }
+
   const newAsOfMs = Date.parse(newAsOf + "T00:00:00Z");
   let wow_pct = null;
   if (isFinite(newAsOfMs)) {

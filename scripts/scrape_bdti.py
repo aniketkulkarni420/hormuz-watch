@@ -99,20 +99,20 @@ def scrape_stockq():
     """en.stockq.org/index/BDTI.php — plain HTML. The quote row is uniquely
     anchored by the 'local' header cell immediately before the value:
       ... High Open YTD local <VALUE> <CHANGE> <CHANGE%> - - - <YTD%> <MM/DD>
-    Returns (value, asOf_iso) or (None, None)."""
+    Returns (value, asOf_iso, history_list) or (None, None, [])."""
     try:
         r = requests.get(STOCKQ_URL, headers={"User-Agent": UA}, timeout=25)
         if not r.ok:
             print(f"  StockQ: HTTP {r.status_code}")
-            return None, None
+            return None, None, []
         html = r.text
     except Exception as e:
         print(f"  StockQ: request error {str(e)[:140]}")
-        return None, None
+        return None, None, []
 
     if "Baltic Dirty Tanker" not in html:
         print("  StockQ: 'Baltic Dirty Tanker' page marker not found")
-        return None, None
+        return None, None, []
 
     # Strip tags across the whole page — the quote table sits well past the
     # title/breadcrumb occurrences of the heading, so window-by-heading is
@@ -141,9 +141,23 @@ def scrape_stockq():
 
     if not sanity_ok(value):
         print(f"  StockQ: no sane value extracted (got {value})")
-        return None, None
-    print(f"  StockQ: {value}  asOf={date_iso or 'unknown'}")
-    return value, date_iso
+        return None, None, []
+
+    # Daily history table — StockQ renders ~20 recent rows as
+    # "YYYY/MM/DD  VALUE  CHANGE%". Capturing these lets /api/bdti compute a
+    # real week-over-week immediately instead of waiting for the bdti_history
+    # KV array to accumulate one scrape at a time.
+    history = []
+    for y, mo, d, hv in re.findall(
+        r"(\d{4})/(\d{2})/(\d{2})\s+([\d,]+\.\d{2})\s+-?[\d.]+\s*%", text
+    ):
+        fv = _to_float(hv)
+        if sanity_ok(fv):
+            history.append({"asOf": f"{y}-{mo}-{d}", "value": fv})
+
+    print(f"  StockQ: {value}  asOf={date_iso or 'unknown'}  "
+          f"(+{len(history)} history rows)")
+    return value, date_iso, history
 
 
 def kv_put(key, value):
@@ -181,7 +195,7 @@ def main():
     mode = "DRY RUN" if dry_run else "LIVE"
     print(f"=== BDTI scrape · StockQ [{mode}] at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
 
-    value, as_of = scrape_stockq()
+    value, as_of, history = scrape_stockq()
 
     if not sanity_ok(value):
         print("\n✗ StockQ returned no usable value — keeping existing KV (no write)")
@@ -215,6 +229,10 @@ def main():
         "confidence": "medium",
         "sources": ["stockq"],
     }
+    # Ship StockQ's recent daily series so /api/bdti can compute a real
+    # week-over-week immediately (entry closest to 7 days prior).
+    if history:
+        payload["history"] = history
 
     post_ok = post_bdti(payload)
     if not post_ok:
