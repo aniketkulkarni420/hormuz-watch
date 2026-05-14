@@ -13,7 +13,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install --quiet requests
+      # scrape_bdti.py imports + uses Playwright even in --dry-run, so the
+      # canary must install it — previously it installed only `requests`,
+      # which made the canary fail on every run. (Batch C · 2026-05-14)
+      - run: pip install --quiet requests playwright
+      - run: python -m playwright install --with-deps chromium
       - name: Run BDTI scraper (dry-run)
         id: dryrun
         continue-on-error: true
@@ -36,7 +40,7 @@ jobs:
             curl -X POST https://api.resend.com/emails \
               -H "Authorization: Bearer $RESEND_KEY" \
               -H "Content-Type: application/json" \
-              -d "{\"from\":\"Hormuz Watch <onboarding@resend.dev>\",\"to\":[\"$ALERT_EMAIL\"],\"subject\":\"Hormuz Watch — BDTI scraper canary failed\",\"text\":\"BDTI scraper canary failed — HSN site may have changed structure. Manual update may be needed Friday.\\n\\nLog tail:\\n$LOG_TAIL\"}"
+              -d "{\"from\":\"Hormuz Watch <onboarding@resend.dev>\",\"to\":[\"$ALERT_EMAIL\"],\"subject\":\"Hormuz Watch — BDTI scraper canary failed\",\"text\":\"BDTI scraper canary failed — Investing.com or Macrotrends page structure may have changed. Manual BDTI update may be needed before Friday's scrape.\\n\\nLog tail:\\n$LOG_TAIL\"}"
           else
             echo "::warning::Canary failed but RESEND_KEY/ALERT_EMAIL not set"
           fi

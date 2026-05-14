@@ -2,7 +2,13 @@ name: vessel-sync
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    # Every 30 min (was */5 = 288 runs/day). AISStream has been in a multi-week
+    # provider outage — the scraper produces 0 messages every run. Recovery
+    # detection works fine at 30-min cadence; the old rate burned ~9 GHA-hours/
+    # day on a guaranteed-failure job and risked schedule throttling for the
+    # whole repo. Restore */5 only when the provider is confirmed back.
+    # (Batch C · 2026-05-14)
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:

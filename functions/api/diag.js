@@ -15,7 +15,7 @@ export async function onRequestGet({ request, env }) {
   // bdti_latest has a different "stale" threshold (weekly publish vs continuous)
   // ais_last_success_ts + ais_last_recovery_ts are excluded from staleness rules — they're
   // markers, not feeds. Surfaced separately below.
-  const kvKeys = ["latest", "oil_scraped", "ais_state", "vessel_count_scraped", "scrape_status_oil", "scrape_status_ais", "verdict_latest", "bdti_latest", "aircraft_state", "seismic_state", "gdelt_state", "weather_state", "news_headlines", "ofac_state", "currency_irr"];
+  const kvKeys = ["latest", "oil_scraped", "ais_state", "vessel_count_scraped", "scrape_status_oil", "scrape_status_ais", "scrape_status_aircraft", "scrape_status_seismic", "scrape_status_gdelt", "scrape_status_weather", "verdict_latest", "bdti_latest", "aircraft_state", "seismic_state", "gdelt_state", "weather_state", "news_headlines", "ofac_state", "currency_irr"];
   for (const k of kvKeys) {
     try {
       const raw = await env.OIL_KV.get(k);
@@ -51,11 +51,30 @@ export async function onRequestGet({ request, env }) {
     } catch (e) { out.feeds.d1_snapshot = { ok: false, reason: String(e).slice(0, 100) }; }
   }
 
-  // Overall health rollup
-  // BDTI publishes weekly so threshold is 9 days (12960 min), not 30 min
+  // Overall health rollup — per-feed staleness limits in minutes.
+  // Each limit ≈ feed's cron cadence × ~4 + headroom for GitHub Actions
+  // scheduled-run delay. A blanket 30-min limit (the old logic) permanently
+  // false-flagged every hourly / 6-hourly feed as stale. (Batch C · 2026-05-14)
+  const MAX_AGE_MIN = {
+    latest: 60, oil_scraped: 60,          // oil scrapers every 15 min
+    ais_state: 30, scrape_status_ais: 30, // AIS scraper every 5 min
+    scrape_status_oil: 60,
+    vessel_count_scraped: 360,            // vessel-scrape every 4 h
+    verdict_latest: 60,                   // written by data-refresh every 15 min
+    bdti_latest: 12960,                   // BDTI publishes weekly (9 days)
+    aircraft_state: 60, scrape_status_aircraft: 60,   // every 15 min
+    seismic_state: 150, scrape_status_seismic: 150,   // hourly
+    gdelt_state: 150,                                 // hourly
+    weather_state: 45, scrape_status_weather: 45,     // every 10 min
+    news_headlines: 90,                               // every 30 min
+    ofac_state: 480,                                  // every 6 h
+    currency_irr: 150,                                // hourly
+    d1_snapshot: 90,                                  // hourly snapshot writer
+  };
+  const DEFAULT_MAX_AGE_MIN = 60;
   const stale = Object.entries(out.feeds).filter(([k, v]) => {
-    if (!v || !v.ageMin) return false;
-    const limit = k === "bdti_latest" ? 12960 : 30;
+    if (!v || v.ageMin == null) return false;
+    const limit = MAX_AGE_MIN[k] ?? DEFAULT_MAX_AGE_MIN;
     return v.ageMin > limit;
   });
   out.healthy = stale.length === 0;

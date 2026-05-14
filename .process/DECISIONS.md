@@ -4,6 +4,23 @@ Append-only. Each entry follows the template. Sorted newest-first.
 
 ---
 
+## 2026-05-14 — Batch C (operational visibility) — part 1
+
+**Root-cause finding:** ALL scheduled GitHub Actions stopped ~2026-05-13 23:43Z (~9h gap). Not billing (repo is public → free unlimited), not disabled workflows (all `active`), not broken code — manual `workflow_dispatch` runs succeed fine. Cause: GitHub Actions scheduled-event throttling/delay. The watchdog couldn't catch it because the watchdog is *itself* a GHA scheduled workflow — it stopped too. This is the exact silent-failure mode the audit predicted.
+
+**Done (part 1):**
+- Manually dispatched both oil scrapers → `/api/oil` restored to `tier:"primary"`, Brent $105.5 / WTI $100.59 (was serving garbage FinnHub ETF proxy $55.85/$142.04).
+- `diag.js`: replaced the blanket 30-min staleness limit (which permanently false-flagged every hourly/6-hourly feed) with a per-feed `MAX_AGE_MIN` table sized to each cron cadence + GHA-delay headroom. Added the 4 unread `scrape_status_*` keys (aircraft/seismic/gdelt/weather) to the monitored key list.
+- `scraper-canary.yml`: was failing every run — installed only `requests` but `scrape_bdti.py` uses Playwright even in `--dry-run`. Now installs Playwright + chromium. Fixed stale "HSN site" alert copy → Investing.com/Macrotrends.
+- `ais-scraper.yml`: cron `*/5` → `*/30`. AISStream is in a multi-week outage producing 0 messages/run; `*/5` burned ~9 GHA-hours/day on a guaranteed-fail job and risked schedule-throttling the whole repo.
+
+**Deferred (part 2 — needs user decision):**
+- Per-scraper hardening: add `scrape_status_*` writes + zero-data floor checks to ~10 scrapers (news/gdelt/ofac write empty payloads + exit 0 on total failure; aircraft/gdelt/seismic/weather exit 0 on failure). Large mechanical pass.
+- **External monitor (user manual action):** the watchdog cannot detect GHA being down. UptimeRobot (or equivalent) hitting `/api/diag` is the only real fix for "all scrapers silently stopped."
+- Set `RESEND_KEY` + `ALERT_EMAIL` in GitHub Secrets — the entire alert layer (watchdog, canary) is inert without them.
+
+---
+
 ## 2026-05-14 — Batch B (methodology truth pass)
 
 **Context:** Audit Agent 4 found the public methodology page was written pre-AIS-outage and only half-patched — it labelled a dead feed LIVE, published a formula the code doesn't run, and named removed sources. Trust-critical, public-facing.
