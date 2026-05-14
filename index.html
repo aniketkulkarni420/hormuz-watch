@@ -169,11 +169,11 @@ header{
 .rpanel{width:280px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
 .rpanel::-webkit-scrollbar{width:2px}
 .rpanel::-webkit-scrollbar-thumb{background:var(--border)}
-.rblock{border-bottom:1px solid var(--border);padding:12px 14px}
+.rblock{border-bottom:1px solid var(--border);padding:16px 18px}
 .rsection{
   font-family:var(--mono);font-size:9px;color:var(--muted2);
   letter-spacing:.18em;text-transform:uppercase;font-weight:700;
-  padding:18px 16px 7px;background:var(--panel);
+  padding:20px 18px 8px;background:var(--panel);
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:9px;
 }
@@ -256,7 +256,7 @@ header{
 .tc-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.5}
 .type-bars{display:flex;flex-direction:column;gap:6px;margin-top:11px}
 .tbar-row{display:flex;align-items:center;gap:8px}
-.tbar-label{font-family:var(--mono);font-size:9px;color:var(--muted);width:96px;text-transform:uppercase;letter-spacing:.03em;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbar-label{font-family:var(--mono);font-size:9px;color:var(--muted);width:66px;text-transform:uppercase;letter-spacing:.03em;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tbar-track{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
 .tbar-fill{height:100%;border-radius:2px;transition:width .8s ease}
 .tbar-pct{font-family:var(--mono);font-size:9px;color:var(--text);width:28px;text-align:right;flex-shrink:0}
@@ -535,7 +535,7 @@ header{
   .tbtn{padding:6px 10px;font-size:10px;min-width:60px}
 
   /* ----- TYPOGRAPHY BUMPS ----- */
-  .rblock{padding:14px 16px}
+  .rblock{padding:16px 18px}
   .rhead{font-size:10px}
   .rhead-src{font-size:10px}
   .conclusion{font-size:10px}
@@ -908,7 +908,7 @@ header{
     <div class="rblock" id="politicalBlock">
       <div class="rhead">
         Political signals
-        <span class="rhead-src src-amber" id="politicalSrc" style="color:var(--amber)">live · multi</span>
+        <span class="rhead-src src-green" id="politicalSrc" style="color:var(--green)">live · multi</span>
       </div>
       <div class="tile-row">
         <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="psOfacDot"></span>OFAC Iran actions / 30d</div>
@@ -990,7 +990,7 @@ header{
 
     <!-- INDIA WATCH -->
     <div class="rblock">
-      <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-eia" style="color:var(--blue)">EQUITY DATA</span></div>
+      <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-blue" style="color:var(--blue)">EQUITY DATA</span></div>
       <div class="india-rows" id="indiaRows"></div>
       <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         ~62% of India's crude imports flow through Hormuz. Each $10/bbl crude rise = ~&#8377;85K Cr import bill increase. Petronet LNG nearly entirely Hormuz-dependent.
@@ -1004,7 +1004,7 @@ header{
     <div class="rblock">
       <div class="rhead">
         Vessel traffic trend
-        <span class="rhead-src src-eia" style="color:var(--blue)" title="Historical: yesterday + today from browser session and historical store">HISTORICAL</span>
+        <span class="rhead-src src-amber" style="color:var(--amber)" title="Historical: yesterday + today from browser session and historical store">HISTORICAL</span>
       </div>
       <div id="trendBars" class="trend-bars"></div>
       <div class="trend-legend" id="trendLegend"></div>
@@ -1054,7 +1054,7 @@ header{
     <div class="rblock" id="eventsBlock">
       <div class="rhead">
         Geopolitical events
-        <span class="rhead-src src-live" style="color:var(--blue)" id="eventsSrc">GDELT FEED</span>
+        <span class="rhead-src src-blue" style="color:var(--blue)" id="eventsSrc">GDELT FEED</span>
       </div>
       <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
         <span style="font-family:var(--mono);font-size:26px;font-weight:700;color:var(--amber)" id="evArt">—</span>
@@ -1063,14 +1063,13 @@ header{
       <div style="font-family:var(--mono);font-size:10px;margin-bottom:8px" id="evTone">Awaiting first GDELT sweep…</div>
       <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Top sources</div>
       <div id="evSources" style="font-family:var(--mono);font-size:10px;color:var(--text);line-height:1.6">—</div>
-      <div class="conclusion" id="concEvents" style="display:none"></div>
     </div>
 
     <!-- HEADLINE PULSE (Phase 2 — RSS news aggregator) -->
     <div class="rblock" id="newsBlock">
       <div class="rhead">
         Headline pulse
-        <span class="rhead-src src-eia" style="color:var(--blue)" id="newsSrc">NEWS FEED</span>
+        <span class="rhead-src src-blue" style="color:var(--blue)" id="newsSrc">NEWS FEED</span>
       </div>
       <div id="newsSubtitle" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px">Loading headlines&hellip;</div>
       <div id="newsList" style="font-family:var(--mono);font-size:11px;line-height:1.55"></div>
@@ -1083,7 +1082,7 @@ header{
     <div class="rblock" id="ofacBlock">
       <div class="rhead">
         <abbr title="US Treasury OFAC publishes designations of foreign individuals, entities, vessels, and tankers. Iran/IRGC/NIOC/NITC actions in the last 30 days are a leading indicator of US-Iran tension and shadow-fleet pressure.">Sanctions activity</abbr>
-        <span class="rhead-src src-eia" style="color:var(--blue)">OFAC · 6h</span>
+        <span class="rhead-src src-blue" style="color:var(--blue)">OFAC · 6h</span>
       </div>
       <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px">Iran-related OFAC actions &middot; last 30d</div>
       <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
@@ -1100,7 +1099,7 @@ header{
     <div class="rblock" id="currencyBlock">
       <div class="rhead">
         <abbr title="Iran runs a dual exchange rate. The official rate is state-controlled; the black-market rate is what Iranians actually pay for hard currency. Wide spread = sanction pressure / capital flight. Sharp black-market depreciation historically precedes Iranian escalation by 2-4 weeks.">Currency pressure</abbr>
-        <span class="rhead-src src-live" style="color:var(--blue)" id="currencySrc">LIVE · 1h</span>
+        <span class="rhead-src src-blue" style="color:var(--blue)" id="currencySrc">LIVE · 1h</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr auto;gap:6px;font-family:var(--mono);font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)">
         <span style="color:var(--muted)">USD &rarr; IRR (official)</span>
@@ -1128,7 +1127,7 @@ header{
     <div class="rblock" id="envBlock">
       <div class="rhead">
         Environmental conditions
-        <span class="rhead-src src-eia" style="color:var(--blue)">WEATHER + USGS</span>
+        <span class="rhead-src src-blue" style="color:var(--blue)">WEATHER + USGS</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div style="background:var(--panel2);border-radius:5px;padding:9px">
@@ -1755,7 +1754,7 @@ async function _fetchXvData(){
   }
   var results = await Promise.all([
     fetch("/api/snapshot").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
-    fetch("/api/bdti").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+    fetch("/api/bdti?_=" + Date.now()).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
     fetch("/api/aircraft").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
     fetch("/api/events").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
     fetch("/api/weather").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
@@ -2300,6 +2299,16 @@ var SHIP_CLASS_COLORS = {
   "Other":"#64748b", "Unknown":"#475569"
 };
 
+// Vessel-type label abbreviations — keep tbar-label column narrow (66px)
+// while preserving the wide visual rhythm of the bars themselves.
+// See .process/DECISIONS.md 2026-05-14 "Vessel Type Mix 1B".
+var TYPE_LABEL_ABBREVIATIONS = {
+  "Offshore/Service": "Offshore",
+  "Container Ship":   "Container",
+  "Bulk Carrier":     "Bulker"
+};
+function _abbrType(label){ return TYPE_LABEL_ABBREVIATIONS[label] || label; }
+
 function updateTypeBars(){
   var tb = document.getElementById("typeBars"); if(!tb) return;
   var inboundEl = document.getElementById("inboundCount");
@@ -2333,7 +2342,7 @@ function updateTypeBars(){
       var pct = Math.round(e.count / totalReal * 100);
       var color = SHIP_CLASS_COLORS[e.label] || "#64748b";
       var row = document.createElement("div"); row.className="tbar-row";
-      row.innerHTML = '<div class="tbar-label">'+e.label+'</div>'
+      row.innerHTML = '<div class="tbar-label">'+_abbrType(e.label)+'</div>'
         +'<div class="tbar-track"><div class="tbar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
         +'<div class="tbar-pct">'+pct+'%</div>';
       tb.appendChild(row);
@@ -2351,7 +2360,7 @@ function updateTypeBars(){
       var pct = Math.round(cnt / totalS * 100);
       var color = SHIP_CLASS_COLORS[k] || "#3b82f6";
       var row = document.createElement("div"); row.className="tbar-row";
-      row.innerHTML = '<div class="tbar-label">'+k+'</div>'
+      row.innerHTML = '<div class="tbar-label">'+_abbrType(k)+'</div>'
         +'<div class="tbar-track"><div class="tbar-fill" style="width:'+Math.max(2,pct)+'%;background:'+color+'"></div></div>'
         +'<div class="tbar-pct">'+cnt+' · '+pct+'%</div>';
       tb.appendChild(row);
@@ -2370,7 +2379,7 @@ function updateTypeBars(){
     sorted.forEach(function(label){
       var pct=Math.round(counts[label].count/total*100);
       var row=document.createElement("div");row.className="tbar-row";
-      row.innerHTML='<div class="tbar-label">'+label+'</div>'
+      row.innerHTML='<div class="tbar-label">'+_abbrType(label)+'</div>'
         +'<div class="tbar-track"><div class="tbar-fill" style="width:'+pct+'%;background:'+counts[label].color+'"></div></div>'
         +'<div class="tbar-pct">'+pct+'%</div>';
       tb.appendChild(row);
@@ -2411,6 +2420,16 @@ function updateTypeBars(){
   var outboundLbl = document.getElementById("outboundLbl");
   if(inboundLbl)  inboundLbl.textContent  = inbLblText;
   if(outboundLbl) outboundLbl.textContent = outbLblText;
+  // Tile colors: blue/amber implies directional AIS data. In scrape mode
+  // (Ports/Vessels) the numbers aren't directional — neutralize the colors
+  // so users don't read in/out semantics into them.
+  if(scrapedMode){
+    if(inboundEl)  inboundEl.style.color  = "var(--muted)";
+    if(outboundEl) outboundEl.style.color = "var(--text)";
+  } else {
+    if(inboundEl)  inboundEl.style.color  = "var(--blue)";
+    if(outboundEl) outboundEl.style.color = "var(--amber)";
+  }
 
   // Flip the card's source badge based on data mode
   var mixBlock = document.getElementById("mixBlock");
@@ -2732,14 +2751,14 @@ function applyAisDegradedMode(snap){
   // 1) Top banner
   var bannerId = "compositeBanner";
   var existing = document.getElementById(bannerId);
-  if(isStatic && !existing){
+  if((isStatic || isWebScrape) && !existing){
     var b = document.createElement("div");
     b.id = bannerId;
     b.style.cssText = "background:#3a2a0c;border:1px solid #8a6a2a;color:#f1c14c;font-family:var(--mono);font-size:11px;padding:8px 12px;border-radius:5px;margin:8px 0;line-height:1.5";
-    b.innerHTML = "Live vessel feed degraded · using composite analytical signals (aircraft, oil, geopolitical events, tanker stocks, weather, seismic). <a href='/methodology#composite' style='color:#f1c14c;text-decoration:underline'>more info</a>";
+    b.innerHTML = "AIS feed degraded · using port-activity proxy (VesselFinder · 5 Gulf ports). <a href='/methodology#composite' style='color:#f1c14c;text-decoration:underline'>more info</a>";
     var cmt = document.querySelector(".main") || document.body;
     cmt.insertBefore(b, cmt.firstChild);
-  } else if(!isStatic && existing){
+  } else if(!isStatic && !isWebScrape && existing){
     existing.remove();
   }
 
@@ -2759,7 +2778,7 @@ function applyAisDegradedMode(snap){
     // Replace subtitle "crossings · last 24h" with port-activity description
     var subEl = elT && elT.nextElementSibling;
     if(subEl){
-      subEl.textContent = "vessels in 5 Persian Gulf ports · web feed · 4h refresh";
+      subEl.textContent = "vessels · 5 Persian Gulf ports";
     }
     // Replace direction split bar (#mvDirBar + its label row) with per-port bars
     var dirBar = document.getElementById("mvDirBar");

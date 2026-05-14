@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hormuz Watch — Right Sidebar Design Audit</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;--orange:#ff8c2e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.55;padding:20px 0}
+.page{max-width:1400px;margin:0 auto;padding:0 24px}
+h1{font-size:28px;margin:0 0 6px;font-weight:900}
+h2{font-size:18px;margin:32px 0 12px;font-weight:800;color:var(--amber)}
+.subtitle{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px}
+.section-desc{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:18px;line-height:1.5}
+.grid-3{display:grid;grid-template-columns:repeat(3, minmax(280px, 1fr));gap:18px}
+.grid-2{display:grid;grid-template-columns:repeat(2, minmax(280px, 1fr));gap:18px}
+.label{font-family:var(--mono);font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-weight:700}
+.bad-label{color:var(--red)}
+.warn-label{color:var(--amber)}
+
+/* shared sidebar styles */
+.rblock{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+.rhead{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;font-weight:700}
+.rhead-src{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:.06em}
+.src-blue{color:var(--blue);background:rgba(56,170,255,.1);border:1px solid rgba(56,170,255,.25)}
+.src-green{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.25)}
+.src-amber{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.25)}
+
+/* TYPE BARS — variants */
+.type-bars{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.tbar-row{display:flex;align-items:center;gap:10px}
+.tbar-label{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbar-track{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.tbar-fill{height:100%;border-radius:2px}
+.tbar-pct{font-family:var(--mono);font-size:9px;color:var(--text);width:48px;text-align:right;flex-shrink:0}
+
+.v-current .tbar-label{width:96px}                  /* current — bars too narrow */
+.v-current .tbar-fill{background:var(--amber)}
+
+.v-abbrev .tbar-label{width:66px}                   /* RECOMMENDED — short labels, wide bars */
+.v-abbrev .tbar-fill{background:var(--amber)}
+
+.v-original .tbar-label{width:62px;text-overflow:clip}  /* original — overlapping text BAD */
+.v-original .tbar-fill{background:var(--amber)}
+
+/* TRAFFIC-GRID (Inbound/Outbound cards in Type Mix) */
+.traffic-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.tcard{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 10px}
+.tc-val{font-family:var(--mono);font-size:14px;font-weight:700}
+.tc-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+
+/* VESSEL MOVEMENT — variants */
+.vm-headline{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.vm-big{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--amber);line-height:1}
+.vm-sub{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.vm-banner{font-family:var(--mono);font-size:9px;color:var(--amber);padding:4px 8px;background:rgba(240,144,20,.08);border-left:2px solid var(--amber);border-radius:3px;margin-bottom:10px}
+
+.port-rows{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.port-row{display:flex;align-items:center;gap:10px}
+.port-name{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.03em;flex-shrink:0;width:88px;font-weight:700}
+.port-bar-track{flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden}
+.port-bar-fill{height:100%;border-radius:3px}
+.port-val{font-family:var(--mono);font-size:11px;font-weight:700;width:30px;text-align:right;flex-shrink:0;color:var(--text)}
+
+/* Country colors */
+.flag-ae{color:var(--amber)} .bar-ae{background:var(--amber)}
+.flag-sa{color:var(--blue)}  .bar-sa{background:var(--blue)}
+.flag-ir{color:var(--red)}   .bar-ir{background:var(--red)}
+
+.audit-note{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--panel);padding:8px 12px;border-radius:5px;margin-top:8px;line-height:1.5;border-left:2px solid var(--amber)}
+.callout{padding:14px 18px;background:rgba(240,144,20,.05);border:1px solid var(--amber);border-radius:6px;margin:16px 0}
+.callout-title{font-family:var(--mono);font-size:11px;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.callout-body{font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.6}
+
+.diff-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:8px}
+.diff-name{font-family:var(--mono);font-size:11px;color:var(--text);font-weight:700;margin-bottom:4px}
+.diff-bad{font-family:var(--mono);font-size:10px;color:var(--red);margin:2px 0}
+.diff-fix{font-family:var(--mono);font-size:10px;color:var(--green);margin:2px 0}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Right Sidebar — Design Audit</h1>
+<div class="subtitle">Honest UX audit of current right sidebar · before/after mockups · pick what to build · 2026-05-14</div>
+
+<div class="callout">
+<div class="callout-title">⚠ Issue I missed earlier</div>
+<div class="callout-body">
+  I widened tbar-label from 62px → 96px to fix the "OFFSHORE/SERVICE" text overlap. This made bars NARROWER, hurting the visual rhythm. Better fix: abbreviate the long labels so they fit in original 62-66px width. Audit below shows 3 design options for vessel type mix + 3 for vessel movement.
+</div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════════════ -->
+<h2>1. Vessel Type Mix — Three Design Options</h2>
+<div class="section-desc">
+  Current state (deployed): bars narrow because labels widened to 96px.<br>
+  Goal: keep bars wide AND no text overlap.
+</div>
+
+<div class="grid-3">
+
+<!-- A: Current deployed -->
+<div>
+  <div class="label warn-label">A. Current deployed (narrow bars)</div>
+  <div class="rblock v-current">
+    <div class="rhead">Vessel type mix <span class="rhead-src src-blue">WEB FEED · 4h</span></div>
+    <div class="traffic-grid">
+      <div class="tcard"><div class="tc-val" style="color:var(--blue)">5</div><div class="tc-lbl">Ports</div></div>
+      <div class="tcard"><div class="tc-val" style="color:var(--amber)">141</div><div class="tc-lbl">Vessels</div></div>
+    </div>
+    <div class="type-bars">
+      <div class="tbar-row"><div class="tbar-label">TANKER</div><div class="tbar-track"><div class="tbar-fill" style="width:48%"></div></div><div class="tbar-pct">67 · 48%</div></div>
+      <div class="tbar-row"><div class="tbar-label">OFFSHORE/SERVICE</div><div class="tbar-track"><div class="tbar-fill" style="width:34%"></div></div><div class="tbar-pct">48 · 34%</div></div>
+      <div class="tbar-row"><div class="tbar-label">OTHER</div><div class="tbar-track"><div class="tbar-fill" style="width:21%"></div></div><div class="tbar-pct">30 · 21%</div></div>
+      <div class="tbar-row"><div class="tbar-label">BULK CARRIER</div><div class="tbar-track"><div class="tbar-fill" style="width:16%"></div></div><div class="tbar-pct">23 · 16%</div></div>
+      <div class="tbar-row"><div class="tbar-label">CONTAINER SHIP</div><div class="tbar-track"><div class="tbar-fill" style="width:9%"></div></div><div class="tbar-pct">13 · 9%</div></div>
+      <div class="tbar-row"><div class="tbar-label">PASSENGER</div><div class="tbar-track"><div class="tbar-fill" style="width:2%"></div></div><div class="tbar-pct">3 · 2%</div></div>
+    </div>
+  </div>
+  <div class="audit-note">
+    Bars look squashed (~120px wide). Labels take too much real estate. Right-side values feel disconnected.
+  </div>
+</div>
+
+<!-- B: RECOMMENDED -->
+<div>
+  <div class="label">B. RECOMMENDED — abbreviated labels</div>
+  <div class="rblock v-abbrev">
+    <div class="rhead">Vessel type mix <span class="rhead-src src-blue">WEB FEED · 4h</span></div>
+    <div class="traffic-grid">
+      <div class="tcard"><div class="tc-val" style="color:var(--blue)">5</div><div class="tc-lbl">Ports</div></div>
+      <div class="tcard"><div class="tc-val" style="color:var(--amber)">141</div><div class="tc-lbl">Vessels</div></div>
+    </div>
+    <div class="type-bars">
+      <div class="tbar-row"><div class="tbar-label">TANKER</div><div class="tbar-track"><div class="tbar-fill" style="width:48%"></div></div><div class="tbar-pct">67 · 48%</div></div>
+      <div class="tbar-row"><div class="tbar-label">OFFSHORE</div><div class="tbar-track"><div class="tbar-fill" style="width:34%"></div></div><div class="tbar-pct">48 · 34%</div></div>
+      <div class="tbar-row"><div class="tbar-label">OTHER</div><div class="tbar-track"><div class="tbar-fill" style="width:21%"></div></div><div class="tbar-pct">30 · 21%</div></div>
+      <div class="tbar-row"><div class="tbar-label">BULKER</div><div class="tbar-track"><div class="tbar-fill" style="width:16%"></div></div><div class="tbar-pct">23 · 16%</div></div>
+      <div class="tbar-row"><div class="tbar-label">CONTAINER</div><div class="tbar-track"><div class="tbar-fill" style="width:9%"></div></div><div class="tbar-pct">13 · 9%</div></div>
+      <div class="tbar-row"><div class="tbar-label">PASSENGER</div><div class="tbar-track"><div class="tbar-fill" style="width:2%"></div></div><div class="tbar-pct">3 · 2%</div></div>
+    </div>
+  </div>
+  <div class="audit-note">
+    Labels: 66px width. "OFFSHORE" instead of "OFFSHORE/SERVICE", "BULKER" instead of "BULK CARRIER", "CONTAINER" instead of "CONTAINER SHIP". Bars get ~160px width — much better visual.
+  </div>
+</div>
+
+<!-- C: Compact -->
+<div>
+  <div class="label">C. Compact alternative</div>
+  <div class="rblock v-abbrev">
+    <div class="rhead">Vessel type mix <span class="rhead-src src-blue">WEB FEED · 4h</span></div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px">141 vessels · 5 Persian Gulf ports</div>
+    <div class="type-bars">
+      <div class="tbar-row"><div class="tbar-label">TANKER</div><div class="tbar-track"><div class="tbar-fill" style="width:48%"></div></div><div class="tbar-pct">67 · 48%</div></div>
+      <div class="tbar-row"><div class="tbar-label">OFFSHORE</div><div class="tbar-track"><div class="tbar-fill" style="width:34%"></div></div><div class="tbar-pct">48 · 34%</div></div>
+      <div class="tbar-row"><div class="tbar-label">OTHER</div><div class="tbar-track"><div class="tbar-fill" style="width:21%"></div></div><div class="tbar-pct">30 · 21%</div></div>
+      <div class="tbar-row"><div class="tbar-label">BULKER</div><div class="tbar-track"><div class="tbar-fill" style="width:16%"></div></div><div class="tbar-pct">23 · 16%</div></div>
+      <div class="tbar-row"><div class="tbar-label">CONTAINER</div><div class="tbar-track"><div class="tbar-fill" style="width:9%"></div></div><div class="tbar-pct">13 · 9%</div></div>
+      <div class="tbar-row"><div class="tbar-label">PASSENGER</div><div class="tbar-track"><div class="tbar-fill" style="width:2%"></div></div><div class="tbar-pct">3 · 2%</div></div>
+    </div>
+  </div>
+  <div class="audit-note">
+    Drops the inbound/outbound tiles entirely. Single subtitle line instead. Even more bar width. Cleanest. Loses the visual grid pattern though.
+  </div>
+</div>
+
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════════════ -->
+<h2>2. Vessel Movement — Three Design Options</h2>
+<div class="section-desc">
+  Current bug: when AIS is broken (now), card still shows misleading "0 westbound / 0 eastbound" and "0 transiting / 0 anchored / 0 approach" placeholders below the headline number. Then per-port bars get appended. Result: visually confused card with stale AIS-era elements showing zeros + new scrape-mode bars.
+</div>
+
+<div class="grid-3">
+
+<!-- A: Current deployed (the bug user sees) -->
+<div>
+  <div class="label bad-label">A. Current deployed (broken)</div>
+  <div class="rblock">
+    <div class="rhead">Vessel movement <span class="rhead-src src-blue">WEB FEED · 4h</span></div>
+    <div class="vm-headline">
+      <div class="vm-big">141</div>
+      <div class="vm-sub">crossings · last 24h</div>
+    </div>
+    <div style="display:flex;height:8px;border-radius:3px;overflow:hidden;background:var(--panel2);margin-bottom:6px">
+      <div style="flex:1;background:var(--blue)"></div>
+      <div style="flex:1;background:var(--amber)"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;margin-bottom:11px">
+      <span style="color:var(--blue)">← <b>0</b> westbound<span style="color:var(--muted2);font-size:9px;display:block;margin-top:2px">entering Persian Gulf</span></span>
+      <span style="color:var(--amber);text-align:right"><b>0</b> eastbound →<span style="color:var(--muted2);font-size:9px;display:block;margin-top:2px">exiting toward Indian Ocean</span></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding-top:11px;border-top:1px solid var(--border);margin-bottom:10px">
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 9px"><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)">0</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;line-height:1.4;margin-top:3px">Transiting<br>now</div></div>
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 9px"><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--red)">0</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;line-height:1.4;margin-top:3px">Anchored<br>(at ports)</div></div>
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 9px"><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--amber)">0</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;line-height:1.4;margin-top:3px">Approach<br>or slow</div></div>
+    </div>
+    <div class="port-rows" style="border-top:1px solid var(--border);padding-top:10px">
+      <div class="port-row"><div class="port-name flag-ae">KHOR FAKKAN</div><div class="port-bar-track"><div class="port-bar-fill bar-ae" style="width:100%"></div></div><div class="port-val">34</div></div>
+      <div class="port-row"><div class="port-name flag-sa">RAS TANURA</div><div class="port-bar-track"><div class="port-bar-fill bar-sa" style="width:91%"></div></div><div class="port-val">31</div></div>
+      <div class="port-row"><div class="port-name flag-ae">FUJAIRAH</div><div class="port-bar-track"><div class="port-bar-fill bar-ae" style="width:82%"></div></div><div class="port-val">28</div></div>
+      <div class="port-row"><div class="port-name flag-ae">JEBEL ALI</div><div class="port-bar-track"><div class="port-bar-fill bar-ae" style="width:76%"></div></div><div class="port-val">26</div></div>
+      <div class="port-row"><div class="port-name flag-ir">BANDAR ABBAS</div><div class="port-bar-track"><div class="port-bar-fill bar-ir" style="width:65%"></div></div><div class="port-val">22</div></div>
+    </div>
+  </div>
+  <div class="audit-note">
+    <b style="color:var(--red)">BROKEN:</b> "crossings · last 24h" subtitle wrong (these are port-vessels, not crossings). Direction split bar (50/50 placeholder). "0 westbound / 0 eastbound" stale. Three tiles showing zeros. Then per-port bars at bottom. Total visual: confused.
+  </div>
+</div>
+
+<!-- B: RECOMMENDED clean scrape mode -->
+<div>
+  <div class="label">B. RECOMMENDED — clean scrape mode</div>
+  <div class="rblock">
+    <div class="rhead">Vessel movement <span class="rhead-src src-blue">WEB FEED · 4h</span></div>
+    <div class="vm-banner">⚠ AIS feed degraded · using port-activity proxy</div>
+    <div class="vm-headline">
+      <div class="vm-big">141</div>
+      <div class="vm-sub">vessels · 5 Persian Gulf ports</div>
+    </div>
+    <div class="port-rows">
+      <div class="port-row"><div class="port-name flag-ae">KHOR FAKKAN</div><div class="port-bar-track"><div class="port-bar-fill bar-ae" style="width:100%"></div></div><div class="port-val">34</div></div>
+      <div class="port-row"><div class="port-name flag-sa">RAS TANURA</div><div class="port-bar-track"><div class="port-bar-fill bar-sa" style="width:91%"></div></div><div class="port-val">31</div></div>
+      <div class="port-row"><div class="port-name flag-ae">FUJAIRAH</div><div class="port-bar-track"><div class="port-bar-fill bar-ae" style="width:82%"></div></div><div class="port-val">28</div></div>
+      <div class="port-row"><div class="port-name flag-ae">JEBEL ALI</div><div class="port-bar-track"><div class="port-bar-fill bar-ae" style="width:76%"></div></div><div class="port-val">26</div></div>
+      <div class="port-row"><div class="port-name flag-ir">BANDAR ABBAS</div><div class="port-bar-track"><div class="port-bar-fill bar-ir" style="width:65%"></div></div><div class="port-val">22</div></div>
+    </div>
+    <div style="margin-top:10px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
+      AIS in-strait positions unavailable · port snapshot every 4h · live AIS data will replace this when AISStream recovers
+    </div>
+  </div>
+  <div class="audit-note">
+    Hides ALL AIS-era elements (direction split, east/west, transit/anchored/approach tiles). Single honest banner up top. Clean per-port breakdown is the focus. Subtitle "vessels · 5 Persian Gulf ports" correct.
+  </div>
+</div>
+
+<!-- C: With AIS recovery slot -->
+<div>
+  <div class="label">C. Hybrid — AIS slots ready when it recovers</div>
+  <div class="rblock">
+    <div class="rhead">Vessel movement <span class="rhead-src src-blue">WEB FEED · 4h</span></div>
+    <div class="vm-headline">
+      <div class="vm-big">141</div>
+      <div class="vm-sub">vessels · port snapshot</div>
+    </div>
+    <div class="port-rows" style="margin-bottom:12px">
+      <div class="port-row"><div class="port-name flag-ae">KHOR FAKKAN</div><div class="port-bar-track"><div class="port-bar-fill bar-ae" style="width:100%"></div></div><div class="port-val">34</div></div>
+      <div class="port-row"><div class="port-name flag-sa">RAS TANURA</div><div class="port-bar-track"><div class="port-bar-fill bar-sa" style="width:91%"></div></div><div class="port-val">31</div></div>
+      <div class="port-row"><div class="port-name flag-ae">FUJAIRAH</div><div class="port-bar-track"><div class="port-bar-fill bar-ae" style="width:82%"></div></div><div class="port-val">28</div></div>
+      <div class="port-row"><div class="port-name flag-ae">JEBEL ALI</div><div class="port-bar-track"><div class="port-bar-fill bar-ae" style="width:76%"></div></div><div class="port-val">26</div></div>
+      <div class="port-row"><div class="port-name flag-ir">BANDAR ABBAS</div><div class="port-bar-track"><div class="port-bar-fill bar-ir" style="width:65%"></div></div><div class="port-val">22</div></div>
+    </div>
+    <div style="padding-top:11px;border-top:1px solid var(--border);font-family:var(--mono);font-size:9px;color:var(--muted2);line-height:1.5">
+      <div style="display:flex;justify-content:space-between"><span>In-strait positions</span><span>AIS pending recovery</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px"><span>Last live AIS</span><span>—</span></div>
+    </div>
+  </div>
+  <div class="audit-note">
+    Hides AIS placeholders but reserves a small "pending recovery" footer slot. When AIS comes back, this slot fills with real direction/category data without major card restructure.
+  </div>
+</div>
+
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════════════ -->
+<h2>3. Full Right Sidebar — Design Inconsistency Audit</h2>
+<div class="section-desc">
+  Issues I should have caught earlier. Each is independently fixable.
+</div>
+
+<div class="grid-2">
+
+<div>
+<div class="diff-card">
+  <div class="diff-name">Vessel Type Mix · Inbound/Outbound tiles</div>
+  <div class="diff-bad">In scrape mode, tiles say "5 Ports / 141 Vessels" but the label below says "Ports/Vessels" with same colors as AIS mode (blue/amber). Confusing carryover.</div>
+  <div class="diff-fix">Either drop tiles entirely (Option C above) OR change colors to neutral grey when in port mode.</div>
+</div>
+
+<div class="diff-card">
+  <div class="diff-name">Vessel Movement · stale AIS placeholders</div>
+  <div class="diff-bad">Direction split bar + east/west text + 3-tile grid all show 0s when AIS is down. Per-port bars rendered below as separate "afterthought".</div>
+  <div class="diff-fix">When data_source = "web_scrape", HIDE the AIS placeholder elements via CSS class. Show only headline + per-port bars + banner.</div>
+</div>
+
+<div class="diff-card">
+  <div class="diff-name">Type bar labels · inconsistent widths</div>
+  <div class="diff-bad">62px → 96px change made bars too narrow. Some labels still feel cramped at smaller sizes.</div>
+  <div class="diff-fix">Set width:66px + use abbreviated labels (OFFSHORE, BULKER, CONTAINER, PASSENGER). Fits naturally.</div>
+</div>
+
+<div class="diff-card">
+  <div class="diff-name">BDTI freshness display</div>
+  <div class="diff-bad">User saw "as of May 5" even after setting May 9. Suggests browser cache or stale frontend render.</div>
+  <div class="diff-fix">Verify hard-refresh fixes it. If persistent, add cache-busting query param to /api/bdti fetch in dashboard JS.</div>
+</div>
+</div>
+
+<div>
+<div class="diff-card">
+  <div class="diff-name">Source badge color inconsistency</div>
+  <div class="diff-bad">Some badges are green "LIVE FEED", some blue "WEB FEED", some amber "EIA WEEKLY". Mixed signals on what's actually fresh.</div>
+  <div class="diff-fix">Standardize: green = live (less than 10 min), blue = recent (10 min - 24h), amber = historical (>24h), red = stale.</div>
+</div>
+
+<div class="diff-card">
+  <div class="diff-name">Tile padding inconsistency</div>
+  <div class="diff-bad">Different tiles use slightly different padding (16/18 vs 14/16). Subtle but adds visual jitter.</div>
+  <div class="diff-fix">Audit all .rblock instances. Standardize to 16px 18px.</div>
+</div>
+
+<div class="diff-card">
+  <div class="diff-name">Conclusion lines hidden by default</div>
+  <div class="diff-bad">Several tiles have a .conclusion div with display:none — never gets populated. Dead code.</div>
+  <div class="diff-fix">Either populate them OR remove the div. Currently confusing for next dev reading the code.</div>
+</div>
+
+<div class="diff-card">
+  <div class="diff-name">Tile section headers spacing</div>
+  <div class="diff-bad">Section headers (.rsection) have inconsistent margin-top between sections (16px vs 24px).</div>
+  <div class="diff-fix">Standardize section spacing to 20px or 24px.</div>
+</div>
+</div>
+
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════════════ -->
+<h2>4. Recommended Build</h2>
+<div class="section-desc">Pick which options and I'll build. No code changes until you confirm.</div>
+
+<div class="callout">
+<div class="callout-title">My picks (mix-and-match if you want)</div>
+<div class="callout-body">
+  <b>Vessel Type Mix:</b> Option B (abbreviated labels, wide bars) — single CSS change + label abbreviation in JS<br>
+  <b>Vessel Movement:</b> Option B (clean scrape mode, hide AIS placeholders) — conditional rendering when data_source = web_scrape<br>
+  <b>Plus all 8 inconsistency fixes</b> from Section 3<br><br>
+  Total: ~1 hour of focused work, single commit, fully tested before push.
+</div>
+</div>
+
+<div style="margin-top:24px;padding:14px 18px;background:var(--panel);border-radius:6px;border-left:2px solid var(--blue);font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text)">
+  <b>Why I made mistakes earlier:</b><br>
+  - Made changes without visual rendering<br>
+  - Tunnel-vision on bug fix, missed downstream impact<br>
+  - Skipped UX audit before pushing<br>
+  - Trusted agent reports without independent verification<br><br>
+  <b>Better process going forward:</b><br>
+  - Mockup → user approval → build → verify in browser → push<br>
+  - Read full surrounding code before changing CSS<br>
+  - Check what other elements depend on the value being changed<br>
+  - Test scrape-mode vs AIS-mode rendering separately
+</div>
+
+</div>
+</body>
+</html>
