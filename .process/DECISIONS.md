@@ -46,10 +46,20 @@ Append-only. Each entry follows the template. Sorted newest-first.
 clean; confidence honestly labelled "medium"). Flag state flow + dark-vessel
 share are gone from the UI until real feeds exist.
 
-**Deferred:** Vessel Type Mix redesign — 3 options mocked in
-`mockups/2026-05-14-vessel-type-mix.html`; **Option A chosen**, not yet wired.
-TD3C + Gulf war-risk premium — verified real but no free auto-feed; sourcing
-decision still open.
+**Follow-ups done same day:**
+- BDTI WoW seeded immediately — StockQ ships ~20 recent daily rows on the
+  page; `scrape_bdti.py` now extracts them and POSTs a `history` array that
+  `bdti.js` merges into `bdti_history`, so WoW computes on the first run
+  (−9.2%: 2429 vs 2676 on 05-06) instead of accumulating over weeks.
+- Vessel Type Mix **Option A wired in** — 14px bars (was 4px hairlines), count
+  inside the fill / `N · P%` in the column on narrow bars (fixes the clipped
+  28px pct column), sample size in a subhead that states the classified-row
+  count explicitly (so 185 is not read as the 148 headline). Dropped the
+  Inbound/Outbound tcards (redundant with the Vessel Movement card).
+
+**Deferred:** TD3C + Gulf war-risk premium — verified real but no free
+auto-feed; sourcing decision still open. The 185-vs-148 scraper reconciliation
+(`scrape_vessels_web.py` counts typed rows vs de-duplicated total) also open.
 
 ---
 

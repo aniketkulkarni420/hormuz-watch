@@ -250,16 +250,16 @@ header{
 .dot-muted{background:var(--muted2)}
 
 /* TRAFFIC GRID */
-.traffic-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.tcard{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:9px 11px}
-.tc-val{font-family:var(--mono);font-size:16px;font-weight:700;line-height:1;margin-bottom:4px}
-.tc-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.5}
-.type-bars{display:flex;flex-direction:column;gap:6px;margin-top:11px}
-.tbar-row{display:flex;align-items:center;gap:8px}
-.tbar-label{font-family:var(--mono);font-size:9px;color:var(--muted);width:66px;text-transform:uppercase;letter-spacing:.03em;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tbar-track{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
-.tbar-fill{height:100%;border-radius:2px;transition:width .8s ease}
-.tbar-pct{font-family:var(--mono);font-size:9px;color:var(--text);width:28px;text-align:right;flex-shrink:0}
+/* Vessel Type Mix — "Option A" refined bars (2026-05-14, mockups/2026-05-14-vessel-type-mix.html).
+   Replaced 4px hairline bars + a 28px pct column that clipped "64 · 35%". */
+.mix-subhead{font-family:var(--mono);font-size:9.5px;color:var(--muted2);margin:3px 0 10px;line-height:1.5}
+.type-bars{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.tbar-row{display:grid;grid-template-columns:84px 1fr auto;align-items:center;gap:10px}
+.tbar-label{font-family:var(--mono);font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbar-track{position:relative;height:14px;background:var(--panel2);border:1px solid var(--border2);border-radius:3px;overflow:hidden}
+.tbar-fill{height:100%;border-radius:2px 0 0 2px;display:flex;align-items:center;transition:width .8s ease}
+.tbar-count{font-family:var(--mono);font-size:9px;font-weight:700;color:#07090e;padding-left:6px}
+.tbar-pct{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);min-width:34px;text-align:right;white-space:nowrap}
 
 /* SCENARIO */
 .scenario-rows{display:flex;flex-direction:column;gap:6px}
@@ -884,13 +884,10 @@ header{
     <!-- VESSEL TYPE MIX (moved into Signals section) -->
     <div class="rblock" id="mixBlock">
       <div class="rhead">
-        <abbr title="Live AIS-derived breakdown of vessel classes near Hormuz. Tanker classes split by ship length: VLCC (300m+), Suezmax (270-300m), Aframax (240-270m).">Vessel type mix</abbr>
+        <abbr title="Breakdown of vessel classes near Hormuz. From live AIS when available, else the VesselFinder port scrape. Tanker classes split by ship length: VLCC (300m+), Suezmax (270-300m), Aframax (240-270m).">Vessel type mix</abbr>
         <span class="rhead-src src-live" style="color:var(--green)" id="mixSrc">LIVE FEED</span>
       </div>
-      <div class="traffic-grid" style="font-size:14px">
-        <div class="tcard"><div class="tc-val" id="inboundCount" style="color:var(--blue);font-size:14px">0</div><div class="tc-lbl" id="inboundLbl">Inbound</div></div>
-        <div class="tcard"><div class="tc-val" id="outboundCount" style="color:var(--amber);font-size:14px">0</div><div class="tc-lbl" id="outboundLbl">Outbound</div></div>
-      </div>
+      <div class="mix-subhead" id="mixSubhead"></div>
       <div class="type-bars" id="typeBars"></div>
       <div class="conclusion" id="concMix" style="display:none"></div>
     </div>
@@ -2374,19 +2371,29 @@ var TYPE_LABEL_ABBREVIATIONS = {
 };
 function _abbrType(label){ return TYPE_LABEL_ABBREVIATIONS[label] || label; }
 
+// "Option A" row builder. Count sits inside the bar fill when the fill is wide
+// enough to hold it (pct >= 14); on narrow bars it falls back into the pct
+// column as "N · P%" so the count is never clipped or hidden.
+function _typeBarRow(label, count, pct, color){
+  var wide = pct >= 14;
+  var fillW = wide ? pct : Math.max(2, pct);
+  var inFill = (wide && count != null) ? '<span class="tbar-count">'+count+'</span>' : '';
+  var pctText = (!wide && count != null) ? (count + ' · ' + pct + '%') : (pct + '%');
+  var row = document.createElement("div"); row.className = "tbar-row";
+  row.innerHTML = '<div class="tbar-label">'+_abbrType(label)+'</div>'
+    + '<div class="tbar-track"><div class="tbar-fill" style="width:'+fillW+'%;background:'+color+'">'+inFill+'</div></div>'
+    + '<div class="tbar-pct">'+pctText+'</div>';
+  return row;
+}
+
 function updateTypeBars(){
   var tb = document.getElementById("typeBars"); if(!tb) return;
-  var inboundEl = document.getElementById("inboundCount");
-  var outboundEl = document.getElementById("outboundCount");
+  var subhead = document.getElementById("mixSubhead");
   // Prefer real AIS server-side aggregation when present
   var server = (typeof _aisServer === "object" && _aisServer) ? _aisServer : null;
   var typeBreakdown = server && server.typeBreakdown ? server.typeBreakdown
                     : (server && server.summary && server.summary.typeBreakdown) ? server.summary.typeBreakdown
                     : null;
-  var realInbound  = server && (server.currentInbound != null ? server.currentInbound
-                    : (server.summary && server.summary.currentInbound != null ? server.summary.currentInbound : null));
-  var realOutbound = server && (server.currentOutbound != null ? server.currentOutbound
-                    : (server.summary && server.summary.currentOutbound != null ? server.summary.currentOutbound : null));
 
   tb.innerHTML = "";
   var simulated = false;
@@ -2404,14 +2411,10 @@ function updateTypeBars(){
     var totalReal = entries.reduce(function(s,e){ return s + e.count; }, 0) || 1;
     entries.sort(function(a,b){ return b.count - a.count; });
     entries.forEach(function(e){
-      var pct = Math.round(e.count / totalReal * 100);
-      var color = SHIP_CLASS_COLORS[e.label] || "#64748b";
-      var row = document.createElement("div"); row.className="tbar-row";
-      row.innerHTML = '<div class="tbar-label">'+_abbrType(e.label)+'</div>'
-        +'<div class="tbar-track"><div class="tbar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
-        +'<div class="tbar-pct">'+pct+'%</div>';
-      tb.appendChild(row);
+      tb.appendChild(_typeBarRow(e.label, e.count, Math.round(e.count / totalReal * 100),
+                                 SHIP_CLASS_COLORS[e.label] || "#64748b"));
     });
+    if(subhead) subhead.textContent = totalReal + " vessels tracked near Hormuz · live AIS";
   } else if(hasScrapedTypes){
     // ── Scraped types fallback (AIS down, web feed fresh) ──
     scrapedMode = true;
@@ -2422,14 +2425,15 @@ function updateTypeBars(){
     keys.sort(function(a,b){ return (scrapedTypes[b]||0) - (scrapedTypes[a]||0); });
     keys.forEach(function(k){
       var cnt = scrapedTypes[k]||0;
-      var pct = Math.round(cnt / totalS * 100);
-      var color = SHIP_CLASS_COLORS[k] || "#3b82f6";
-      var row = document.createElement("div"); row.className="tbar-row";
-      row.innerHTML = '<div class="tbar-label">'+_abbrType(k)+'</div>'
-        +'<div class="tbar-track"><div class="tbar-fill" style="width:'+Math.max(2,pct)+'%;background:'+color+'"></div></div>'
-        +'<div class="tbar-pct">'+cnt+' · '+pct+'%</div>';
-      tb.appendChild(row);
+      tb.appendChild(_typeBarRow(k, cnt, Math.round(cnt / totalS * 100),
+                                 SHIP_CLASS_COLORS[k] || "#3b82f6"));
     });
+    if(subhead){
+      var portN = scrapedPerPort ? Object.keys(scrapedPerPort).length : 5;
+      // totalS is the classified-row count — stated explicitly so it is not
+      // read as equal to the de-duplicated headline vessel total.
+      subhead.textContent = totalS + " vessels classified · " + portN + " Gulf ports · VesselFinder";
+    }
   } else {
     // ── Fallback: legacy simulation array ──
     simulated = true;
@@ -2442,58 +2446,11 @@ function updateTypeBars(){
     });
     var sorted=Object.keys(counts).sort(function(a,b){return counts[b].count-counts[a].count;});
     sorted.forEach(function(label){
-      var pct=Math.round(counts[label].count/total*100);
-      var row=document.createElement("div");row.className="tbar-row";
-      row.innerHTML='<div class="tbar-label">'+_abbrType(label)+'</div>'
-        +'<div class="tbar-track"><div class="tbar-fill" style="width:'+pct+'%;background:'+counts[label].color+'"></div></div>'
-        +'<div class="tbar-pct">'+pct+'%</div>';
-      tb.appendChild(row);
+      tb.appendChild(_typeBarRow(label, counts[label].count,
+                                 Math.round(counts[label].count / total * 100),
+                                 counts[label].color));
     });
-  }
-
-  // Inbound / outbound counts — real if available, else port-count under scrape mode, else simulated
-  var inb, outb;
-  var inbLblText = "Inbound", outbLblText = "Outbound";
-  if(realInbound != null && realOutbound != null){
-    inb = realInbound; outb = realOutbound;
-  } else if(scrapedMode){
-    // In scrape mode there's no inbound/outbound direction — relabel tiles
-    // to Ports / Vessels so numbers match labels honestly.
-    var portCnt = scrapedPerPort ? Object.keys(scrapedPerPort).length : 5;
-    var vesselTot = 0;
-    if(scrapedPerPort){
-      Object.keys(scrapedPerPort).forEach(function(k){
-        var v = scrapedPerPort[k];
-        if(typeof v === "number") vesselTot += v;
-        else if(v && typeof v === "object" && isFinite(v.total)) vesselTot += v.total;
-      });
-    }
-    if(!vesselTot && _snapshotData && isFinite(_snapshotData.scraped_vessel_total)){
-      vesselTot = _snapshotData.scraped_vessel_total;
-    }
-    inb = portCnt;
-    outb = vesselTot || "—";
-    inbLblText = "Ports";
-    outbLblText = "Vessels";
-  } else {
-    inb = loggedVessels.filter(function(v){return v.lane==="in";}).length;
-    outb = loggedVessels.filter(function(v){return v.lane==="out";}).length;
-  }
-  if(inboundEl)  inboundEl.textContent = inb;
-  if(outboundEl) outboundEl.textContent = outb;
-  var inboundLbl = document.getElementById("inboundLbl");
-  var outboundLbl = document.getElementById("outboundLbl");
-  if(inboundLbl)  inboundLbl.textContent  = inbLblText;
-  if(outboundLbl) outboundLbl.textContent = outbLblText;
-  // Tile colors: blue/amber implies directional AIS data. In scrape mode
-  // (Ports/Vessels) the numbers aren't directional — neutralize the colors
-  // so users don't read in/out semantics into them.
-  if(scrapedMode){
-    if(inboundEl)  inboundEl.style.color  = "var(--muted)";
-    if(outboundEl) outboundEl.style.color = "var(--text)";
-  } else {
-    if(inboundEl)  inboundEl.style.color  = "var(--blue)";
-    if(outboundEl) outboundEl.style.color = "var(--amber)";
+    if(subhead) subhead.textContent = "Live mix pending AIS recovery";
   }
 
   // Flip the card's source badge based on data mode
