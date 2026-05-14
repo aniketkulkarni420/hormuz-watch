@@ -4,6 +4,55 @@ Append-only. Each entry follows the template. Sorted newest-first.
 
 ---
 
+## 2026-05-14 — Post-audit fixes: BDTI source, fake-data removal, AIS-dependent UI
+
+**Context:** User audit pass — flagged the Conditions card as "not real", a
++219% BDTI WoW, and the whole tool degrading when one feed (AIS) failed.
+
+**BDTI — StockQ-only scraper (`scrape_bdti.py` rewrite):**
+- Root cause of +219%: `wow_pct` in `bdti.js` was `(new − last KV value)`, NOT
+  week-over-week. A manual 3063 entry (which was actually the **BDI**, the
+  wrong index) got diffed against a ~960 noise-median left by the old
+  investing.com (frozen at 1107 since 31-Mar) + macrotrends (813) pair.
+- `bdti.js`: WoW now computed from a dated `bdti_history` KV array against the
+  entry closest to 7 days prior (4–11d window); ±60% sanity guard on both read
+  and write neutralises the frozen 219.1 with no re-POST.
+- Scraper: **StockQ (`en.stockq.org/index/BDTI.php`) is the sole source** per
+  user instruction — plain HTML, no Playwright. Propagates StockQ's own quote
+  date as `asOf` (never stamps today on unverified-fresh data); 12-day
+  staleness gate; verified live (2429 / 2026-05-13). `bdti-weekly.yml` drops
+  the chromium install, 15→5 min timeout.
+- **Supersedes** the "Multi-source cross-verification" + "BDTI confidence gate"
+  entries below *for BDTI specifically*: investing.com froze, macrotrends was a
+  loose regex, TE serves the BDI fallback — there was no reliable multi-source
+  set. Oil/vessels keep the multi-source pattern.
+
+**Conditions card — removed fake "Dark vessel share":**
+- It was `env.HORMUZ_DARK || 947` (a frozen constant) divided by the live
+  vessel count, so the "share" moved *inversely* to real traffic and was even
+  bumping the Cross-signal tension gauge to HIGH. `snapshot.js` now emits
+  `dark_vessels: null`; the Conditions row is removed; the XV row auto-degrades
+  to "unavailable". No genuine dark-traffic feed exists — restore when one does.
+
+**AIS-dependent UI pulled while AISStream is down:**
+- Removed the full-width amber "AIS feed degraded" banner (visually
+  disproportionate for a known multi-week outage; degraded state still shown on
+  the Vessel Movement card).
+- Removed the **Flag state flow** card entirely — it is 100% AIS-derived and
+  had no real data. JS (`updateFlagDisplay`/`trackFlag`) kept and null-guarded
+  so it repopulates automatically when `#flagRows` is restored post-recovery.
+
+**Tradeoffs:** BDTI now single-source (user-accepted — StockQ is dated/daily/
+clean; confidence honestly labelled "medium"). Flag state flow + dark-vessel
+share are gone from the UI until real feeds exist.
+
+**Deferred:** Vessel Type Mix redesign — 3 options mocked in
+`mockups/2026-05-14-vessel-type-mix.html`; **Option A chosen**, not yet wired.
+TD3C + Gulf war-risk premium — verified real but no free auto-feed; sourcing
+decision still open.
+
+---
+
 ## 2026-05-14 — Batch D (crisis-time accuracy + recalibration) + Batch G opened
 
 **Batch D — done (crisis-time accuracy + honesty fixes):**

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vessel Type Mix — redesign options · 2026-05-14</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0e1320;--border:#18202e;--border2:#222c3d;
+  --amber:#f09014;--blue:#38aaff;--green:#1dd47e;--red:#ff6b35;--violet:#b07cf0;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;--sans:'Manrope',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);padding:32px;line-height:1.5}
+h1{font-size:20px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.lede{font-family:var(--mono);font-size:12px;color:var(--muted);max-width:780px;margin-bottom:24px}
+.lede b{color:var(--amber);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;align-items:start}
+.col-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);margin-bottom:8px}
+.col-label .tag{color:var(--green)}
+.col-label.bad .tag{color:var(--red)}
+.note{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-top:8px;line-height:1.6}
+
+/* ── shared card chrome (matches dashboard .rblock) ── */
+.rblock{background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:13px 14px}
+.rhead{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:700;margin-bottom:4px}
+.rhead-src{font-family:var(--mono);font-size:9px;letter-spacing:.04em}
+.src-blue{color:var(--blue)} .src-green{color:var(--green)} .src-muted{color:var(--muted2)}
+.subhead{font-family:var(--mono);font-size:9.5px;color:var(--muted2);margin-bottom:11px}
+
+/* ════════ BEFORE (current production) ════════ */
+.traffic-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px}
+.tcard{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:9px 11px}
+.tc-val{font-family:var(--mono);font-size:16px;font-weight:700;line-height:1;margin-bottom:4px}
+.tc-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.b-type-bars{display:flex;flex-direction:column;gap:6px;margin-top:11px}
+.b-tbar-row{display:flex;align-items:center;gap:8px}
+.b-tbar-label{font-family:var(--mono);font-size:9px;color:var(--muted);width:66px;text-transform:uppercase;letter-spacing:.03em;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-tbar-track{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.b-tbar-fill{height:100%;border-radius:2px}
+.b-tbar-pct{font-family:var(--mono);font-size:9px;color:var(--text);width:28px;text-align:right;flex-shrink:0;overflow:hidden;white-space:nowrap}
+
+/* ════════ OPTION A — refined bars ════════ */
+.a-bars{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.a-row{display:grid;grid-template-columns:84px 1fr auto;align-items:center;gap:10px}
+.a-label{font-family:var(--mono);font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.a-track{position:relative;height:14px;background:var(--panel2);border:1px solid var(--border2);border-radius:3px;overflow:hidden}
+.a-fill{height:100%;border-radius:2px 0 0 2px;display:flex;align-items:center}
+.a-count{font-family:var(--mono);font-size:9px;font-weight:700;color:#07090e;padding-left:6px}
+.a-pct{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);min-width:34px;text-align:right}
+
+/* ════════ OPTION B — stacked composition bar ════════ */
+.b2-bar{display:flex;height:26px;border-radius:4px;overflow:hidden;border:1px solid var(--border2);margin:6px 0 13px}
+.b2-seg{height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;color:#07090e;min-width:0}
+.b2-legend{display:grid;grid-template-columns:1fr 1fr;gap:7px 14px}
+.b2-leg{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px}
+.b2-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.b2-leg-name{color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b2-leg-val{color:var(--muted)}
+
+/* ════════ OPTION C — compact card grid ════════ */
+.c-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:4px}
+.c-card{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 9px;border-left-width:3px}
+.c-top{display:flex;justify-content:space-between;align-items:baseline}
+.c-name{font-family:var(--mono);font-size:10px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-pct{font-family:var(--mono);font-size:13px;font-weight:700}
+.c-count{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:2px}
+.c-mini{height:3px;border-radius:2px;margin-top:6px;background:var(--border2);overflow:hidden}
+.c-mini-fill{height:100%;border-radius:2px}
+</style>
+</head>
+<body>
+
+<h1>Vessel Type Mix — redesign options</h1>
+<p class="lede">
+Live data, 2026-05-14: VesselFinder scrape of 5 Gulf ports, <b>confidence medium</b>.
+Three problems with the current card: (1) <b>4px hairline bars</b> are visually anemic;
+(2) the <b>28px percent column</b> can't fit the scrape-mode string <code>"64 · 35%"</code> so it clips;
+(3) the type counts sum to <b>185</b> but the dashboard headline says <b>148 vessels</b> — because
+the scraper counts <i>typed rows</i> (arrivals + departures tables) while the headline counts
+<i>de-duplicated vessels</i>. Every option below states the 185 sample size explicitly instead of
+implying it equals the 148 headline. Pick A, B, or C (or mix).
+</p>
+
+<div class="grid">
+
+  <!-- ════════ BEFORE ════════ -->
+  <div>
+    <div class="col-label bad">Before · <span class="tag">current production</span></div>
+    <div class="rblock">
+      <div class="rhead">Vessel type mix <span class="rhead-src src-green">WEB FEED · 4h</span></div>
+      <div class="traffic-grid">
+        <div class="tcard"><div class="tc-val" style="color:var(--muted)">5</div><div class="tc-lbl">Ports</div></div>
+        <div class="tcard"><div class="tc-val" style="color:var(--text)">148</div><div class="tc-lbl">Vessels</div></div>
+      </div>
+      <div class="b-type-bars">
+        <div class="b-tbar-row"><div class="b-tbar-label">Tanker</div><div class="b-tbar-track"><div class="b-tbar-fill" style="width:35%;background:var(--amber)"></div></div><div class="b-tbar-pct">64 · 35%</div></div>
+        <div class="b-tbar-row"><div class="b-tbar-label">Offshore</div><div class="b-tbar-track"><div class="b-tbar-fill" style="width:27%;background:var(--blue)"></div></div><div class="b-tbar-pct">50 · 27%</div></div>
+        <div class="b-tbar-row"><div class="b-tbar-label">Other</div><div class="b-tbar-track"><div class="b-tbar-fill" style="width:16%;background:var(--muted2)"></div></div><div class="b-tbar-pct">29 · 16%</div></div>
+        <div class="b-tbar-row"><div class="b-tbar-label">Bulker</div><div class="b-tbar-track"><div class="b-tbar-fill" style="width:15%;background:#8b9dc3"></div></div><div class="b-tbar-pct">28 · 15%</div></div>
+        <div class="b-tbar-row"><div class="b-tbar-label">Container</div><div class="b-tbar-track"><div class="b-tbar-fill" style="width:7%;background:var(--green)"></div></div><div class="b-tbar-pct">13 · 7%</div></div>
+        <div class="b-tbar-row"><div class="b-tbar-label">Passenger</div><div class="b-tbar-track"><div class="b-tbar-fill" style="width:2%;background:var(--violet)"></div></div><div class="b-tbar-pct">1 · 1%</div></div>
+      </div>
+    </div>
+    <div class="note">Hairline bars · clipped "64 · 35%" pct column · two big number cards floating
+      above the bars with no visual link · 185 vs 148 never reconciled.</div>
+  </div>
+
+  <!-- ════════ OPTION A ════════ -->
+  <div>
+    <div class="col-label">Option A · <span class="tag">refined bars</span></div>
+    <div class="rblock">
+      <div class="rhead">Vessel type mix <span class="rhead-src src-blue">WEB FEED · 4h</span></div>
+      <div class="subhead">185 vessels classified across 5 Gulf ports · VesselFinder · confidence medium</div>
+      <div class="a-bars">
+        <div class="a-row"><div class="a-label">Tanker</div><div class="a-track"><div class="a-fill" style="width:35%;background:var(--amber)"><span class="a-count">64</span></div></div><div class="a-pct">35%</div></div>
+        <div class="a-row"><div class="a-label">Offshore</div><div class="a-track"><div class="a-fill" style="width:27%;background:var(--blue)"><span class="a-count">50</span></div></div><div class="a-pct">27%</div></div>
+        <div class="a-row"><div class="a-label">Other</div><div class="a-track"><div class="a-fill" style="width:16%;background:var(--muted2)"><span class="a-count">29</span></div></div><div class="a-pct">16%</div></div>
+        <div class="a-row"><div class="a-label">Bulk carrier</div><div class="a-track"><div class="a-fill" style="width:15%;background:#8b9dc3"><span class="a-count">28</span></div></div><div class="a-pct">15%</div></div>
+        <div class="a-row"><div class="a-label">Container</div><div class="a-track"><div class="a-fill" style="width:7%;background:var(--green)"><span class="a-count">13</span></div></div><div class="a-pct">7%</div></div>
+        <div class="a-row"><div class="a-label">Passenger</div><div class="a-track"><div class="a-fill" style="width:2%;background:var(--violet)"></div></div><div class="a-pct">1%</div></div>
+      </div>
+    </div>
+    <div class="note">Closest to current — low-risk change. 14px bars, count sits <i>inside</i> the
+      fill, % gets its own column. Ports/Vessels cards dropped; sample size moved to the subhead.
+      Smallest diff to ship.</div>
+  </div>
+
+  <!-- ════════ OPTION B ════════ -->
+  <div>
+    <div class="col-label">Option B · <span class="tag">stacked composition bar</span></div>
+    <div class="rblock">
+      <div class="rhead">Vessel type mix <span class="rhead-src src-blue">WEB FEED · 4h</span></div>
+      <div class="subhead">Composition of 185 vessels · 5 Gulf ports · VesselFinder</div>
+      <div class="b2-bar">
+        <div class="b2-seg" style="width:35%;background:var(--amber)">35%</div>
+        <div class="b2-seg" style="width:27%;background:var(--blue)">27%</div>
+        <div class="b2-seg" style="width:16%;background:var(--muted2)">16%</div>
+        <div class="b2-seg" style="width:15%;background:#8b9dc3">15%</div>
+        <div class="b2-seg" style="width:7%;background:var(--green)"></div>
+        <div class="b2-seg" style="width:1%;background:var(--violet)"></div>
+      </div>
+      <div class="b2-legend">
+        <div class="b2-leg"><span class="b2-dot" style="background:var(--amber)"></span><span class="b2-leg-name">Tanker</span><span class="b2-leg-val">64</span></div>
+        <div class="b2-leg"><span class="b2-dot" style="background:var(--blue)"></span><span class="b2-leg-name">Offshore</span><span class="b2-leg-val">50</span></div>
+        <div class="b2-leg"><span class="b2-dot" style="background:var(--muted2)"></span><span class="b2-leg-name">Other</span><span class="b2-leg-val">29</span></div>
+        <div class="b2-leg"><span class="b2-dot" style="background:#8b9dc3"></span><span class="b2-leg-name">Bulk carrier</span><span class="b2-leg-val">28</span></div>
+        <div class="b2-leg"><span class="b2-dot" style="background:var(--green)"></span><span class="b2-leg-name">Container</span><span class="b2-leg-val">13</span></div>
+        <div class="b2-leg"><span class="b2-dot" style="background:var(--violet)"></span><span class="b2-leg-name">Passenger</span><span class="b2-leg-val">1</span></div>
+      </div>
+    </div>
+    <div class="note">Reads as a "mix" at a glance — one bar, proportions obvious. Most compact
+      vertically. Tiny segments (Container/Passenger) drop their inline label gracefully.
+      Biggest visual departure from the current card.</div>
+  </div>
+
+  <!-- ════════ OPTION C ════════ -->
+  <div>
+    <div class="col-label">Option C · <span class="tag">compact card grid</span></div>
+    <div class="rblock">
+      <div class="rhead">Vessel type mix <span class="rhead-src src-blue">WEB FEED · 4h</span></div>
+      <div class="subhead">185 vessels classified · 5 Gulf ports · VesselFinder</div>
+      <div class="c-grid">
+        <div class="c-card" style="border-left-color:var(--amber)"><div class="c-top"><span class="c-name">Tanker</span><span class="c-pct" style="color:var(--amber)">35%</span></div><div class="c-count">64 vessels</div><div class="c-mini"><div class="c-mini-fill" style="width:100%;background:var(--amber)"></div></div></div>
+        <div class="c-card" style="border-left-color:var(--blue)"><div class="c-top"><span class="c-name">Offshore</span><span class="c-pct" style="color:var(--blue)">27%</span></div><div class="c-count">50 vessels</div><div class="c-mini"><div class="c-mini-fill" style="width:78%;background:var(--blue)"></div></div></div>
+        <div class="c-card" style="border-left-color:var(--muted2)"><div class="c-top"><span class="c-name">Other</span><span class="c-pct" style="color:var(--muted)">16%</span></div><div class="c-count">29 vessels</div><div class="c-mini"><div class="c-mini-fill" style="width:45%;background:var(--muted2)"></div></div></div>
+        <div class="c-card" style="border-left-color:#8b9dc3"><div class="c-top"><span class="c-name">Bulk carrier</span><span class="c-pct" style="color:#8b9dc3">15%</span></div><div class="c-count">28 vessels</div><div class="c-mini"><div class="c-mini-fill" style="width:44%;background:#8b9dc3"></div></div></div>
+        <div class="c-card" style="border-left-color:var(--green)"><div class="c-top"><span class="c-name">Container</span><span class="c-pct" style="color:var(--green)">7%</span></div><div class="c-count">13 vessels</div><div class="c-mini"><div class="c-mini-fill" style="width:20%;background:var(--green)"></div></div></div>
+        <div class="c-card" style="border-left-color:var(--violet)"><div class="c-top"><span class="c-name">Passenger</span><span class="c-pct" style="color:var(--violet)">1%</span></div><div class="c-count">1 vessel</div><div class="c-mini"><div class="c-mini-fill" style="width:2%;background:var(--violet)"></div></div></div>
+      </div>
+    </div>
+    <div class="note">Densest, most "dashboard-like" — count and % both prominent, mini-bar is
+      relative-to-largest. Pairs well with the Vessel Movement card's existing tcard grid.
+      Six cards is a bit tall on mobile (single column).</div>
+  </div>
+
+</div>
+
+<p class="note" style="margin-top:24px;max-width:780px">
+Separately — the <b>185 vs 148</b> gap is a real scraper-reconciliation bug
+(<code>scrape_vessels_web.py</code>: <code>byType</code> sums every typed row,
+<code>total_all</code> takes a de-duplicated max). It's worth fixing at source so the type mix
+and the headline agree. That's a scraper change, tracked separately from this card redesign.
+</p>
+
+</body>
+</html>
