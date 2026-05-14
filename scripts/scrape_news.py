@@ -159,6 +159,9 @@ def kv_put(key, value):
     return r.status_code == 200
 
 
+from _status import write_status
+
+
 def main():
     print(f"=== news scrape at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
     all_items = []
@@ -180,6 +183,16 @@ def main():
         except Exception as e:
             print(f"  error: {str(e)[:180]}")
             per_source_count[name] = 0
+
+    # Floor check (Batch C · 2026-05-14): if EVERY RSS feed failed, this is a
+    # real outage — not "no Hormuz news today". Don't overwrite KV with an
+    # empty payload (the verdict's news trigger would silently see 0);
+    # preserve the previous value and fail loudly.
+    if succeeded == 0:
+        print("  ✗ ALL news feeds failed — preserving previous KV, exiting non-zero")
+        write_status("news", ok=False, reason="all_feeds_failed",
+                     sources_total=len(FEEDS))
+        return 1
 
     # Filter by keywords + score
     filtered = []
@@ -242,6 +255,8 @@ def main():
 
     ok = kv_put("news_headlines", json.dumps(out, separators=(",", ":")))
     print(f"\n{'✓' if ok else '✗'} KV write {'OK' if ok else 'FAILED'}  (key=news_headlines)")
+    write_status("news", ok=ok, count=len(top20), count_24h=count_24h,
+                 sources_succeeded=succeeded, sources_total=len(FEEDS))
     if not ok:
         return 1
     return 0

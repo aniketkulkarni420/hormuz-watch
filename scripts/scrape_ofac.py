@@ -55,6 +55,9 @@ def parse_date(yyyymmdd):
         return None
 
 
+from _status import write_status
+
+
 def main():
     print(f"=== OFAC scrape at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
     try:
@@ -69,6 +72,15 @@ def main():
     html = r.text
     matches = ACTION_LINK_RE.findall(html)
     print(f"  found {len(matches)} action links")
+
+    # Floor check (Batch C · 2026-05-14): OFAC's recent-actions page always
+    # lists *some* actions. Zero matches means the page markup changed and the
+    # regex broke — NOT "no sanctions activity". Don't overwrite KV with a
+    # 0-count payload (the verdict's OFAC trigger would then never fire).
+    if not matches:
+        print("  ✗ 0 action links parsed — page structure likely changed; preserving previous KV")
+        write_status("ofac", ok=False, reason="zero_matches_regex_broke")
+        return 1
 
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(days=30)
@@ -122,6 +134,8 @@ def main():
     }
     ok = kv_put("ofac_state", json.dumps(payload, separators=(",", ":")))
     print(f"  KV write: {'OK' if ok else 'FAILED'}")
+    write_status("ofac", ok=ok, iran_30d=len(iran_30d),
+                 total_30d=len(actions_30d))
     return 0 if ok else 1
 
 

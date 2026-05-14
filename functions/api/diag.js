@@ -15,7 +15,7 @@ export async function onRequestGet({ request, env }) {
   // bdti_latest has a different "stale" threshold (weekly publish vs continuous)
   // ais_last_success_ts + ais_last_recovery_ts are excluded from staleness rules — they're
   // markers, not feeds. Surfaced separately below.
-  const kvKeys = ["latest", "oil_scraped", "ais_state", "vessel_count_scraped", "scrape_status_oil", "scrape_status_ais", "scrape_status_aircraft", "scrape_status_seismic", "scrape_status_gdelt", "scrape_status_weather", "verdict_latest", "bdti_latest", "aircraft_state", "seismic_state", "gdelt_state", "weather_state", "news_headlines", "ofac_state", "currency_irr"];
+  const kvKeys = ["latest", "oil_scraped", "ais_state", "vessel_count_scraped", "scrape_status_oil", "scrape_status_ais", "scrape_status_aircraft", "scrape_status_seismic", "scrape_status_gdelt", "scrape_status_weather", "scrape_status_news", "scrape_status_ofac", "scrape_status_currency", "scrape_status_bdti", "scrape_status_oil_web", "scrape_status_vessels_web", "verdict_latest", "bdti_latest", "aircraft_state", "seismic_state", "gdelt_state", "weather_state", "news_headlines", "ofac_state", "currency_irr"];
   for (const k of kvKeys) {
     try {
       const raw = await env.OIL_KV.get(k);
@@ -64,11 +64,14 @@ export async function onRequestGet({ request, env }) {
     bdti_latest: 12960,                   // BDTI publishes weekly (9 days)
     aircraft_state: 60, scrape_status_aircraft: 60,   // every 15 min
     seismic_state: 150, scrape_status_seismic: 150,   // hourly
-    gdelt_state: 150,                                 // hourly
+    gdelt_state: 150, scrape_status_gdelt: 150,       // hourly
     weather_state: 45, scrape_status_weather: 45,     // every 10 min
-    news_headlines: 90,                               // every 30 min
-    ofac_state: 480,                                  // every 6 h
-    currency_irr: 150,                                // hourly
+    news_headlines: 90, scrape_status_news: 90,       // every 30 min
+    ofac_state: 480, scrape_status_ofac: 480,         // every 6 h
+    currency_irr: 150, scrape_status_currency: 150,   // hourly
+    scrape_status_oil_web: 60,                        // every 15 min
+    scrape_status_vessels_web: 360,                   // every 4 h
+    scrape_status_bdti: 12960,                        // BDTI publishes weekly
     d1_snapshot: 90,                                  // hourly snapshot writer
   };
   const DEFAULT_MAX_AGE_MIN = 60;

@@ -333,4 +333,13 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # Per-scraper health visibility for /api/diag + watchdog (Batch C · 2026-05-14).
+    # main() may sys.exit() internally OR fall through — catch both so the
+    # status write always runs.
+    from _status import write_status
+    try:
+        _rc = main() or 0
+    except SystemExit as _e:
+        _rc = _e.code if isinstance(_e.code, int) else (0 if _e.code is None else 1)
+    write_status("oil_web", ok=(_rc == 0))
+    sys.exit(_rc)

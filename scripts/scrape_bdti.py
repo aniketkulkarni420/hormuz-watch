@@ -349,4 +349,8 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # Per-scraper health visibility for /api/diag + watchdog (Batch C · 2026-05-14)
+    from _status import write_status
+    _rc = main()
+    write_status("bdti", ok=(_rc == 0))
+    sys.exit(_rc)

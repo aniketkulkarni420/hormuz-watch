@@ -35,21 +35,35 @@ def put_kv(key, value):
 
 def main():
     print(f"=== gdelt scrape {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
+    def _fail(reason):
+        # Real failure path (Batch C · 2026-05-14): flag it so /api/diag and
+        # the watchdog see it, and DON'T touch gdelt_state — preserve the
+        # previous value rather than clobbering it with a 0-count payload.
+        # The old code exited 0 here (silent success on total failure).
+        put_kv("scrape_status_gdelt", json.dumps({
+            "fetchedAt": int(time.time()), "ok": False,
+            "reason": reason, "job": "gdelt-scraper",
+        }, separators=(",", ":")))
+        sys.exit(1)
+
     try:
         r = requests.get(URL, timeout=25,
                          headers={"User-Agent": "HormuzWatch-GDELT/1.0"})
     except Exception as e:
         print(f"GDELT request failed: {e}")
-        sys.exit(0)
+        _fail("request_exception")
     if r.status_code != 200:
         print(f"GDELT HTTP {r.status_code}: {r.text[:200]}")
-        sys.exit(0)
+        _fail(f"http_{r.status_code}")
 
     try:
         data = r.json()
     except Exception:
-        print("GDELT JSON parse failed (often empty body when no articles)")
-        data = {}
+        # Empty/garbage body — GDELT's doc API returns this on transient
+        # errors AND (per its docs) sometimes on genuine zero-results, so the
+        # two are indistinguishable. Treat as failure: preserve previous KV.
+        print("GDELT JSON parse failed — preserving previous KV, flagging failure")
+        _fail("json_parse_failed")
 
     articles = data.get("articles") or []
     count = len(articles)
