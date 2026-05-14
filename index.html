@@ -973,10 +973,10 @@ header{
         <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="cdSeismicDot"></span>Seismic (7d, mag 4+)</div>
         <div class="tile-row-val" id="cdSeismicVal">&mdash;</div>
       </div>
-      <div class="tile-row">
-        <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="cdDarkDot"></span>Dark vessel share</div>
-        <div class="tile-row-val" id="cdDarkVal">&mdash;</div>
-      </div>
+      <!-- "Dark vessel share" row removed 2026-05-14 — it was computed from a
+           frozen hardcoded 947 constant divided by the live vessel count, so the
+           "share" moved inversely to real traffic. No genuine dark-traffic feed
+           exists; restore this row only when one does. -->
     </div>
 
     <!-- CLOSURE SCENARIO -->
@@ -1014,19 +1014,14 @@ header{
       </div>
     </div>
 
-    <!-- FLAG STATE FLOW (slowest signal) -->
-    <div class="rblock">
-      <div class="rhead">
-        Flag state flow today
-        <span class="rhead-src src-est" id="flagSrc">AIS &mdash; DEGRADED</span>
-      </div>
-      <div class="flag-rows" id="flagRows">
-        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Per-flag breakdown resumes when the AIS feed recovers.</div>
-      </div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        Flag = ship registry. Liberia/Marshall Islands/Panama = <span title="Ship registered in a country other than its owner's — typically Liberia, Marshall Islands, Panama">flag of convenience</span>, predominantly Gulf crude. Indian-flag = IOC/SCI/BPCL tankers direct.
-      </div>
-    </div>
+    <!-- FLAG STATE FLOW — removed 2026-05-14. This card is 100% AIS-derived
+         (per-flag vessel registry counts); with AISStream down it had no real
+         data to show. Rather than display a permanent "resumes when AIS
+         recovers" placeholder, the card is pulled entirely. Restore this block
+         when the AIS feed stabilises — the JS (updateFlagDisplay / trackFlag)
+         is still present and null-guarded, so it will repopulate automatically
+         once #flagRows exists in the DOM again. -->
+
 
     <!-- ───── HIDDEN LEGACY TILES (data flows preserved; DOM kept for getElementById writers) ───── -->
     <div style="display:none" aria-hidden="true">
@@ -1680,6 +1675,7 @@ function updateFlagDisplay(){
   var top = sorted.slice(0,6);
   var maxV = top.length > 0 ? flagCounts[top[0]] : 1;
   var fr = document.getElementById("flagRows");
+  if(!fr) return;   // Flag state flow card removed while AIS is down — no-op until restored
   if(top.length === 0){
     fr.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Populating from live AIS&hellip;</div>';
     return;
@@ -4279,16 +4275,8 @@ function renderConsolidatedTiles(){
   } else {
     _setText("cdSeismicVal", "—"); _setDot("cdSeismicDot", "muted");
   }
-  // Dark vessel share (uses snapshot.dark_vessels vs scraped/AIS count)
-  var darkAbs = s.dark_vessels;
-  var aisN = s.daily_transit_estimate || s.transits_per_day;
-  if(darkAbs != null && aisN != null && (darkAbs + aisN) > 0){
-    var pct = Math.round(darkAbs / (darkAbs + aisN) * 100);
-    _setText("cdDarkVal", pct + "%");
-    _setDot("cdDarkDot", pct > 15 ? "red" : pct >= 8 ? "amber" : "green");
-  } else {
-    _setText("cdDarkVal", "—"); _setDot("cdDarkDot", "muted");
-  }
+  // "Dark vessel share" tile removed 2026-05-14 — was a frozen constant
+  // dressed as a live computed percentage. See the matching HTML comment.
 
   // ─── MACRO CONTEXT ─────────────────────────────────────────
   var opec = s.opec_production_mbpd;

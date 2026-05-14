@@ -102,7 +102,14 @@ export async function onRequestGet({ request, env }) {
   const baseline = numFromEnv(env.HORMUZ_BASELINE_30D, 140);
   const inbound = aisLive ? aisLive.inbound : numFromEnv(env.HORMUZ_INBOUND, 38);
   const outbound = aisLive ? aisLive.outbound : numFromEnv(env.HORMUZ_OUTBOUND, 42);
-  const dark = numFromEnv(env.HORMUZ_DARK, 947);
+  // Dark-vessel count: we have NO real source for this. The old
+  // numFromEnv(env.HORMUZ_DARK, 947) shipped a frozen constant that the UI
+  // then divided by the live vessel count to render a "Dark vessel share"
+  // — which moved inversely to live traffic (fewer tracked ships → higher
+  // fake "dark %") and even bumped the Cross-signal tension gauge to HIGH.
+  // Emit null until a genuine dark-traffic feed exists; both UI consumers
+  // already degrade null to an honest "not available". (2026-05-14)
+  const dark = null;
 
   // BDTI: KV-backed. null when KV is empty — never invent a value. The old
   // env fallback of 14 was nonsensical (real BDTI ~800–3000) and scores as
@@ -153,7 +160,6 @@ export async function onRequestGet({ request, env }) {
       "oil_transit_value_usd_per_day",
       "incidents_30d",
       "india_import_dependency_pct",
-      "dark_vessels",
     ],
     is_static: !aisLive,
     live_source_count: aisLive ? 1 : 0,
