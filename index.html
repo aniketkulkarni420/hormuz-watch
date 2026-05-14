@@ -633,7 +633,7 @@ header{
     </div>
     <div class="sig-bot">
       <span class="sig-label">Transits / 24h</span>
-      <span class="sig-src src-live">LIVE FEED</span>
+      <span class="sig-src src-est" id="sigVesselsSrc">FEED PENDING</span>
     </div>
     <div class="sig-tooltip" id="ttipVessels"></div>
   </div>
@@ -650,8 +650,8 @@ header{
   </div>
   <div class="sig">
     <div class="sig-top">
-      <span class="sig-val" id="sigBDTI" style="color:var(--amber)">2841</span>
-      <span class="sig-dir" style="color:var(--green)">&#9650;3.2%</span>
+      <span class="sig-val" id="sigBDTI" style="color:var(--amber)">&mdash;</span>
+      <span class="sig-dir" id="sigBDTIDir" style="color:var(--muted)"></span>
     </div>
     <div class="sig-bot">
       <span class="sig-label" title="Baltic Dirty Tanker Index — weekly freight rate index for crude oil tankers">BDTI index <span id="sigBdtiAsOf" style="color:var(--muted2);font-weight:400">· as of —</span></span>
@@ -823,7 +823,7 @@ header{
 
     <!-- VESSEL MOVEMENT — explicit transit/anchored/approach + east/west flow -->
     <div class="rblock">
-      <div class="rhead">Vessel movement <span class="rhead-src src-live" style="color:var(--green)" id="moveSrc">LIVE FEED</span></div>
+      <div class="rhead">Vessel movement <span class="rhead-src src-est" id="moveSrc">INITIALISING</span></div>
       <!-- Headline: 24h transits with direction split -->
       <div style="margin-bottom:14px">
         <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
@@ -1018,10 +1018,10 @@ header{
     <div class="rblock">
       <div class="rhead">
         Flag state flow today
-        <span class="rhead-src src-live" style="color:var(--green)">LIVE FEED</span>
+        <span class="rhead-src src-est" id="flagSrc">AIS &mdash; DEGRADED</span>
       </div>
       <div class="flag-rows" id="flagRows">
-        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Populating from live vessel feed&hellip;</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">Per-flag breakdown resumes when the AIS feed recovers.</div>
       </div>
       <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
         Flag = ship registry. Liberia/Marshall Islands/Panama = <span title="Ship registered in a country other than its owner's — typically Liberia, Marshall Islands, Panama">flag of convenience</span>, predominantly Gulf crude. Indian-flag = IOC/SCI/BPCL tankers direct.
@@ -1315,27 +1315,10 @@ var TANKERS = [
   {ticker:"DHT",  name:"DHT Holdings",    upside:"+25\u201350%"}
 ];
 
-var TODAY_LOG = [
-  {mmsi:636092297,name:"OCEANIA",        typeCode:80,lane:"in", flag:"\uD83C\uDDF1\uD83C\uDDF7",timeOffset:0.5},
-  {mmsi:477555123,name:"GULF PIONEER",   typeCode:80,lane:"in", flag:"\uD83C\uDDED\uD83C\uDDF0",timeOffset:1.3},
-  {mmsi:311046600,name:"AL GATTARA",     typeCode:84,lane:"in", flag:"\uD83C\uDDF6\uD83C\uDDE6",timeOffset:2.1},
-  {mmsi:311000233,name:"AL SALEEF",      typeCode:80,lane:"in", flag:"\uD83C\uDDF8\uD83C\uDDE6",timeOffset:2.8},
-  {mmsi:235012345,name:"STENA IMPERIAL", typeCode:89,lane:"out",flag:"\uD83C\uDDEC\uD83C\uDDE7",timeOffset:3.2},
-  {mmsi:636091200,name:"ATHENIAN STAR",  typeCode:80,lane:"out",flag:"\uD83C\uDDF1\uD83C\uDDF7",timeOffset:4.0},
-  {mmsi:311033456,name:"MOZAH",          typeCode:84,lane:"out",flag:"\uD83C\uDDF6\uD83C\uDDE6",timeOffset:4.7},
-  {mmsi:477321654,name:"PACIFIC CROWN",  typeCode:80,lane:"in", flag:"\uD83C\uDDEF\uD83C\uDDF5",timeOffset:5.5},
-  {mmsi:538003421,name:"EXCELLENCE",     typeCode:84,lane:"out",flag:"\uD83C\uDDE7\uD83C\uDDEA",timeOffset:6.2},
-  {mmsi:538003422,name:"TI HELLAS",      typeCode:80,lane:"in", flag:"\uD83C\uDDF2\uD83C\uDDED",timeOffset:7.0},
-  {mmsi:636091234,name:"GULF NAVIGATOR", typeCode:80,lane:"out",flag:"\uD83C\uDDF1\uD83C\uDDF7",timeOffset:7.8},
-  {mmsi:477891234,name:"MSC ADRIATIC",   typeCode:71,lane:"out",flag:"\uD83C\uDDF2\uD83C\uDDED",timeOffset:8.5},
-  {mmsi:636016823,name:"MARAN ZEUS",     typeCode:80,lane:"in", flag:"\uD83C\uDDEC\uD83C\uDDF7",timeOffset:9.3},
-  {mmsi:357234567,name:"THOR INTEGRITY", typeCode:89,lane:"out",flag:"\uD83C\uDDF5\uD83C\uDDE6",timeOffset:10.1},
-  {mmsi:419111001,name:"SCI TRIVENI",    typeCode:80,lane:"in", flag:"\uD83C\uDDEE\uD83C\uDDF3",timeOffset:11.0},
-  {mmsi:419222002,name:"JNPT MARINER",   typeCode:80,lane:"out",flag:"\uD83C\uDDEE\uD83C\uDDF3",timeOffset:12.5},
-  {mmsi:412345678,name:"COSCO HORMUZ",   typeCode:80,lane:"in", flag:"\uD83C\uDDE8\uD83C\uDDF3",timeOffset:13.2},
-  {mmsi:440123456,name:"SK SUNRISE",     typeCode:84,lane:"out",flag:"\uD83C\uDDF0\uD83C\uDDF7",timeOffset:14.1},
-  {mmsi:431001234,name:"NIPPON MARU",    typeCode:80,lane:"in", flag:"\uD83C\uDDEF\uD83C\uDDF5",timeOffset:15.0}
-];
+// TODAY_LOG removed (Batch A \u00B7 2026-05-14) \u2014 was a hardcoded 19-vessel array
+// animated to look like a live arrivals feed. The "Ships in Hormuz today"
+// panel now shows an honest empty state until AISStream recovers; see the
+// showVesselLogEmptyState() block further down.
 
 // ═══════════════════════════════════════════════════
 // MMSI COUNTRY LOOKUP
@@ -1737,6 +1720,9 @@ function trackFlag(mmsi, forceCode){
   if(!flagCounts[code]) flagCounts[code] = 0;
   flagCounts[code]++;
   updateFlagDisplay();
+  // Real AIS data arrived — promote the flag-state badge from DEGRADED to LIVE
+  var _fs = document.getElementById("flagSrc");
+  if(_fs && _fs.textContent !== "AIS · LIVE"){ _fs.textContent = "AIS · LIVE"; _fs.style.color = "var(--green)"; }
 }
 
 // ═══════════════════════════════════════════════════
@@ -2034,6 +2020,8 @@ async function renderXV(aisCount){
   // Stash composite data for new tiles (aerial / geopolitical / environment)
   window._compositeData = data;
   if(typeof renderCompositeTiles === "function") try { renderCompositeTiles(data); } catch(e){}
+  try { renderSeismicMarkers(); } catch(e){}
+  try { renderAircraft(); } catch(e){}
   xv.innerHTML = "";
   out.rows.forEach(function(def){
     var row = document.createElement("div");
@@ -2140,9 +2128,16 @@ var routeLayers = ROUTES.map(function(r){
   return [glow,line];
 });
 
-var layerMap={inbound:inLane,outbound:outLane,patrol:[patrolPoly],pipelines:[uaePipe,saPipe],routes:[].concat.apply([],routeLayers)};
-var layerOn={inbound:true,outbound:true,patrol:true,pipelines:true,routes:false}; // Trade Routes off by default — opt-in toggle
-var LAYER_DEFS=[{id:"inbound",name:"Inbound Lane",color:"#38aaff"},{id:"outbound",name:"Outbound Lane",color:"#f09014"},{id:"patrol",name:"IRGCN Patrol",color:"#ff3e52"},{id:"pipelines",name:"Bypass Pipelines",color:"#1dd47e"},{id:"routes",name:"Trade Routes",color:"#b47aff"}];
+// ── Real-data layer groups (B-interactive · 2026-05-14) ──────────────────
+// Port Pressure: circle per Gulf port, radius ∝ live 24h vessel count (snapshot feed).
+// Aircraft: OpenSky ADS-B positions (composite feed). Seismic: USGS events near ports.
+var portPressureLayer=L.layerGroup().addTo(map);
+var aircraftLayer=L.layerGroup().addTo(map);
+var seismicLayer=L.layerGroup().addTo(map);
+
+var layerMap={inbound:inLane,outbound:outLane,patrol:[patrolPoly],pipelines:[uaePipe,saPipe],routes:[].concat.apply([],routeLayers),portpressure:[portPressureLayer],aircraft:[aircraftLayer],seismic:[seismicLayer]};
+var layerOn={inbound:true,outbound:true,patrol:true,pipelines:true,routes:false,portpressure:true,aircraft:true,seismic:true}; // Trade Routes off by default — opt-in toggle
+var LAYER_DEFS=[{id:"portpressure",name:"Port Pressure",color:"#f09014"},{id:"aircraft",name:"Aircraft",color:"#ff3e52"},{id:"seismic",name:"Seismic",color:"#ff8c2e"},{id:"inbound",name:"Inbound Lane",color:"#38aaff"},{id:"outbound",name:"Outbound Lane",color:"#f09014"},{id:"patrol",name:"IRGCN Patrol",color:"#ff3e52"},{id:"pipelines",name:"Bypass Pipelines",color:"#1dd47e"},{id:"routes",name:"Trade Routes",color:"#b47aff"}];
 
 // Hide Trade Routes initially since layerOn.routes=false
 layerMap.routes.forEach(function(l){map.removeLayer(l);});
@@ -2170,6 +2165,81 @@ LOCS.forEach(function(loc){
   L.marker([loc.lat,loc.lng],{icon:mkLocIcon(loc.type,loc.color)}).addTo(map)
     .bindTooltip(loc.name,{className:"ctt"}).on("click",function(){showLoc(loc.id);});
 });
+
+// ═══════════════════════════════════════════════════
+// REAL-DATA MAP LAYERS — Port Pressure · Aircraft · Seismic
+// (B-interactive · 2026-05-14 · replaces the SIM_FLEET animation)
+// All three bind to feeds already polled elsewhere: _snapshotData (port
+// vessel counts) and window._compositeData (aircraft + seismic). Each
+// renderer is null-safe — empty layer until its feed populates.
+// ═══════════════════════════════════════════════════
+var PORT_COORDS = {
+  "Fujairah":     [25.123,56.336],
+  "Khor Fakkan":  [25.349,56.358],
+  "Jebel Ali":    [25.011,55.061],
+  "Ras Tanura":   [26.640,50.160],
+  "Bandar Abbas": [27.183,56.277]
+};
+// Saudi = blue, Iran = red, rest = amber (matches the dashboard convention)
+var PORT_COLORS = { "Ras Tanura":"#38aaff", "Bandar Abbas":"#ff3e52" };
+function _portCount(v){
+  if(v==null) return null;
+  if(typeof v==="number") return v;
+  if(typeof v==="object"){
+    if(isFinite(v.total)) return v.total;
+    if(v.data && isFinite(v.data.total)) return v.data.total;
+  }
+  return null;
+}
+function renderPortPressure(){
+  if(typeof portPressureLayer==="undefined") return;
+  portPressureLayer.clearLayers();
+  var snap = (typeof _snapshotData==="object" && _snapshotData) ? _snapshotData : null;
+  var perPort = snap && snap.scraped_vessel_perport ? snap.scraped_vessel_perport : null;
+  if(!perPort) return;
+  Object.keys(perPort).forEach(function(name){
+    var coord = PORT_COORDS[name]; if(!coord) return;
+    var cnt = _portCount(perPort[name]); if(cnt==null) return;
+    var color = PORT_COLORS[name] || "#f09014";
+    // Halo radius (metres) scales with vessel count; core dot scales gently.
+    L.circle(coord,{radius:(6+cnt*0.7)*900,color:color,fillColor:color,fillOpacity:.13,weight:1,opacity:.45}).addTo(portPressureLayer);
+    var m=L.circleMarker(coord,{radius:5+Math.min(cnt,80)*0.22,color:color,fillColor:color,fillOpacity:.9,weight:1.5}).addTo(portPressureLayer);
+    m.bindTooltip("<b>"+name+"</b> · "+cnt+" vessels (24h)",{className:"ctt"});
+    m.bindPopup('<div style="font-family:var(--mono);font-size:11px;line-height:1.6"><b style="color:'+color+'">'+name+'</b><br>Vessels in port (24h): <b>'+cnt+'</b><br>Source: VesselFinder scrape</div>');
+  });
+}
+function renderSeismicMarkers(){
+  if(typeof seismicLayer==="undefined") return;
+  seismicLayer.clearLayers();
+  var c=(typeof window._compositeData==="object" && window._compositeData) ? window._compositeData : null;
+  var se=c && c.seismic ? c.seismic : null;
+  var events=se && Array.isArray(se.events_near_ports) ? se.events_near_ports : null;
+  if(!events) return;
+  events.forEach(function(ev){
+    if(ev.lat==null || ev.lng==null) return;
+    var mag=ev.mag || ev.magnitude || 0;
+    var ico=L.divIcon({className:"",iconSize:[14,14],iconAnchor:[7,7],
+      html:'<div style="width:14px;height:14px;border-radius:50%;background:rgba(255,140,46,.22);border:1.5px solid #ff8c2e;animation:pulse 2.6s ease-out infinite"></div>'});
+    L.marker([ev.lat,ev.lng],{icon:ico}).addTo(seismicLayer)
+      .bindTooltip("M "+mag+(ev.place?" · "+ev.place:""),{className:"ctt"});
+  });
+}
+function renderAircraft(){
+  if(typeof aircraftLayer==="undefined") return;
+  aircraftLayer.clearLayers();
+  var c=(typeof window._compositeData==="object" && window._compositeData) ? window._compositeData : null;
+  var ac=c && c.aircraft ? c.aircraft : null;
+  var pos=ac && Array.isArray(ac.positions) ? ac.positions : null;
+  if(!pos) return; // scraper emits positions[] after aircraft-scraper redeploys
+  pos.forEach(function(a){
+    if(a.lat==null || a.lng==null) return;
+    var col=a.mil?"#ff3e52":"#8099b3";
+    var ico=L.divIcon({className:"",iconSize:[14,14],iconAnchor:[7,7],
+      html:'<div style="font-size:12px;line-height:1;color:'+col+';filter:drop-shadow(0 0 2px #000)">✈</div>'});
+    L.marker([a.lat,a.lng],{icon:ico}).addTo(aircraftLayer)
+      .bindTooltip((a.cs||"aircraft")+(a.mil?" · military":" · civil"),{className:"ctt"});
+  });
+}
 
 var card=document.getElementById("card");
 document.getElementById("iclose").addEventListener("click",closeCard);
@@ -2228,22 +2298,12 @@ function getShipInfo(typeCode,name){
   return SHIP_TYPES[typeCode]||{label:"Vessel",color:"#38aaff",cargoM:0};
 }
 
+// ── Animated SIM_FLEET removed (B-interactive · 2026-05-14) ──────────────
+// The looping requestAnimationFrame vessel animation used hardcoded SIM_FLEET
+// data, not a real feed — the "map cannot be stopped, looks horrible" bug.
+// Replaced by the real-data Port Pressure / Aircraft / Seismic layers above.
+// simVessels kept declared-but-empty: the log-entry click handler references it.
 var simVessels=[];
-SIM_FLEET.forEach(function(v){
-  var si=getShipInfo(v.typeCode,v.name);
-  var pts=v.lane==="in"?IN_PTS:OUT_PTS;
-  var m=L.marker(posOnPath(pts,v.t),{icon:mkVIcon(si.color,v.heading),zIndexOffset:200}).addTo(map);
-  m.bindTooltip(v.name+" | "+si.label+" | "+v.flag+" | $"+si.cargoM+"M cargo",{className:"ctt",sticky:true});
-  simVessels.push({m:m,t:v.t,spd:0.000085+Math.random()*0.00004,pts:pts,heading:v.heading,color:si.color,data:v});
-  trackFlag(v.mmsi);
-});
-function animateVessels(){
-  for(var i=0;i<simVessels.length;i++){
-    var v=simVessels[i];v.t=(v.t+v.spd)%1;v.m.setLatLng(posOnPath(v.pts,v.t));
-  }
-  requestAnimationFrame(animateVessels);
-}
-animateVessels();
 
 var logScroll=document.getElementById("logScroll");
 var loggedMMSIs={};var loggedVessels=[];
@@ -2283,12 +2343,21 @@ function addLogEntry(vessel,flash){
   document.getElementById("sigVessels").textContent=loggedVessels.length;
 }
 
-var nowHour=new Date().getUTCHours()+(new Date().getUTCMinutes()/60);
-var toShow=TODAY_LOG.filter(function(v){return v.timeOffset<=nowHour;});
-toShow.sort(function(a,b){return b.timeOffset-a.timeOffset;});
-toShow.forEach(function(v){addLogEntry(v,false);});
-var pending=TODAY_LOG.filter(function(v){return v.timeOffset>nowHour;});
-setInterval(function(){if(pending.length>0){var next=pending.shift();addLogEntry(next,true);}},22000);
+// ── TODAY_LOG simulation removed (Batch A · 2026-05-14) ──────────────────
+// The "Ships in Hormuz today" panel was seeded from a hardcoded 19-vessel
+// array and animated on a 22s timer to look like live arrivals. With the
+// AISStream provider down, that was pure fiction. addLogEntry() is still
+// wired to the real AIS onmessage handler — the panel populates for real
+// when the feed recovers; until then it shows an honest empty state.
+(function showVesselLogEmptyState(){
+  if (logScroll && !logScroll.children.length) {
+    logScroll.innerHTML = '<div style="font-family:var(--mono);font-size:10px;'
+      + 'color:var(--muted);padding:14px 4px;line-height:1.6">Live per-ship feed '
+      + 'unavailable — AISStream provider outage.<br>Arrivals resume when the '
+      + 'feed recovers. Port-level activity is on the map’s Port Pressure '
+      + 'layer and in the Cross-Signal panel.</div>';
+  }
+})();
 
 // Color palette for canonical ship-class labels from the AIS scraper.
 var SHIP_CLASS_COLORS = {
@@ -2531,25 +2600,51 @@ function saveTransits(arr){
 }
 var transits24h = loadTransits();
 
-// BDTI is manually refreshed weekly via cron — anchor freshness to the constant
-// (BDTI_LAST_UPDATE updated each time the weekly job edits the value)
-var BDTI_LAST_UPDATE = "2026-05-05T00:00:00Z";
-dataAge.bdti.lastFetch = new Date(BDTI_LAST_UPDATE).getTime();
-dataAge.bdti.status = "manual";
-// I7 — surface BDTI as-of date + stale badge when > 9 days old
-(function updateBdtiAsOf(){
-  var d = new Date(BDTI_LAST_UPDATE);
-  var ageDays = (Date.now() - d.getTime()) / 86400000;
-  var asOfEl = document.getElementById("sigBdtiAsOf");
-  var badgeEl = document.getElementById("sigBdtiBadge");
-  if (asOfEl) {
-    var mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getUTCMonth()];
-    asOfEl.textContent = "· as of " + mon + " " + d.getUTCDate();
-  }
-  if (badgeEl && ageDays > 9) {
-    badgeEl.textContent = "STALE · " + Math.round(ageDays) + "d";
-    badgeEl.style.color = "var(--amber)";
-  }
+// BDTI — fetched live from /api/bdti (KV-backed: manual-verified entry or
+// scraper value). No more hardcoded value/date (Batch A · 2026-05-14). The
+// tile value, WoW arrow, as-of date and stale badge are all driven by the
+// real feed; the API owns the staleness verdict (weekly publish cadence).
+dataAge.bdti.status = "loading";
+(function loadBdtiTile(){
+  fetch("/api/bdti?_=" + Date.now())
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(!d || !isFinite(d.value)) return;
+      var valEl   = document.getElementById("sigBDTI");
+      var dirEl   = document.getElementById("sigBDTIDir");
+      var asOfEl  = document.getElementById("sigBdtiAsOf");
+      var badgeEl = document.getElementById("sigBdtiBadge");
+      if(valEl) valEl.textContent = Math.round(d.value);
+      if(dirEl){
+        var wow = isFinite(d.wow_pct) ? d.wow_pct : null;
+        if(wow == null){ dirEl.textContent = ""; }
+        else {
+          dirEl.textContent = (wow >= 0 ? "▲" : "▼") + Math.abs(wow).toFixed(1) + "%";
+          dirEl.style.color = wow > 0 ? "var(--green)" : wow < 0 ? "var(--red)" : "var(--muted)";
+        }
+      }
+      if(asOfEl){
+        if(d.asOf){
+          var dt = new Date(d.asOf + "T00:00:00Z");
+          var mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getUTCMonth()];
+          asOfEl.textContent = "· as of " + mon + " " + dt.getUTCDate();
+          dataAge.bdti.lastFetch = dt.getTime();
+        } else {
+          asOfEl.textContent = "· as of —";
+        }
+      }
+      if(badgeEl){
+        if(d.stale){
+          badgeEl.textContent = "STALE" + (isFinite(d.ageDays) ? " · " + d.ageDays + "d" : "");
+          badgeEl.style.color = "var(--amber)";
+        } else {
+          badgeEl.textContent = "FREIGHT";
+          badgeEl.style.color = "";
+        }
+      }
+      dataAge.bdti.status = (d.source && String(d.source).indexOf("manual") >= 0) ? "manual" : "feed";
+    })
+    .catch(function(){});
 })();
 
 function categorizeVessel(lat, lng, sog, heading){
@@ -2701,6 +2796,14 @@ function updateVesselUI(){
       srcEl.textContent = serverActive ? "LIVE FEED · server" : "LIVE FEED";
       srcEl.style.color = "var(--green)";
     }
+  }
+  // Signal-bar "Transits / 24h" badge mirrors the Vessel-movement freshness
+  // state — no more hardcoded "LIVE FEED" (Batch A · 2026-05-14).
+  var sigSrcEl = document.getElementById("sigVesselsSrc");
+  if (sigSrcEl) {
+    var srcTxt = srcEl ? srcEl.textContent : "FEED PENDING";
+    sigSrcEl.textContent = srcTxt.indexOf("·") >= 0 ? srcTxt.split("·")[0].trim() : srcTxt;
+    sigSrcEl.style.color = (srcEl && srcEl.style.color) || "var(--muted)";
   }
 }
 // ─── Composite-mode UI reframe · runs when AIS is degraded ──────────────────
@@ -3012,7 +3115,7 @@ var _snapshotData = null;
 function pollSnapshotForDegradedMode(){
   fetch("/api/snapshot")
     .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(d){ if(d){ _snapshotData = d; applyAisDegradedMode(d); try { updateTypeBars(); } catch(e){} try { renderConsolidatedTiles(); } catch(e){} } })
+    .then(function(d){ if(d){ _snapshotData = d; applyAisDegradedMode(d); try { updateTypeBars(); } catch(e){} try { renderConsolidatedTiles(); } catch(e){} try { renderPortPressure(); } catch(e){} } })
     .catch(function(){});
 }
 setTimeout(pollSnapshotForDegradedMode, 4000);
@@ -4229,9 +4332,11 @@ function renderConsolidatedTiles(){
   } else {
     _setText("mcCrudeVal", "—"); _setDot("mcCrudeDot", "muted");
   }
-  // Persian Gulf imports — static reference (no live feed yet)
-  _setText("mcImportsVal", "12.3M bbl/mo");
-  _setDot("mcImportsDot", "amber");
+  // Persian Gulf imports — no live feed yet. Show an honest placeholder
+  // rather than a hardcoded "12.3M bbl/mo" dressed up next to live rows
+  // (Batch A · 2026-05-14). Restore a value only when a real feed is wired.
+  _setText("mcImportsVal", "no feed");
+  _setDot("mcImportsDot", "muted");
 }
 // Run on a heartbeat — _snapshotData populates ~4s after load
 setTimeout(renderConsolidatedTiles, 5000);

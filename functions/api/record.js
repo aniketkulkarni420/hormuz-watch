@@ -321,7 +321,11 @@ async function _handleRecord({ request, env }) {
   ]);
 
   const aisSummary = (aisD && aisD.summary) || {};
-  const vTransit24h = isFinite(aisSummary.transits24h) ? aisSummary.transits24h : null;
+  // Don't feed degraded / zero-message AIS into the verdict — a fresh-but-dead
+  // feed would otherwise select ais-primary weights off stale data and defeat
+  // the whole composite-mode design (Batch A · 2026-05-14).
+  const aisDegraded = !!(aisD && aisD.degraded);
+  const vTransit24h = (!aisDegraded && isFinite(aisSummary.transits24h)) ? aisSummary.transits24h : null;
   const vTransiting = isFinite(aisSummary.categories?.transit)  ? aisSummary.categories.transit  : null;
   const vAnchored   = isFinite(aisSummary.categories?.anchored) ? aisSummary.categories.anchored : null;
   const vApproach   = isFinite(aisSummary.categories?.approach) ? aisSummary.categories.approach : null;
@@ -343,21 +347,30 @@ async function _handleRecord({ request, env }) {
   let gfwLoi = (gfwLoiD && Array.isArray(gfwLoiD.entries)) ? gfwLoiD.entries.length : null;
 
   // KV side-load for verdict inputs (preserves prior behaviour when /api/snapshot is incomplete)
-  let aircraftKv = null, seismicKv = null, gdeltKv = null, weatherKv = null;
+  let aircraftKv = null, seismicKv = null, gdeltKv = null, weatherKv = null, bdtiKv = null;
   if (env.OIL_KV) {
     try {
-      const [acR, seR, gdR, wxR] = await Promise.all([
+      const [acR, seR, gdR, wxR, bdR] = await Promise.all([
         env.OIL_KV.get("aircraft_state"),
         env.OIL_KV.get("seismic_state"),
         env.OIL_KV.get("gdelt_state"),
         env.OIL_KV.get("weather_state"),
+        env.OIL_KV.get("bdti_latest"),
       ]);
       if (acR) aircraftKv = JSON.parse(acR);
       if (seR) seismicKv = JSON.parse(seR);
       if (gdR) gdeltKv = JSON.parse(gdR);
       if (wxR) weatherKv = JSON.parse(wxR);
+      if (bdR) bdtiKv = JSON.parse(bdR);
     } catch { /* best effort */ }
   }
+
+  // BDTI — read from KV (manual-verified entry or scraper value). No more
+  // hardcoded 2841 in the verdict or D1 history (Batch A · 2026-05-14).
+  // null when KV is empty: scoreBdti() returns null → verdict skips it
+  // rather than scoring a fabricated value as "calm".
+  const bdtiValue = (bdtiKv && isFinite(bdtiKv.value))   ? bdtiKv.value   : null;
+  const bdtiWow   = (bdtiKv && isFinite(bdtiKv.wow_pct)) ? bdtiKv.wow_pct : null;
 
   const milAircraft = aircraftKv?.militaryCount ?? snapshotD?.military_aircraft_count ?? null;
   const totalAircraft = aircraftKv?.count ?? snapshotD?.aircraft_count ?? null;
@@ -393,7 +406,7 @@ async function _handleRecord({ request, env }) {
     max_mag:                    maxMag,
     seismic_max_mag:            maxMag,
     rough_conditions:           roughWeather,
-    bdti:                       2841, bdti_wow: 3.2,
+    bdti:                       bdtiValue, bdti_wow: bdtiWow,
     // NEW
     ofac_iran_actions_30d:      snapshotD?.ofac_iran_actions_30d ?? null,
     ofac_latest_action_date:    snapshotD?.ofac_latest_action_date ?? null,
@@ -460,7 +473,8 @@ async function _handleRecord({ request, env }) {
       brentSource,
       isFinite(wti) ? wti : null,
       isFinite(bwSpread) ? bwSpread : null,
-      2841, 3.2,
+      isFinite(bdtiValue) ? bdtiValue : null,
+      isFinite(bdtiWow) ? bdtiWow : null,
       gfwEnc, gfwLoi, null,
       62.0,
       JSON.stringify(sourceHealth),

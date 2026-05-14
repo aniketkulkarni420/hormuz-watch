@@ -93,6 +93,7 @@ def main():
     bands = {"low": 0, "mid": 0, "high": 0}
     callsigns = []
     mil_callsigns = []
+    positions = []  # per-aircraft lat/lng for the map's Aircraft layer
 
     # OpenSky state vector indexes:
     # 0 icao24, 1 callsign, 2 origin_country, 5 lng, 6 lat, 7 baro_alt,
@@ -122,12 +123,22 @@ def main():
             else:
                 bands["high"] += 1
 
-            if classify_callsign(cs):
+            is_mil = classify_callsign(cs)
+            if is_mil:
                 mil += 1
                 if cs not in mil_callsigns:
                     mil_callsigns.append(cs)
             else:
                 com += 1
+
+            # Position for the map layer — skip on-ground noise, cap list size
+            if not on_ground and len(positions) < 80:
+                positions.append({
+                    "lat": round(lat, 3),
+                    "lng": round(lng, 3),
+                    "cs": cs or "",
+                    "mil": is_mil,
+                })
         except Exception:
             continue
 
@@ -146,6 +157,7 @@ def main():
         "commercialCount": com,
         "byAltitude": bands,
         "movement24h": movement_24h,
+        "positions": positions,
         "callsigns": mil_callsigns[:40],
         "source": "OpenSky Network ADS-B (anonymous tier)",
         "bbox": {"lamin": 23, "lomin": 51, "lamax": 29, "lomax": 60},

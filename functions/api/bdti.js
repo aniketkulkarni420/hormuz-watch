@@ -41,16 +41,18 @@ async function _handleBdtiGet({ env }) {
       max: kv_data.max ?? null,
     });
   }
-  // Fallback: legacy env-var default (was set manually by Claude scheduled task)
-  const fallback = parseInt(env.HORMUZ_BDTI || "14", 10);
+  // No KV data and no manual entry — return null rather than inventing a
+  // value. The old fallback (env.HORMUZ_BDTI || "14") was nonsensical: real
+  // BDTI runs ~800–3000, and 14 scores as "calm" in the verdict engine —
+  // a broken feed must never read as all-clear. (Batch A · 2026-05-14)
   return json({
-    value: fallback,
+    value: null,
     asOf: null,
-    source: "env-default",
+    source: "unavailable",
     wow_pct: null,
     ageDays: null,
-    stale: true,                  // env-default is definitionally untracked
-    origin: "env-fallback",
+    stale: true,
+    origin: "no-data",
   });
 }
 

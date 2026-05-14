@@ -20,5 +20,3 @@ User-agent: PerplexityBot
 Disallow: /
 User-agent: cohere-ai
 Disallow: /
-
-Sitemap: https://hormuz-watch-7cd.pages.dev/sitemap.xml

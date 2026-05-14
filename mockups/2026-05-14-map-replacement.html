@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Map Decision · Hormuz Watch</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;--orange:#ff8c2e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.55;padding:20px}
+h1{font-size:24px;font-weight:900;margin-bottom:6px}
+.sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:24px}
+h2{font-size:16px;color:var(--amber);margin:24px 0 8px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+.section-desc{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:14px}
+
+.grid-2{display:grid;grid-template-columns:repeat(2, 1fr);gap:18px;margin-bottom:32px}
+.opt{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;overflow:hidden}
+.opt h3{font-size:13px;color:var(--text);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-weight:700;font-family:var(--mono)}
+.opt-rec{border-color:var(--green)}
+.opt-rec h3{color:var(--green)}
+.opt-cur{border-color:var(--red)}
+.opt-cur h3{color:var(--red)}
+.opt-body{height:380px;background:var(--panel2);border-radius:6px;position:relative;margin:10px 0;overflow:hidden;border:1px solid var(--border)}
+.opt-note{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.6}
+.pros{color:var(--green)}
+.cons{color:var(--red)}
+
+/* ───── Option A: Empty (map removed) ───── */
+.opta{display:flex;flex-direction:column;justify-content:center;align-items:center;color:var(--muted2);font-family:var(--mono);font-size:11px;text-align:center;padding:30px;gap:14px}
+.opta-reclaim{padding:14px;background:var(--panel);border:1px dashed var(--green);border-radius:5px;color:var(--green);font-size:10px}
+
+/* ───── Option B: Pressure Map (HTML/SVG, no Leaflet) ───── */
+.optb{padding:18px;height:100%;display:flex;flex-direction:column;gap:8px}
+.optb-title{font-family:var(--mono);font-size:11px;color:var(--text);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:4px}
+.optb-svg-wrap{flex:1;position:relative;background:linear-gradient(135deg, #0a1422 0%, #07090e 100%);border-radius:5px;overflow:hidden;border:1px solid var(--border)}
+.optb-legend{display:flex;gap:8px;font-family:var(--mono);font-size:9px;color:var(--muted);flex-wrap:wrap}
+.optb-legend span::before{content:"●";margin-right:3px}
+.l-port::before{color:var(--amber)}
+.l-mil::before{color:var(--red)}
+.l-quake::before{color:var(--orange)}
+.l-strait::before{color:var(--blue)}
+
+/* ───── Option C: Static infographic (pre-drawn region) ───── */
+.optc{padding:14px;display:flex;flex-direction:column;gap:10px;height:100%}
+.optc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
+.optc-card{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:10px}
+.optc-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--amber);line-height:1}
+.optc-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;margin-top:4px}
+.optc-bars{flex:1;display:flex;flex-direction:column;gap:6px}
+.optc-bar{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px}
+.optc-bar-label{width:100px;color:var(--text);font-weight:700}
+.optc-bar-track{flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden}
+.optc-bar-fill{height:100%;border-radius:3px}
+.optc-bar-val{width:34px;text-align:right;color:var(--text);font-weight:700}
+
+.callout{padding:14px 18px;background:rgba(29,212,126,.06);border:1px solid var(--green);border-radius:6px;margin:24px 0}
+.callout-title{font-family:var(--mono);font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.callout-body{font-family:var(--mono);font-size:11px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<h1>Map Replacement Decision</h1>
+<div class="sub">Current map is broken: uses TODAY_LOG simulation array (fake animated vessels). Choose what to do.</div>
+
+<h2>Current State (what you're seeing — it's NOT real)</h2>
+<div class="section-desc">The map currently shows simulated vessel pins from a hardcoded array, animated every 22 seconds. Not real AIS, not real anything. Looks "alive" but is fiction.</div>
+
+<div class="opt opt-cur">
+  <h3>✗ Current Deployed — broken</h3>
+  <div class="opt-body" style="display:flex;align-items:center;justify-content:center;color:var(--muted2);font-family:var(--mono);font-size:11px;flex-direction:column;gap:10px">
+    <div style="width:80%;height:60%;background:repeating-linear-gradient(45deg, rgba(56,170,255,.1), rgba(56,170,255,.1) 10px, transparent 10px, transparent 20px);border-radius:4px;position:relative;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;top:30%;left:25%;width:8px;height:8px;border-radius:50%;background:var(--amber)"></div>
+      <div style="position:absolute;top:55%;left:45%;width:8px;height:8px;border-radius:50%;background:var(--amber)"></div>
+      <div style="position:absolute;top:40%;left:65%;width:8px;height:8px;border-radius:50%;background:var(--amber)"></div>
+      <div style="position:absolute;top:70%;left:35%;width:8px;height:8px;border-radius:50%;background:var(--amber)"></div>
+      <div style="position:absolute;top:25%;left:75%;width:8px;height:8px;border-radius:50%;background:var(--amber)"></div>
+      <div style="color:var(--red);font-size:10px;letter-spacing:.06em">⚠ SIMULATED VESSELS</div>
+    </div>
+    <div style="font-size:9px;color:var(--red);max-width:80%;text-align:center;line-height:1.5">
+      All pins are from TODAY_LOG hardcoded array.<br>Animated every 22 seconds.<br>NOT connected to real AIS or any data feed.
+    </div>
+  </div>
+  <div class="opt-note cons">
+    <b>The problem:</b> Misleading. Implies live data when there's none. Visually busy but conveys nothing useful.<br>
+    <b>User reaction:</b> "Map cannot be stopped · Looks horrible · Product will have to be removed."
+  </div>
+</div>
+
+<h2>Three Replacement Options</h2>
+<div class="section-desc">All three use REAL data we already have. Pick one — or mix-and-match elements.</div>
+
+<div class="grid-2">
+
+<!-- Option A — Remove entirely -->
+<div class="opt">
+  <h3>A. Remove map · use space for headline metrics</h3>
+  <div class="opt-body opta">
+    <div style="font-size:14px;color:var(--text);font-weight:700">Map removed</div>
+    <div style="font-size:10px;color:var(--muted)">Left-side space reclaimed for high-impact tiles</div>
+    <div class="opta-reclaim">
+      Possible uses for reclaimed space:<br>
+      • Large verdict + tension gauge<br>
+      • Big-font headline numbers (transits, oil, BDTI)<br>
+      • Cross-signal verification (full width)<br>
+      • Live news ticker
+    </div>
+  </div>
+  <div class="opt-note">
+    <span class="pros">Pros:</span> Fastest fix. Zero misleading data. Less code to maintain.<br>
+    <span class="cons">Cons:</span> Loses spatial context. Hormuz is geographically distinctive — a map adds intuitive understanding.<br>
+    <b>Effort:</b> 1 hour (delete map div + reflow left side).
+  </div>
+</div>
+
+<!-- Option B — RECOMMENDED -->
+<div class="opt opt-rec">
+  <h3>B. RECOMMENDED · Replace with "Hormuz Pressure Map" using real data</h3>
+  <div class="opt-body">
+    <div class="optb">
+      <div class="optb-title">Persian Gulf — port activity + aerial overlay</div>
+      <div class="optb-svg-wrap">
+        <svg viewBox="0 0 600 280" style="width:100%;height:100%">
+          <!-- Coastline outline (simplified Persian Gulf shape) -->
+          <path d="M 30 90 Q 80 60 150 80 L 230 70 Q 320 80 380 140 L 450 150 Q 520 180 560 250" stroke="#38aaff" stroke-width="1.5" fill="none" opacity="0.4"/>
+          <path d="M 60 240 Q 150 250 230 230 L 320 220 Q 400 210 480 240" stroke="#38aaff" stroke-width="1.5" fill="none" opacity="0.4"/>
+          <!-- Strait of Hormuz indicator -->
+          <line x1="400" y1="155" x2="400" y2="205" stroke="#38aaff" stroke-width="2" stroke-dasharray="3,3" opacity="0.6"/>
+          <text x="408" y="180" font-family="JetBrains Mono" font-size="8" fill="#38aaff" opacity="0.8">HORMUZ GATE</text>
+          <!-- Port circles, sized by vessel count -->
+          <!-- Khor Fakkan (34) — UAE east -->
+          <circle cx="440" cy="140" r="22" fill="#f09014" opacity="0.25"/>
+          <circle cx="440" cy="140" r="9" fill="#f09014"/>
+          <text x="455" y="135" font-family="JetBrains Mono" font-size="9" fill="#cdd8e8" font-weight="700">KHOR FAKKAN</text>
+          <text x="455" y="146" font-family="JetBrains Mono" font-size="8" fill="#8099b3">34 vessels</text>
+          <!-- Fujairah (28) -->
+          <circle cx="455" cy="165" r="19" fill="#f09014" opacity="0.25"/>
+          <circle cx="455" cy="165" r="8" fill="#f09014"/>
+          <text x="475" y="168" font-family="JetBrains Mono" font-size="9" fill="#cdd8e8" font-weight="700">FUJAIRAH</text>
+          <text x="475" y="178" font-family="JetBrains Mono" font-size="8" fill="#8099b3">28</text>
+          <!-- Jebel Ali (26) — Dubai -->
+          <circle cx="335" cy="115" r="18" fill="#f09014" opacity="0.25"/>
+          <circle cx="335" cy="115" r="7" fill="#f09014"/>
+          <text x="345" y="108" font-family="JetBrains Mono" font-size="9" fill="#cdd8e8" font-weight="700">JEBEL ALI</text>
+          <text x="345" y="118" font-family="JetBrains Mono" font-size="8" fill="#8099b3">26</text>
+          <!-- Ras Tanura (31) — Saudi -->
+          <circle cx="170" cy="100" r="20" fill="#38aaff" opacity="0.25"/>
+          <circle cx="170" cy="100" r="8" fill="#38aaff"/>
+          <text x="80" y="95" font-family="JetBrains Mono" font-size="9" fill="#cdd8e8" font-weight="700">RAS TANURA</text>
+          <text x="80" y="106" font-family="JetBrains Mono" font-size="8" fill="#8099b3">31 · Saudi</text>
+          <!-- Bandar Abbas (22) — Iran -->
+          <circle cx="380" cy="85" r="16" fill="#ff3e52" opacity="0.25"/>
+          <circle cx="380" cy="85" r="7" fill="#ff3e52"/>
+          <text x="392" y="80" font-family="JetBrains Mono" font-size="9" fill="#cdd8e8" font-weight="700">BANDAR ABBAS</text>
+          <text x="392" y="91" font-family="JetBrains Mono" font-size="8" fill="#8099b3">22 · Iran</text>
+          <!-- Aircraft pins (real OpenSky positions when working) -->
+          <text x="200" y="135" font-family="JetBrains Mono" font-size="10" fill="#ff3e52">✈</text>
+          <text x="290" y="105" font-family="JetBrains Mono" font-size="10" fill="#8099b3">✈</text>
+          <text x="380" y="135" font-family="JetBrains Mono" font-size="10" fill="#ff3e52">✈</text>
+          <text x="420" y="195" font-family="JetBrains Mono" font-size="10" fill="#8099b3">✈</text>
+          <!-- Seismic marker (recent quake) -->
+          <circle cx="270" cy="55" r="4" fill="none" stroke="#ff8c2e" stroke-width="1.5"/>
+          <circle cx="270" cy="55" r="8" fill="none" stroke="#ff8c2e" stroke-width="1" opacity="0.4"/>
+          <text x="280" y="58" font-family="JetBrains Mono" font-size="8" fill="#ff8c2e">M 4.4</text>
+        </svg>
+      </div>
+      <div class="optb-legend">
+        <span class="l-port">Port (sized by 24h vessel count)</span>
+        <span class="l-mil">Military aircraft (live)</span>
+        <span class="l-quake">Seismic activity</span>
+        <span class="l-strait">Strait of Hormuz</span>
+      </div>
+    </div>
+  </div>
+  <div class="opt-note">
+    <span class="pros">Pros:</span> All real data. Spatial context preserved. Tells the analytical story: ports active, military aircraft pattern, geological events. No Leaflet needed — pure SVG/HTML (lighter, faster).<br>
+    <span class="cons">Cons:</span> Not interactive (no pan/zoom). Schematic, not geographically perfect.<br>
+    <b>Effort:</b> 3-4 hours (SVG region template + scraped-data binding + auto-update on KV refresh).
+  </div>
+</div>
+
+<!-- Option C — Static infographic -->
+<div class="opt">
+  <h3>C. Replace with data dashboard panels (no map)</h3>
+  <div class="opt-body">
+    <div class="optc">
+      <div class="optc-grid">
+        <div class="optc-card">
+          <div class="optc-val">141</div>
+          <div class="optc-lbl">Vessels in port</div>
+        </div>
+        <div class="optc-card">
+          <div class="optc-val" style="color:var(--green)">$106</div>
+          <div class="optc-lbl">Brent</div>
+        </div>
+        <div class="optc-card">
+          <div class="optc-val" style="color:var(--red)">3063</div>
+          <div class="optc-lbl">BDTI</div>
+        </div>
+      </div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Port activity (live)</div>
+      <div class="optc-bars">
+        <div class="optc-bar"><div class="optc-bar-label" style="color:var(--amber)">KHOR FAKKAN</div><div class="optc-bar-track"><div class="optc-bar-fill" style="width:100%;background:var(--amber)"></div></div><div class="optc-bar-val">34</div></div>
+        <div class="optc-bar"><div class="optc-bar-label" style="color:var(--blue)">RAS TANURA</div><div class="optc-bar-track"><div class="optc-bar-fill" style="width:91%;background:var(--blue)"></div></div><div class="optc-bar-val">31</div></div>
+        <div class="optc-bar"><div class="optc-bar-label" style="color:var(--amber)">FUJAIRAH</div><div class="optc-bar-track"><div class="optc-bar-fill" style="width:82%;background:var(--amber)"></div></div><div class="optc-bar-val">28</div></div>
+        <div class="optc-bar"><div class="optc-bar-label" style="color:var(--amber)">JEBEL ALI</div><div class="optc-bar-track"><div class="optc-bar-fill" style="width:76%;background:var(--amber)"></div></div><div class="optc-bar-val">26</div></div>
+        <div class="optc-bar"><div class="optc-bar-label" style="color:var(--red)">BANDAR ABBAS</div><div class="optc-bar-track"><div class="optc-bar-fill" style="width:65%;background:var(--red)"></div></div><div class="optc-bar-val">22</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="opt-note">
+    <span class="pros">Pros:</span> Most data-dense per pixel. No spatial pretense. All real data.<br>
+    <span class="cons">Cons:</span> No geographic intuition. Just charts. Could feel sterile.<br>
+    <b>Effort:</b> 2 hours.
+  </div>
+</div>
+
+</div>
+
+<div class="callout">
+<div class="callout-title">My recommendation: Option B (Pressure Map)</div>
+<div class="callout-body">
+  We've spent real effort getting port-level vessel counts, aircraft positions, seismic data. Throwing all that visual potential away (Option A) wastes the work. Option B uses every piece of real data we have, in a spatial layout that makes intuitive sense for "Strait of Hormuz monitoring." No Leaflet dependency — pure SVG, lighter than the current map.<br><br>
+  <b>If you want the fastest fix:</b> Option A (delete it, ship today).<br>
+  <b>If you want the best use of our work:</b> Option B (3-4 hours, all real data).<br>
+  <b>If you want minimal visual:</b> Option C (data-only panels).
+</div>
+</div>
+
+<div style="margin-top:24px;padding:14px 18px;background:var(--panel);border-radius:6px;border-left:2px solid var(--blue);font-family:var(--mono);font-size:11px;line-height:1.7">
+  <b>Following the new .process/MOCKUP_FIRST rule:</b><br>
+  I'm NOT changing any code until you pick. This mockup is at <code>mockups/2026-05-14-map-replacement.html</code>. Open in browser to see all three options visually.<br><br>
+  <b>Tell me:</b> "Build A" / "Build B" / "Build C" / "Mix B+C: pressure map + port bars below"
+</div>
+
+</body>
+</html>

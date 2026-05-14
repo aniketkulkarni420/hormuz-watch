@@ -72,17 +72,21 @@ a:hover{text-decoration:underline}
 <div class="endpoint">
   <div class="ep-head"><span class="method GET">GET</span><span class="path">/api/oil</span><span class="tier public">public</span></div>
   <div class="ep-body">
-    <p>Live Brent + WTI prices with tiered source fallback.</p>
-    <p>Response shape:</p>
+    <p>Brent + WTI prices with a tiered source fallback chain.</p>
+    <p>Response shape (varies by active tier):</p>
     <pre>{
-  "source": "Live commodity feed",
-  "tier": "primary" | "secondary" | "tertiary-required",
-  "brent": { "level": 108.42, "change": 0.94, "changePct": 0.87, "high": 109.1, "low": 107.8, "t": 1778... },
-  "wti":   { "level":  95.18, "change": ..., "changePct": ..., ... },
+  "source": "...",
+  "tier": "tier0-xverified" | "primary" | "primary-stale"
+        | "scrape" | "secondary" | "tertiary-required",
+  "brent": { "level": 105.90, "change": ..., "changePct": ..., ... },
+  "wti":   { "level": 101.26, "change": ..., "changePct": ..., ... },
   "fetchedAt": 1778...,
   "ageMin": 1.1
 }</pre>
-    <p>When <code>tier: "secondary"</code>, the ETF proxy structure is returned instead — see source.</p>
+    <p><code>tier0-xverified</code> is the preferred path (median of cross-verified
+    providers). <code>secondary</code> returns a FinnHub ETF-proxy structure —
+    its <code>proxyPrice</code> is the ETF share price, NOT the oil level; only
+    <code>proxyDp</code> (the % change) is meaningful. Always check <code>tier</code>.</p>
   </div>
 </div>
 
@@ -143,14 +147,22 @@ a:hover{text-decoration:underline}
   <div class="ep-body">
     <p>Cached current-state snapshot. Used by downstream tools (e.g. India Risk Monitor) for the <code>hormuz_throughput</code> metric. Returns a stable schema across regime changes.</p>
     <pre>{
-  "as_of": "2026-05-08T...",
+  "as_of": "2026-05-14T...",
   "daily_transit_estimate": 84,
   "vessel_count_inbound": 38, "vessel_count_outbound": 42,
   "pct_of_normal": 60.0,
   "dark_vessels": 947,
-  "bdti": 14,
+  "bdti": 3063,            // null when the BDTI feed has no data
+  "bdti_stale": false,
+  "static_fields": [ ... ], // keys that are structural constants, not live
+  "is_static": true,        // true when AIS is degraded / no live source
   ...
 }</pre>
+    <p><code>static_fields</code> lists keys (e.g. <code>oil_transit_value_usd_per_day</code>,
+    <code>incidents_30d</code>, <code>india_import_dependency_pct</code>,
+    <code>dark_vessels</code>) that are structural constants — they carry the
+    response's <code>as_of</code> but are not live-tracked. Don't treat them as
+    time-series data.</p>
   </div>
 </div>
 
@@ -163,11 +175,11 @@ a:hover{text-decoration:underline}
 </section>
 
 <section>
-<h2>External Worker endpoints</h2>
-<p>Specialised data sources hosted as separate Cloudflare Workers:</p>
+<h2>External Worker endpoints <span style="font-family:var(--mono);font-size:11px;color:var(--amber);font-weight:400">— deprecated / offline</span></h2>
+<div class="callout"><b>Deprecated:</b> the standalone AIS-aggregator Worker below is currently inactive — AISStream has had a multi-week provider outage. The dashboard now reads AIS state from <code>/api/ais</code> (KV-backed) and runs in composite-signal mode. These endpoints are documented for reference only; do not integrate against them.</div>
 
-<div class="endpoint">
-  <div class="ep-head"><span class="method GET">GET</span><span class="path">hormuz-ais-aggregator.aniket-kulkarni.workers.dev/state</span><span class="tier public">public</span></div>
+<div class="endpoint" style="opacity:.6">
+  <div class="ep-head"><span class="method GET">GET</span><span class="path">hormuz-ais-aggregator.aniket-kulkarni.workers.dev/state</span><span class="tier auth">offline</span></div>
   <div class="ep-body">
     <p>Authoritative server-side AIS aggregation. Single Durable Object subscribes to AISStream once, computes gate-crossings centrally so all users share the same numbers.</p>
     <pre>{
@@ -181,8 +193,8 @@ a:hover{text-decoration:underline}
   </div>
 </div>
 
-<div class="endpoint">
-  <div class="ep-head"><span class="method GET">GET</span><span class="path">hormuz-ais-aggregator.aniket-kulkarni.workers.dev/transits</span><span class="tier public">public</span></div>
+<div class="endpoint" style="opacity:.6">
+  <div class="ep-head"><span class="method GET">GET</span><span class="path">hormuz-ais-aggregator.aniket-kulkarni.workers.dev/transits</span><span class="tier auth">offline</span></div>
   <div class="ep-body">
     <p>Recent gate-crossing events. Parameter <code>?range=24h</code> (or <code>7d</code> etc).</p>
     <pre>{ "count": 84, "transits": [{ "mmsi": ..., "name": "...", "dir": "eastbound", "time": ..., "lat": ..., "lng": ... }] }</pre>

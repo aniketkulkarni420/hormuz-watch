@@ -78,7 +78,7 @@ async function _handleSubscribePost({ request, env }) {
           html:
             '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#222">' +
             '<h2 style="color:#f09014;margin:0 0 14px">Confirm your subscription</h2>' +
-            '<p>You signed up for the Hormuz Watch weekly digest. Click below to confirm — takes 5 seconds.</p>' +
+            '<p>You asked to be notified about Hormuz Watch. Click below to confirm — takes 5 seconds. We\'ll email you when the digest launches; no messages until then.</p>' +
             '<p style="margin:22px 0"><a href="' + confirmUrl + '" style="background:#f09014;color:#000;padding:12px 22px;text-decoration:none;border-radius:5px;font-weight:700">Confirm subscription</a></p>' +
             '<p style="font-size:12px;color:#666">If you didn\'t sign up, ignore this email. No further messages will be sent.</p>' +
             '<p style="font-size:11px;color:#999;margin-top:30px">Hormuz Watch · by Aniket Kulkarni · <a href="https://hormuz-watch-2.pages.dev" style="color:#999">hormuz-watch-2.pages.dev</a></p>' +
@@ -119,7 +119,7 @@ async function _handleSubscribeGet({ request, env }) {
       });
     }
     await env.DB.prepare("UPDATE subscribers SET confirmed = 1, confirm_token = NULL WHERE email = ?").bind(row.email).run();
-    return new Response(htmlPage("Subscribed ✓", "You'll get the weekly Hormuz digest every Monday morning."), {
+    return new Response(htmlPage("Subscribed ✓", "You're confirmed. We'll email you when the Hormuz Watch digest launches — no messages until then."), {
       status: 200, headers: { "content-type": "text/html" },
     });
   } catch (e) {

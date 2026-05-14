@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Methodology · Hormuz Watch</title>
-<meta name="robots" content="noindex,nofollow">
+<meta name="robots" content="index,follow">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -75,10 +75,11 @@ a:hover{text-decoration:underline}
 <table>
 <thead><tr><th>Signal</th><th>Used for</th><th>Refresh</th><th>Status</th></tr></thead>
 <tbody>
-<tr><td>Live vessel-tracking feed</td><td>Real-time vessel positions in the Hormuz region</td><td>Sub-second (streaming)</td><td><span class="tag live">live</span></td></tr>
-<tr><td>Live commodity quotes</td><td>Brent (ICE) + WTI (NYMEX) front-month, intraday refresh</td><td>15 min during market hours</td><td><span class="tag live">live</span></td></tr>
-<tr><td>Daily reference oil prices</td><td>Anchor when live feed is degraded; 4-week sparkline history</td><td>Daily publish, 1-2 day lag</td><td><span class="tag lag">reference</span></td></tr>
-<tr><td>Satellite vessel detection</td><td>Dark-vessel encounters + loitering events</td><td>4 hours</td><td><span class="tag live">live</span></td></tr>
+<tr><td>Live vessel-tracking feed (AIS)</td><td>Per-vessel positions + gate-crossing counts in the Hormuz region</td><td>Streaming when available</td><td><span class="tag disabled">degraded</span></td></tr>
+<tr><td>Port-level vessel activity</td><td>Per-port arrival/departure counts — fallback when AIS is degraded</td><td>~4 hours (web scrape)</td><td><span class="tag lag">fallback</span></td></tr>
+<tr><td>Commodity quotes</td><td>Brent + WTI front-month, intraday — cross-verified across providers</td><td>15 min during market hours</td><td><span class="tag live">live</span></td></tr>
+<tr><td>Daily reference oil prices</td><td>Anchor when intraday feed is degraded; 4-week sparkline history</td><td>Daily publish, 1-2 day lag</td><td><span class="tag lag">reference</span></td></tr>
+<tr><td>Satellite vessel detection</td><td>Dark-vessel encounter + loitering event counts</td><td>~4 hours</td><td><span class="tag live">live</span></td></tr>
 <tr><td>Freight index (Baltic Dirty Tanker)</td><td>BDTI level + weekly change as fear-premium signal</td><td>Weekly</td><td><span class="tag manual">weekly</span></td></tr>
 <tr><td>Conflict event tracker</td><td>Regional incidents within rolling 30-day window</td><td>Pending API access</td><td><span class="tag disabled">disabled</span></td></tr>
 <tr><td>Official statistics + filings</td><td>India crude import share, OMC exposure %, port capacities</td><td>Quarterly review</td><td><span class="tag manual">curated</span></td></tr>
@@ -119,9 +120,9 @@ a:hover{text-decoration:underline}
 </ol>
 <p>The pulse tag at the top of the Market Pulse panel always names the current active tier.</p>
 
-<h3>Dark traffic %</h3>
-<p>Computed as <code>satellite_events / (live_AIS_in_corridor + satellite_events)</code>. Satellite SAR captures vessels that appear in imagery but lack corresponding AIS broadcasts.</p>
-<p>Banded into normal / elevated / high / critical; specific cut-points calibrated against historical enforcement spikes and held in the private threshold config.</p>
+<h3>Dark traffic / suspect vessels</h3>
+<p>The intended metric is a ratio — <code>satellite_events / (live_AIS_in_corridor + satellite_events)</code> — but it is <b>not currently computed as a percentage</b>: the live AIS denominator is unavailable during the provider outage. While AIS is degraded, the dashboard surfaces the <b>raw satellite-detected encounter and loitering event counts</b> (vessels appearing in imagery without corresponding AIS broadcasts) rather than a synthetic ratio.</p>
+<p>The percentage form returns when the AIS feed recovers. Band cut-points (normal / elevated / high / critical) are held in the private threshold config and calibrated against historical enforcement spikes.</p>
 
 <h3>Freight index (BDTI)</h3>
 <p>Composite index of dirty-tanker spot freight rates. Currently refreshed weekly. Direction and magnitude carry the analyst signal more than precise level.</p>
@@ -167,13 +168,13 @@ switches to a composite-signal mode. The weighting and source list:</p>
 <thead><tr style="border-bottom:1px solid #2a3242"><th style="text-align:left;padding:8px">Signal</th><th style="text-align:left;padding:8px">Source</th><th style="text-align:left;padding:8px">AIS-primary weight</th><th style="text-align:left;padding:8px">Composite-fallback weight</th></tr></thead>
 <tbody>
 <tr><td style="padding:6px 8px">Transits 24h</td><td style="padding:6px 8px">AIS aggregator</td><td style="padding:6px 8px">30%</td><td style="padding:6px 8px">0%</td></tr>
-<tr><td style="padding:6px 8px">Brent price + 24h spike</td><td style="padding:6px 8px">EIA / OilPriceAPI / Yahoo / FRED</td><td style="padding:6px 8px">20%</td><td style="padding:6px 8px">25%</td></tr>
-<tr><td style="padding:6px 8px">Tanker stocks (6-stock index)</td><td style="padding:6px 8px">Yahoo / Stooq</td><td style="padding:6px 8px">15%</td><td style="padding:6px 8px">20%</td></tr>
+<tr><td style="padding:6px 8px">Brent price + 24h spike</td><td style="padding:6px 8px">OilPriceAPI + Investing.com (cross-verified) → EIA reference → FinnHub ETF proxy</td><td style="padding:6px 8px">20%</td><td style="padding:6px 8px">25%</td></tr>
+<tr><td style="padding:6px 8px">Tanker stocks (6-stock index)</td><td style="padding:6px 8px">Yahoo Finance (yfinance)</td><td style="padding:6px 8px">15%</td><td style="padding:6px 8px">20%</td></tr>
 <tr><td style="padding:6px 8px">Military aircraft count</td><td style="padding:6px 8px">OpenSky Network ADS-B</td><td style="padding:6px 8px">10%</td><td style="padding:6px 8px">20%</td></tr>
 <tr><td style="padding:6px 8px">Geopolitical event tone</td><td style="padding:6px 8px">GDELT 2.0 Doc API</td><td style="padding:6px 8px">10%</td><td style="padding:6px 8px">15%</td></tr>
 <tr><td style="padding:6px 8px">Earthquakes (Iran/Gulf, 7d)</td><td style="padding:6px 8px">USGS FDSN</td><td style="padding:6px 8px">5%</td><td style="padding:6px 8px">5%</td></tr>
 <tr><td style="padding:6px 8px">Weather / sea state</td><td style="padding:6px 8px">OpenWeather (4 Hormuz pts)</td><td style="padding:6px 8px">5%</td><td style="padding:6px 8px">5%</td></tr>
-<tr><td style="padding:6px 8px">BDTI level + WoW</td><td style="padding:6px 8px">Baltic Exchange manual</td><td style="padding:6px 8px">5%</td><td style="padding:6px 8px">10%</td></tr>
+<tr><td style="padding:6px 8px">BDTI level + WoW</td><td style="padding:6px 8px">Investing.com + Macrotrends (cross-verified) + manual admin entry</td><td style="padding:6px 8px">5%</td><td style="padding:6px 8px">10%</td></tr>
 </tbody>
 </table>
 <p>Each signal is scored 0 (calm) to 4 (critical). The weighted score maps to a

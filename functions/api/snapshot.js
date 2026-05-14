@@ -104,10 +104,12 @@ export async function onRequestGet({ request, env }) {
   const outbound = aisLive ? aisLive.outbound : numFromEnv(env.HORMUZ_OUTBOUND, 42);
   const dark = numFromEnv(env.HORMUZ_DARK, 947);
 
-  // BDTI: existing OIL_KV lookup · preserved unchanged
-  let bdti = numFromEnv(env.HORMUZ_BDTI, 14);
+  // BDTI: KV-backed. null when KV is empty — never invent a value. The old
+  // env fallback of 14 was nonsensical (real BDTI ~800–3000) and scores as
+  // "calm" in the verdict engine. (Batch A · 2026-05-14)
+  let bdti = null;
   let bdti_as_of = null;
-  let bdti_stale = false;
+  let bdti_stale = true;   // stays true until KV provides a tracked value
   if (env.OIL_KV) {
     try {
       const raw = await env.OIL_KV.get("bdti_latest");
@@ -143,6 +145,16 @@ export async function onRequestGet({ request, env }) {
     incidents_30d: 58,
     india_import_dependency_pct: 58.0,
     // V2 honesty fields · downstream consumers detect static vs live
+    // static_fields: keys below are structural constants, NOT live-tracked —
+    // they carry the response's fresh `as_of` only because they ship in the
+    // same payload. Consumers must not treat them as time-series data.
+    // (Batch A · 2026-05-14)
+    static_fields: [
+      "oil_transit_value_usd_per_day",
+      "incidents_30d",
+      "india_import_dependency_pct",
+      "dark_vessels",
+    ],
     is_static: !aisLive,
     live_source_count: aisLive ? 1 : 0,
     ais_state_age_sec: aisLive?.ageSec ?? null,

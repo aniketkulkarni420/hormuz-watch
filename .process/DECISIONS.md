@@ -4,6 +4,56 @@ Append-only. Each entry follows the template. Sorted newest-first.
 
 ---
 
+## 2026-05-14 — Batch B (methodology truth pass)
+
+**Context:** Audit Agent 4 found the public methodology page was written pre-AIS-outage and only half-patched — it labelled a dead feed LIVE, published a formula the code doesn't run, and named removed sources. Trust-critical, public-facing.
+
+**Changes:**
+- `methodology/index.html`: dropped `noindex` (it's a public trust asset; robots.txt already allows it). Data-signal table: vessel AIS feed → `degraded` (not "live · sub-second"); added a "Port-level vessel activity" fallback row; commodity quotes reworded "cross-verified across providers" (was "Brent (ICE) + WTI (NYMEX)" implying exchange-direct). Dark-traffic section: now states the % is NOT currently computed (AIS denominator unavailable) and raw GFW encounter/loitering counts are shown instead. Composite-source table: Brent → "OilPriceAPI + Investing.com (cross-verified) → EIA → FinnHub ETF" (was "EIA/OilPriceAPI/Yahoo/FRED"); tanker stocks → "Yahoo Finance (yfinance)" (was "Yahoo/Stooq"); BDTI → "Investing.com + Macrotrends + manual admin" (was "Baltic Exchange manual").
+- `subscribe.js`: removed "weekly digest every Monday" promise from confirmation email + confirm page — the digest cron doesn't exist. Now: "we'll email you when the digest launches."
+- `robots.txt`: removed dead `Sitemap:` line pointing at the old `hormuz-watch-7cd` domain (no sitemap.xml exists).
+- `api/index.html`: `/api/oil` tier enum corrected to the 6 real tiers + note that `secondary` proxyPrice is an ETF share price not an oil level; `/api/snapshot` sample fixed (`bdti:14` → realistic + `static_fields` documented); External Worker (AIS aggregator) endpoints marked deprecated/offline.
+
+**Left as-is:** methodology baseline "42 transits/day" — it's the correct intended value (matches regions.json + the derivation); the bug is record.js using 22 / snapshot.js using 140, which Batch F unifies. snapshot.js `india_import_dependency_pct:58` vs methodology 62% — kept separate (different metric for the IRM consumer).
+
+**Pending:** push to main requires user authorization. subscribe.js passes `node --check`.
+
+---
+
+## 2026-05-14 — Tool-wide audit + Batch A (kill fake-live data)
+
+**Context:** 4 parallel agents audited index.html, functions/, scrapers+workflows, static content. Systemic finding: hardcoded/stale numbers dressed as live data across UI, verdict engine, D1 history, API samples, methodology page. User chose to fix all 6 batches in priority order A→B→E→C→D→F, reviewing each before push.
+
+**Batch A — kill fake-live data. Changes:**
+- `index.html`: removed `TODAY_LOG` (fake 19-vessel animated arrivals log) → honest empty state in `#logScroll`. Removed 3 hardcoded `LIVE FEED` badges (Transits/24h, Vessel-movement, Flag-state) → neutral defaults, driven dynamically by real freshness in `updateVesselUI`/`trackFlag`. Replaced hardcoded BDTI `2841`/`▲3.2%` + `BDTI_LAST_UPDATE` constant with a live `/api/bdti` fetch (`loadBdtiTile`). Persian Gulf imports `12.3M bbl/mo` → "no feed" placeholder.
+- `record.js`: BDTI `2841`/`3.2` hardcoded into verdict input AND every D1 row → now reads `bdti_latest` KV (null when empty; `scoreBdti` skips null). Verdict no longer fed degraded/zero-message AIS (`aisDegraded` gate on `vTransit24h`).
+- `bdti.js` / `snapshot.js`: removed nonsensical `env.HORMUZ_BDTI || 14` fallback → return `value:null, stale:true`. (14 scored as "calm" — broken feed read as all-clear.)
+- `snapshot.js`: added `static_fields[]` marking `oil_transit_value_usd_per_day`, `incidents_30d`, `india_import_dependency_pct`, `dark_vessels` as structural constants, not live data.
+- `ais.js`: added `stale`/`degraded`/`liveness`/`messagesProcessed` — zero-message AIS no longer presented as authoritative; `source` string downgrades to "DEGRADED".
+
+**Deferred from Batch A:** AIS API key hardcoded in client source (`index.html` ~2576) — moving server-side needs a WebSocket-proxying Worker; flagged for a dedicated follow-up, not rushed blind.
+
+**Pending:** visual verification across all 5 modes; push to main requires user authorization. All 4 edited JS functions pass `node --check`.
+
+---
+
+## 2026-05-14 — Map: Option B-interactive (real-data layers, kill SIM_FLEET)
+
+**Context:** Map showed `SIM_FLEET` — 14 hardcoded vessels animated forever via `requestAnimationFrame`. Not a real feed. User: "map cannot be stopped, looks horrible." Mockup `mockups/2026-05-14-map-B-interactive.html` (Leaflet, geographically correct, pan/zoom) approved.
+
+**Decision:** Keep the existing geographically-correct interactive Leaflet base (lanes, pipelines, routes, LOCS, basemap toggles — all real geography). Remove the `SIM_FLEET` animation. Add three real-data layer groups bound to feeds already polled:
+- **Port Pressure** — circle per Gulf port, radius ∝ 24h vessel count from `_snapshotData.scraped_vessel_perport`.
+- **Seismic** — pulsing markers from `_compositeData.seismic.events_near_ports` (has lat/lng).
+- **Aircraft** — markers from `aircraft_state.positions[]`. Required scraper change: `scrape_aircraft.py` now emits per-aircraft `positions` (was aggregate counts only). Layer stays empty until `aircraft-scraper` workflow next runs post-deploy.
+
+All three renderers are null-safe (empty layer until feed populates) and added as toggleable entries in `LAYER_DEFS`. `SIM_FLEET` array left defined but unused (harmless); `simVessels` kept declared-empty for the log click handler.
+
+**Files:** `index.html` (4 edits), `scripts/scrape_aircraft.py` (3 edits).
+
+**Pending:** visual verification across all 5 modes; layer-control panel now has 8 rows (was 5) — check for overflow; push to main requires user authorization.
+
+---
+
 ## 2026-05-14 — Install .process/ mistake-prevention system
 
 **Context:** Repeat regressions from tunnel-vision fixes: `.tbar-label` width broke bar rhythm; stale AIS-era placeholders left visible in scrape-mode; `display:none` applied without understanding original element purpose. Each was a single-line edit that shipped without visual review.
