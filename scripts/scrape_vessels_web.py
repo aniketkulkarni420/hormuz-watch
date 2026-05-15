@@ -237,6 +237,12 @@ def parse_vf_port(html):
                 return bucket
         return None
 
+    # Type counts must be deduplicated per UNIQUE vessel — otherwise a vessel
+    # that appears in both 'arrivals' and 'departures' (or expected/inport)
+    # gets counted twice in `types`, which is why types-sum diverged from
+    # the headline vessel total (185 vs 148). One vessel = one type, total. (2026-05-15)
+    seen_typed = set()
+    vessel_row_pat = re.compile(r'/vessels/details/([^"\']+)', re.I)
     counted_in_section = False
     for tag, body in segments:
         if not isinstance(body, str):
@@ -247,18 +253,31 @@ def parse_vf_port(html):
             if "/vessels/details/" not in row and "/vessels/" not in row:
                 continue
             section_rows += 1
+            counted_in_section = True
+            vmatch = vessel_row_pat.search(row)
+            vkey = vmatch.group(1) if vmatch else None
+            # If we already counted this vessel's type in another section, skip.
+            if vkey and vkey in seen_typed:
+                continue
+            if vkey:
+                seen_typed.add(vkey)
             raw_type = extract_row_type(row)
             bump(_classify_type(raw_type))
-            counted_in_section = True
         if tag in counts:
             counts[tag] += section_rows
 
-    # Fallback if section labels missed: count all vessel-link rows once.
+    # Fallback if section labels missed: count all vessel-link rows once each.
     if not counted_in_section:
         for rm in row_pat.finditer(html):
             row = rm.group("row")
             if "/vessels/details/" not in row:
                 continue
+            vmatch = vessel_row_pat.search(row)
+            vkey = vmatch.group(1) if vmatch else None
+            if vkey and vkey in seen_typed:
+                continue
+            if vkey:
+                seen_typed.add(vkey)
             raw_type = extract_row_type(row)
             bump(_classify_type(raw_type))
 
@@ -276,7 +295,13 @@ def parse_vf_port(html):
         if m_exp:
             counts["expected"] = int(m_exp.group(1))
 
-    total = max(len(unique_vessels), counts["arrivals"] + counts["departures"])
+    # Headline `total` must match sum(types). `unique_vessels` is the de-duped
+    # vessel-link set — same dedup basis as `types` (one type per vessel).
+    # Fall back to arrivals+departures only when no vessel links parsed (e.g.
+    # the page rendered just text counts). The old `max(unique, arr+dep)`
+    # could exceed unique_vessels when a vessel was listed in both sections,
+    # producing the headline-vs-types-sum drift (148 vs 185). (2026-05-15)
+    total = len(unique_vessels) or (counts["arrivals"] + counts["departures"])
     if total == 0 and sum(types.values()) == 0:
         return None
 
