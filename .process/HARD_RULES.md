@@ -31,3 +31,6 @@ These rules exist because each one corresponds to a real production regression o
 
 10. **NEVER label data as "LIVE" when it's >1h old or single-source unverified.**
     Source-attribution rules in SESSION_HANDOFF.md §17. Use `WEB FEED · Nh` / `EIA SPOT · as of date` / `DATA PENDING` instead. The user has explicitly called out fake-LIVE badges as a trust-breaking bug.
+
+11. **NEVER touch a card renderer in `index.html` without updating `showcase/index.html`.**
+    The showcase at `/showcase/` is the visual safety net — it renders each right-sidebar card across 6 data permutations and runs a DOM overflow tripwire. It works only if its renderers and CSS match the live page. When you change `_typeBarRow` / `renderTrend` / `renderConditionsCard`-equivalents / `renderPulseCard`-equivalents / `renderHeadlinesCard` or any `.rblock`-class CSS, mirror the change into `showcase/index.html` (look for `BEGIN-MIRRORED` / `END-MIRRORED` markers — those blocks must stay in sync) and re-run its self-test. Adding a new `.rblock` card to the live sidebar? Add a section with 6 permutations and register its ID in the showcase's `covered` set, or the coverage hint will keep nagging.

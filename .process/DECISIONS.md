@@ -4,6 +4,53 @@ Append-only. Each entry follows the template. Sorted newest-first.
 
 ---
 
+## 2026-05-15 — Design showcase + overflow tripwire (`/showcase/`)
+
+**Context:** Two design bugs shipped to production back-to-back — the Vessel
+Type Mix count overflow (count text wider than the bar fill, spilling onto
+the gray track) and the Vessel Traffic Trend sublabel overflow
+(`white-space:nowrap` on ~74px columns let "Feb-Mar '26 est" bleed into
+neighbours). Both passed every existing check (`node --check`, `py_compile`,
+HARD_RULES, mockup approved). Root cause: there is no visual safety net.
+The agent cannot see rendered output; mockups are static and use the
+typical-case data; bugs that only appear at edge data shapes (a 1% row,
+a long sublabel) ship past every gate.
+
+**Chosen:** New `/showcase/index.html` — a deployed page that renders each
+right-sidebar card across **6 data permutations** spanning the failure-mode
+space (typical / empty / one-dominant / all-equal / long-label edge / max
+stress). Covers Vessel Type Mix, Vessel Traffic Trend, Conditions, Political
+Signals, Market Pulse, Headline Pulse. Three sidebar widths (280 / 340 / 480
+px) selectable. Card render code is **copied verbatim** from `index.html`
+with `BEGIN-MIRRORED` / `END-MIRRORED` markers so drift is grep-detectable.
+Self-test at the bottom walks every rendered card and flags any child whose
+right/left edge extends >1px beyond its parent — the overflow tripwire
+that would have caught both shipped bugs. A coverage check fetches
+`/index.html` and warns when a new `.rblock` ID exists live but not in the
+showcase.
+
+**HARD_RULE #11 added:** Touch a live card renderer → mirror to showcase.
+The showcase is the lock-in for "design bug → regression test."
+
+**Blindspots explicitly accepted:**
+- Only catches **render** bugs given data — does NOT catch upstream data
+  bugs (those need the data audit this session has been doing).
+- DOM bounding-box check has ±1px tolerance for sub-pixel rendering;
+  hairline overflow can still slip.
+- Drift between showcase and live is a discipline problem, not a system
+  one — the BEGIN-MIRRORED markers make it grep-able but not automatic.
+- Only covers 6 cards today; the sidebar has more. Coverage check nags
+  when new ones get added.
+- Showcase renders the *final* state with transitions disabled. Mid-
+  transition rendering bugs are out of scope.
+- Currently a human-eyeball + tripwire combo, not a Playwright screenshot
+  CI. The Playwright job is the natural next step — emits PNG diffs on
+  PRs — but adds ~2 min to every push, deferred.
+
+**Where to find it:** https://hormuz-watch-2.pages.dev/showcase/
+
+---
+
 ## 2026-05-14 — Post-audit fixes: BDTI source, fake-data removal, AIS-dependent UI
 
 **Context:** User audit pass — flagged the Conditions card as "not real", a

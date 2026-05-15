@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hormuz Watch — Design Showcase</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+/* ════════════════ DASHBOARD CSS — COPIED VERBATIM FROM index.html ════════════════
+   Anything between BEGIN-MIRRORED and END-MIRRORED must match the live page.
+   When you touch the live card CSS, update here too (see .process/HARD_RULES.md
+   "Showcase parity"). Drift = false negatives in this safety net. */
+
+/* BEGIN-MIRRORED: theme vars */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0e1320;--border:#18202e;--border2:#222c3d;
+  --amber:#f09014;--blue:#38aaff;--green:#1dd47e;--red:#ff6b35;--violet:#b07cf0;
+  --orange:#ff8c2e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;--sans:'Manrope',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;line-height:1.5}
+/* END-MIRRORED: theme vars */
+
+/* BEGIN-MIRRORED: card chrome */
+.rblock{border:1px solid var(--border);background:var(--panel);padding:13px 14px;border-radius:7px}
+.rhead{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:700;margin-bottom:4px}
+.rhead-src{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--muted)}
+.src-live{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.2);padding:1px 5px;border-radius:2px}
+.src-est{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.2);padding:1px 5px;border-radius:2px}
+.src-eia{color:var(--blue);background:rgba(56,170,255,.1);border:1px solid rgba(56,170,255,.2);padding:1px 5px;border-radius:2px}
+.src-blue{color:var(--blue)}
+.src-green{color:var(--green)}
+.src-muted{color:var(--muted2)}
+/* END-MIRRORED */
+
+/* BEGIN-MIRRORED: vessel type mix */
+.mix-subhead{font-family:var(--mono);font-size:9.5px;color:var(--muted2);margin:3px 0 10px;line-height:1.5}
+.type-bars{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.tbar-row{display:grid;grid-template-columns:84px 1fr auto;align-items:center;gap:10px}
+.tbar-label{font-family:var(--mono);font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbar-track{position:relative;height:14px;background:var(--panel2);border:1px solid var(--border2);border-radius:3px;overflow:hidden}
+.tbar-fill{height:100%;border-radius:2px 0 0 2px}
+.tbar-pct{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);min-width:34px;text-align:right;white-space:nowrap}
+/* END-MIRRORED */
+
+/* BEGIN-MIRRORED: vessel trend */
+.trend-bars{display:flex;flex-direction:column;gap:5px}
+.trend-bars-only{display:flex;align-items:flex-end;gap:8px;height:56px}
+.t-bar-only{flex:1;border-radius:2px 2px 0 0;min-height:3px}
+.trend-meta-row{display:flex;gap:8px}
+.t-meta{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.t-meta-val{font-family:var(--mono);font-size:11px;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+.t-meta-label{font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;line-height:1.35;word-break:break-word;hyphens:auto}
+.trend-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.tleg{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;color:var(--muted)}
+.tleg-dot{width:7px;height:7px;border-radius:1px;flex-shrink:0}
+/* END-MIRRORED */
+
+/* BEGIN-MIRRORED: tile rows (Conditions / Political / Macro) */
+.tile-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px}
+.tile-row:last-child{border-bottom:0}
+.tile-row-label{color:var(--muted);display:flex;align-items:center}
+.tile-row-val{color:var(--text);font-weight:700;text-align:right}
+.tile-row-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;flex-shrink:0}
+.dot-green{background:var(--green)}
+.dot-amber{background:var(--amber)}
+.dot-orange{background:var(--orange)}
+.dot-red{background:var(--red)}
+.dot-muted{background:var(--muted2)}
+/* END-MIRRORED */
+
+/* BEGIN-MIRRORED: market pulse bits we re-render */
+.pulse-row{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.pulse-big{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--text);line-height:1}
+.pulse-chg{font-family:var(--mono);font-size:11px;font-weight:700}
+.pulse-row2{display:flex;justify-content:space-between;align-items:baseline;margin-top:5px;font-family:var(--mono);font-size:11px}
+.pulse-spread{font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:auto}
+.pulse-note{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:8px}
+.pulse-official{display:flex;align-items:center;gap:5px;margin:6px 0 9px;padding:3px 7px;background:var(--panel2);border-radius:3px;border-left:2px solid var(--border2);font-family:var(--mono);font-size:10px;color:var(--muted)}
+/* END-MIRRORED */
+
+/* BEGIN-MIRRORED: news */
+.news-item{padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;line-height:1.55}
+.news-item:last-child{border-bottom:0}
+.news-item .nm-title{color:var(--text);text-decoration:none;display:block}
+.news-item .nm-meta{font-size:9px;color:var(--muted2);margin-top:2px}
+/* END-MIRRORED */
+
+/* ════════════════ SHOWCASE-ONLY layout (not in live) ════════════════ */
+.page{max-width:1400px;margin:0 auto;padding:32px}
+h1{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.lede{font-family:var(--mono);font-size:12px;color:var(--muted);max-width:920px;margin-bottom:14px}
+.lede b{color:var(--amber);font-weight:700}
+.checklist{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:11px}
+.checklist h3{font-family:var(--sans);font-size:13px;margin-bottom:8px;color:var(--text)}
+.checklist ul{list-style:none;padding-left:0}
+.checklist li{padding:2px 0 2px 18px;position:relative;color:var(--muted)}
+.checklist li::before{content:"☐";position:absolute;left:0;color:var(--amber)}
+.controls{display:flex;gap:8px;margin:14px 0 28px;align-items:center;flex-wrap:wrap}
+.controls button{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;border-radius:3px;border:1px solid var(--border);background:var(--panel);color:var(--text);cursor:pointer}
+.controls button.on{background:var(--amber);color:#000;border-color:var(--amber)}
+.controls span{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-right:6px}
+.section{margin-bottom:48px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:4px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.section-hint{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:14px}
+.perm-grid{display:grid;gap:14px}
+.perm{display:flex;flex-direction:column;gap:6px}
+.perm-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2)}
+.perm-label .tag{color:var(--amber)}
+.perm-mount{}
+.assert{margin-top:36px;background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:14px 18px;font-family:var(--mono);font-size:11px}
+.assert h3{font-family:var(--sans);font-size:14px;margin-bottom:8px;color:var(--text)}
+.assert .ok{color:var(--green)}
+.assert .fail{color:var(--red)}
+.assert ul{list-style:none;padding:6px 0 0}
+.assert li{padding:2px 0;color:var(--muted)}
+/* Kill transitions in the showcase so screenshots are deterministic. */
+*{transition:none!important}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Design showcase — Hormuz Watch right sidebar</h1>
+  <p class="lede">
+    Renders every right-sidebar card across <b>6 data permutations</b> so design
+    bugs surface before they ship to the live dashboard. If anything looks
+    broken here, the live card has the same bug. The DOM bounding-box check
+    at the bottom is a tripwire for overflow regressions — <b>red lines = act</b>.
+  </p>
+
+  <div class="checklist">
+    <h3>Acceptance checklist — scan every card</h3>
+    <ul>
+      <li>Counts and percentages always in the SAME visual position across every row of a card</li>
+      <li>No text spills outside its container (column, bar, tile)</li>
+      <li>Bars / fills never exceed 100% width of their track</li>
+      <li>Long labels truncate with ellipsis or wrap — they never bleed into neighbours</li>
+      <li>Empty / loading / stale states render explicitly (no "0" disguised as fresh data)</li>
+      <li>Colors used semantically: green = good, amber = warn, red = bad, blue = info, muted = absent</li>
+      <li>Numbers and units always paired (no orphan "42" without "transits", no "$" without value)</li>
+      <li>Self-test panel at the bottom shows <span class="ok">all clear</span></li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <span>Width:</span>
+    <button data-w="280" class="wbtn">280 (mobile sidebar)</button>
+    <button data-w="340" class="wbtn on">340 (desktop sidebar)</button>
+    <button data-w="480" class="wbtn">480 (wide)</button>
+    <span style="margin-left:auto">Built 2026-05-15</span>
+  </div>
+
+  <main id="main"></main>
+
+  <div class="assert" id="assertPanel">
+    <h3>Self-test — overflow tripwire</h3>
+    <div id="assertSummary">Running…</div>
+    <ul id="assertList"></ul>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// CARD RENDERERS — copied from index.html so the showcase exercises the SAME
+// markup the live page does. Drift between these and live = false negatives.
+// HARD_RULE: when you change a card renderer in index.html, mirror it here.
+// ═══════════════════════════════════════════════════════════════════════════
+
+var SHIP_CLASS_COLORS = {
+  "VLCC":"#ff3e52","Suezmax":"#f09014","Aframax":"#f7c948",
+  "Panamax tanker":"#38aaff","Small tanker":"#7dd3fc","Tanker":"#f09014",
+  "Cargo":"#1dd47e","Passenger":"#a78bfa","Fishing":"#38bdf8",
+  "Military":"#ef4444","High-speed":"#facc15","Service":"#94a3b8",
+  "Container Ship":"#1dd47e","Bulk Carrier":"#8b9dc3","Offshore/Service":"#38aaff",
+  "Other":"#64748b","Unknown":"#475569"
+};
+var TYPE_LABEL_ABBREVIATIONS = {
+  "Offshore/Service": "Offshore",
+  "Container Ship":   "Container",
+  "Bulk Carrier":     "Bulker"
+};
+function _abbrType(label){ return TYPE_LABEL_ABBREVIATIONS[label] || label; }
+
+// MIRRORED from index.html _typeBarRow
+function _typeBarRow(label, count, pct, color){
+  var fillW = Math.max(2, pct);
+  var pctText = (count != null) ? (count + " · " + pct + "%") : (pct + "%");
+  var row = document.createElement("div"); row.className = "tbar-row";
+  row.innerHTML = '<div class="tbar-label">'+_abbrType(label)+'</div>'
+    + '<div class="tbar-track"><div class="tbar-fill" style="width:'+fillW+'%;background:'+color+'"></div></div>'
+    + '<div class="tbar-pct">'+pctText+'</div>';
+  return row;
+}
+
+// ── Vessel Type Mix card ────────────────────────────────────────────────
+function renderMixCard(mount, data){
+  var html = '<div class="rblock" id="mixBlock">'
+    + '<div class="rhead">Vessel type mix '
+    + '<span class="rhead-src '+(data.srcClass||"src-blue")+'">'+(data.srcLabel||"WEB FEED")+'</span></div>'
+    + '<div class="mix-subhead">'+(data.subhead||"")+'</div>'
+    + '<div class="type-bars"></div></div>';
+  mount.innerHTML = html;
+  var bars = mount.querySelector(".type-bars");
+  if(!data.types || !Object.keys(data.types).length){
+    bars.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted2)">Live mix pending — reference: VLCC 30% · Suezmax 20% · Aframax 15% · Panamax 15% · Smaller 20%</div>';
+    return;
+  }
+  var keys = Object.keys(data.types);
+  var total = keys.reduce(function(s,k){return s+(data.types[k]||0);}, 0) || 1;
+  keys.sort(function(a,b){return (data.types[b]||0)-(data.types[a]||0);});
+  keys.forEach(function(k){
+    var cnt = data.types[k]||0;
+    var pct = Math.round(cnt/total*100);
+    bars.appendChild(_typeBarRow(k, cnt, pct, SHIP_CLASS_COLORS[k] || "#3b82f6"));
+  });
+}
+
+// ── Vessel Traffic Trend ────────────────────────────────────────────────
+function renderTrendCard(mount, data){
+  var max = 42;
+  var html = '<div class="rblock"><div class="rhead">Vessel traffic trend '
+    + '<span class="rhead-src src-est">HISTORICAL</span></div>'
+    + '<div class="trend-bars"><div class="trend-bars-only"></div><div class="trend-meta-row"></div></div>'
+    + '<div class="trend-legend">'
+    + '<div class="tleg"><div class="tleg-dot" style="background:var(--green)"></div>EIA / public baseline</div>'
+    + '<div class="tleg"><div class="tleg-dot" style="background:var(--blue)"></div>This session / AIS</div>'
+    + '</div></div>';
+  mount.innerHTML = html;
+  var barsRow = mount.querySelector(".trend-bars-only");
+  var metaRow = mount.querySelector(".trend-meta-row");
+  data.bars.forEach(function(d){
+    var isUnknown = (d.val === null || d.val === undefined);
+    var v = isUnknown ? 0 : d.val;
+    var pct = Math.round(v / max * 100);
+    var bar = document.createElement("div"); bar.className = "t-bar-only";
+    bar.style.height = (isUnknown ? 3 : Math.max(4, Math.round(pct * 0.54))) + "px";
+    bar.style.background = isUnknown ? "var(--border2)" : d.color;
+    bar.style.opacity = d.live ? 1 : 0.75;
+    barsRow.appendChild(bar);
+    var meta = document.createElement("div"); meta.className = "t-meta";
+    meta.innerHTML = '<div class="t-meta-val" style="color:'+(isUnknown?"var(--muted)":d.color)+'">'+(isUnknown?"--":v)+'</div>'
+      + '<div class="t-meta-label">'+d.label+'<br><span style="color:var(--muted2)">'+d.sublabel+'</span></div>';
+    metaRow.appendChild(meta);
+  });
+}
+
+// ── Conditions ──────────────────────────────────────────────────────────
+function renderConditionsCard(mount, data){
+  var html = '<div class="rblock"><div class="rhead">Conditions '
+    + '<span class="rhead-src '+(data.srcClass||"src-green")+'">'+(data.srcLabel||"live · multi")+'</span></div>';
+  data.rows.forEach(function(r){
+    html += '<div class="tile-row">'
+      + '<div class="tile-row-label"><span class="tile-row-dot dot-'+(r.dot||"muted")+'"></span>'+r.label+'</div>'
+      + '<div class="tile-row-val">'+r.val+'</div></div>';
+  });
+  html += '</div>';
+  mount.innerHTML = html;
+}
+
+// ── Political Signals ───────────────────────────────────────────────────
+function renderPoliticalCard(mount, data){
+  var html = '<div class="rblock"><div class="rhead">Political signals '
+    + '<span class="rhead-src '+(data.srcClass||"src-green")+'">'+(data.srcLabel||"live · multi")+'</span></div>';
+  data.rows.forEach(function(r){
+    html += '<div class="tile-row">'
+      + '<div class="tile-row-label"><span class="tile-row-dot dot-'+(r.dot||"muted")+'"></span>'+r.label+'</div>'
+      + '<div class="tile-row-val">'+r.val+'</div></div>';
+  });
+  html += '</div>';
+  mount.innerHTML = html;
+}
+
+// ── Market Pulse ────────────────────────────────────────────────────────
+function renderPulseCard(mount, data){
+  var html = '<div class="rblock"><div class="rhead">Market pulse '
+    + '<span class="rhead-src '+(data.srcClass||"src-eia")+'">'+(data.srcLabel||"EIA")+'</span></div>';
+  if(data.brent != null){
+    html += '<div class="pulse-row">'
+      + '<span class="pulse-big">$'+data.brent.toFixed(1)+'</span>'
+      + '<span class="pulse-chg" style="color:'+(data.brentChg>=0?"var(--green)":"var(--red)")+'">'
+        + (data.brentChg>=0?"▲ +":"▼ ")+ Math.abs(data.brentChg).toFixed(2) +'%</span>'
+      + '</div>';
+  } else {
+    html += '<div class="pulse-row"><span class="pulse-big" style="color:var(--muted)">$—</span></div>';
+  }
+  if(data.official){
+    html += '<div class="pulse-official">EIA spot $'+data.official.toFixed(2)+' · as of '+data.officialAsOf+'</div>';
+  }
+  if(data.wti != null){
+    var spread = data.brent != null ? (data.brent - data.wti) : null;
+    html += '<div class="pulse-row2"><span style="color:var(--muted)">WTI $'+data.wti.toFixed(1)+'</span>'
+      + (spread != null ? '<span class="pulse-spread">B–W spread: $'+spread.toFixed(1)+'</span>' : '')
+      + '</div>';
+  }
+  html += '<div class="pulse-note">'+(data.note||"")+'</div></div>';
+  mount.innerHTML = html;
+}
+
+// ── Headline Pulse ──────────────────────────────────────────────────────
+function renderHeadlinesCard(mount, data){
+  var html = '<div class="rblock"><div class="rhead">Headline pulse '
+    + '<span class="rhead-src src-blue">NEWS FEED</span></div>'
+    + '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px">'+(data.subtitle||"")+'</div>';
+  if(!data.items || !data.items.length){
+    html += '<div style="font-family:var(--mono);font-size:10px;color:var(--muted2)">'+(data.emptyMsg||"No headlines.")+'</div>';
+  } else {
+    data.items.forEach(function(it){
+      html += '<div class="news-item">'
+        + '<a class="nm-title" href="#" onclick="return false">'+it.title+'</a>'
+        + '<div class="nm-meta">'+it.source+' · '+it.when+'</div>'
+        + '</div>';
+    });
+  }
+  html += '</div>';
+  mount.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PERMUTATION DATA — six per card spanning the failure-mode space:
+//   1. Typical            2. Empty/loading      3. Single dominant
+//   4. All equal          5. Long-label edge    6. Min/max stress
+// ═══════════════════════════════════════════════════════════════════════════
+
+var CARDS = [
+  {
+    name: "Vessel Type Mix",
+    hint: "After 2026-05-15 fix: count + percent always in the right-hand column ('N · P%'). Bar is purely proportional. No in-fill text.",
+    render: renderMixCard,
+    perms: [
+      { label: "Typical (live shape)", data: { types: {Tanker:37,"Offshore/Service":37,Other:33,"Bulk Carrier":19,"Container Ship":12,Passenger:1}, subhead:"139 vessels classified · 5 Gulf ports · VesselFinder" } },
+      { label: "Empty (no AIS, no scrape)", data: { types: null, subhead:"Live mix pending AIS recovery", srcClass:"src-muted", srcLabel:"GLOBAL FLEET REF" } },
+      { label: "One dominant 80%+", data: { types: {VLCC:80,Suezmax:8,Aframax:5,Tanker:4,Other:3}, subhead:"100 vessels classified · live AIS", srcClass:"src-live", srcLabel:"LIVE FEED" } },
+      { label: "All equal (6× ~17%)", data: { types: {Tanker:20,"Offshore/Service":20,Other:20,"Bulk Carrier":20,"Container Ship":20,Passenger:20}, subhead:"120 vessels classified · 5 Gulf ports · VesselFinder" } },
+      { label: "Edge: 1% tail (Passenger)", data: { types: {Tanker:50,"Offshore/Service":35,Other:9,"Bulk Carrier":4,"Container Ship":1,Passenger:1}, subhead:"100 vessels classified · 5 Gulf ports · VesselFinder" } },
+      { label: "Many types + long labels", data: { types: {VLCC:18,Suezmax:14,Aframax:12,"Panamax tanker":10,"Small tanker":9,"Offshore/Service":15,"Bulk Carrier":8,"Container Ship":6,Cargo:4,Fishing:2,Military:1,Other:1}, subhead:"100 vessels classified · live AIS · 12 ship classes", srcClass:"src-live", srcLabel:"LIVE FEED" } },
+    ]
+  },
+
+  {
+    name: "Vessel Traffic Trend",
+    hint: "After 2026-05-15 fix: sublabels wrap rather than overflowing the ~74px column. Value stays single-line with ellipsis.",
+    render: renderTrendCard,
+    perms: [
+      { label: "Typical", data: { bars: [
+        {label:"Pre-crisis",sublabel:"Pre-Feb '26",val:42,color:"#1dd47e"},
+        {label:"Crisis avg",sublabel:"30d rolling",val:18,color:"#f09014"},
+        {label:"Yesterday",sublabel:"05-14",val:32,color:"#38aaff"},
+        {label:"Today",sublabel:"live",val:35,color:"#38aaff",live:true},
+      ] } },
+      { label: "Acute crisis (today low)", data: { bars: [
+        {label:"Pre-crisis",sublabel:"Pre-Feb '26",val:42,color:"#1dd47e"},
+        {label:"Crisis avg",sublabel:"30d rolling",val:18,color:"#f09014"},
+        {label:"Yesterday",sublabel:"05-14",val:5,color:"#38aaff"},
+        {label:"Today",sublabel:"live",val:8,color:"#38aaff",live:true},
+      ] } },
+      { label: "Yesterday unknown", data: { bars: [
+        {label:"Pre-crisis",sublabel:"Pre-Feb '26",val:42,color:"#1dd47e"},
+        {label:"Crisis avg",sublabel:"30d rolling",val:18,color:"#f09014"},
+        {label:"Yesterday",sublabel:"05-14",val:null,color:"#38aaff"},
+        {label:"Today",sublabel:"live",val:35,color:"#38aaff",live:true},
+      ] } },
+      { label: "Recovery (today > baseline)", data: { bars: [
+        {label:"Pre-crisis",sublabel:"Pre-Feb '26",val:42,color:"#1dd47e"},
+        {label:"Crisis avg",sublabel:"30d rolling",val:18,color:"#f09014"},
+        {label:"Yesterday",sublabel:"05-14",val:45,color:"#38aaff"},
+        {label:"Today",sublabel:"live",val:50,color:"#38aaff",live:true},
+      ] } },
+      { label: "Long sublabel stress", data: { bars: [
+        {label:"Pre-crisis",sublabel:"Q4 2025 baseline avg",val:42,color:"#1dd47e"},
+        {label:"Crisis avg",sublabel:"Feb-Mar '26 est",val:18,color:"#f09014"},
+        {label:"Yesterday",sublabel:"Wed 14 May 2026",val:32,color:"#38aaff"},
+        {label:"Today",sublabel:"live · AIS feed",val:35,color:"#38aaff",live:true},
+      ] } },
+      { label: "Cold start (all unknown)", data: { bars: [
+        {label:"Pre-crisis",sublabel:"Pre-Feb '26",val:42,color:"#1dd47e"},
+        {label:"Crisis avg",sublabel:"30d rolling",val:null,color:"#f09014"},
+        {label:"Yesterday",sublabel:"05-14",val:null,color:"#38aaff"},
+        {label:"Today",sublabel:"live",val:null,color:"#38aaff",live:true},
+      ] } },
+    ]
+  },
+
+  {
+    name: "Conditions",
+    hint: "Dot color must match severity. 'Dark vessel share' removed 2026-05-14 (no real source).",
+    render: renderConditionsCard,
+    perms: [
+      { label: "All clear", data: { rows: [
+        {label:"Aerial activity",val:"10 aircraft · 0 mil",dot:"green"},
+        {label:"Weather (4 waypoints)",val:"wind 12kn · clear",dot:"green"},
+        {label:"Seismic (7d, mag 4+)",val:"3 events · max 4.7",dot:"green"},
+      ] } },
+      { label: "Mixed amber", data: { rows: [
+        {label:"Aerial activity",val:"14 aircraft · 4 mil",dot:"amber"},
+        {label:"Weather (4 waypoints)",val:"wind 28kn · rough",dot:"amber"},
+        {label:"Seismic (7d, mag 4+)",val:"7 events · max 5.1",dot:"amber"},
+      ] } },
+      { label: "Elevated risk", data: { rows: [
+        {label:"Aerial activity",val:"22 aircraft · 8 mil",dot:"red"},
+        {label:"Weather (4 waypoints)",val:"wind 42kn · rough",dot:"amber"},
+        {label:"Seismic (7d, mag 4+)",val:"2 events · max 5.7",dot:"red"},
+      ] } },
+      { label: "Stale / loading", data: { srcClass:"src-est", srcLabel:"stale · multi", rows: [
+        {label:"Aerial activity",val:"— · 11h stale",dot:"muted"},
+        {label:"Weather (4 waypoints)",val:"— · stale",dot:"muted"},
+        {label:"Seismic (7d, mag 4+)",val:"3 events · max 4.7",dot:"green"},
+      ] } },
+      { label: "All unavailable", data: { srcClass:"src-est", srcLabel:"degraded", rows: [
+        {label:"Aerial activity",val:"—",dot:"muted"},
+        {label:"Weather (4 waypoints)",val:"—",dot:"muted"},
+        {label:"Seismic (7d, mag 4+)",val:"—",dot:"muted"},
+      ] } },
+      { label: "Long values stress", data: { rows: [
+        {label:"Aerial activity",val:"127 aircraft · 12 military",dot:"red"},
+        {label:"Weather (4 waypoints)",val:"wind 64.3 kn · rough seas",dot:"amber"},
+        {label:"Seismic (7d, mag 4+)",val:"14 events · max M 6.3",dot:"red"},
+      ] } },
+    ]
+  },
+
+  {
+    name: "Political Signals",
+    hint: "Currency bands recalibrated 2026-05-15: <15 aligned · <40 stressed · <80 dislocated · ≥80 extreme (black-vs-mid-market basis).",
+    render: renderPoliticalCard,
+    perms: [
+      { label: "Typical", data: { rows: [
+        {label:"OFAC Iran actions / 30d",val:"3",dot:"amber"},
+        {label:"News headlines / 24h",val:"24 headlines",dot:"amber"},
+        {label:"GDELT events / 24h",val:"50 events",dot:"green"},
+        {label:"Currency IRR spread",val:"47% (dislocated)",dot:"red"},
+      ] } },
+      { label: "Surge / acute", data: { rows: [
+        {label:"OFAC Iran actions / 30d",val:"8",dot:"red"},
+        {label:"News headlines / 24h",val:"67 headlines",dot:"red"},
+        {label:"GDELT events / 24h",val:"210 events · neg tone 62%",dot:"red"},
+        {label:"Currency IRR spread",val:"95% (extreme)",dot:"red"},
+      ] } },
+      { label: "Quiet", data: { rows: [
+        {label:"OFAC Iran actions / 30d",val:"0",dot:"green"},
+        {label:"News headlines / 24h",val:"5 headlines",dot:"green"},
+        {label:"GDELT events / 24h",val:"12 events",dot:"green"},
+        {label:"Currency IRR spread",val:"8% (aligned)",dot:"green"},
+      ] } },
+      { label: "Currency at thresholds", data: { rows: [
+        {label:"OFAC Iran actions / 30d",val:"2",dot:"amber"},
+        {label:"News headlines / 24h",val:"35 headlines",dot:"amber"},
+        {label:"GDELT events / 24h",val:"100 events",dot:"green"},
+        {label:"Currency IRR spread",val:"39% (stressed)",dot:"amber"},
+      ] } },
+      { label: "All unavailable", data: { srcClass:"src-est", srcLabel:"degraded", rows: [
+        {label:"OFAC Iran actions / 30d",val:"—",dot:"muted"},
+        {label:"News headlines / 24h",val:"—",dot:"muted"},
+        {label:"GDELT events / 24h",val:"—",dot:"muted"},
+        {label:"Currency IRR spread",val:"—",dot:"muted"},
+      ] } },
+      { label: "Long values stress", data: { rows: [
+        {label:"OFAC Iran actions / 30d",val:"127",dot:"red"},
+        {label:"News headlines / 24h",val:"248 headlines",dot:"red"},
+        {label:"GDELT events / 24h",val:"1,840 events · neg tone 78%",dot:"red"},
+        {label:"Currency IRR spread",val:"312% (extreme)",dot:"red"},
+      ] } },
+    ]
+  },
+
+  {
+    name: "Market Pulse",
+    hint: "Verdict and header must use the same brent/wti source (fixed 2026-05-14). Stale tag honest when source date > 1h.",
+    render: renderPulseCard,
+    perms: [
+      { label: "Live fresh (Stooq)", data: { brent:107.0, brentChg:0.47, wti:102.5, official:111.37, officialAsOf:"2026-05-12", srcClass:"src-live", srcLabel:"LIVE FEED", note:"Live: commodity feed · 4m ago" } },
+      { label: "Live stale (3h)", data: { brent:106.16, brentChg:-0.52, wti:101.97, official:111.37, officialAsOf:"2026-05-12", srcClass:"src-est", srcLabel:"STALE · 220m", note:"Live: commodity feed · 220m ago — source has not updated" } },
+      { label: "EIA fallback only", data: { brent:111.37, brentChg:4.96, wti:105.78, srcClass:"src-eia", srcLabel:"EIA WEEKLY", note:"EIA weekly spot · live feed pending" } },
+      { label: "Negative change (red)", data: { brent:98.2, brentChg:-2.34, wti:94.1, official:99.5, officialAsOf:"2026-05-13", srcClass:"src-live", srcLabel:"LIVE FEED", note:"Live: commodity feed · 8m ago" } },
+      { label: "Wide spread ($10+)", data: { brent:115.5, brentChg:1.21, wti:103.8, official:114.9, officialAsOf:"2026-05-13", srcClass:"src-live", srcLabel:"LIVE FEED", note:"Brent-WTI spread > $10: Atlantic tightness or Hormuz risk pricing in" } },
+      { label: "Loading (all em-dash)", data: { brent:null, brentChg:0, wti:null, srcClass:"src-est", srcLabel:"loading", note:"Awaiting first oil quote…" } },
+    ]
+  },
+
+  {
+    name: "Headline Pulse",
+    hint: "Restored 2026-05-15 as a separate section. Titles wrap; meta-row stays one line.",
+    render: renderHeadlinesCard,
+    perms: [
+      { label: "Typical (5 items)", data: { subtitle:"24 headlines · last 24h · 5 sources", items: [
+        {title:"Shipping industry fears fuel shortages as Iran war squeezes bunker fuel supply",source:"Lloyd's List",when:"2h"},
+        {title:"Limited uptick in Hormuz LNG traffic offers scant relief to global markets",source:"Reuters",when:"4h"},
+        {title:"Strait of Hormuz reopening won't mean cheaper shipping as insurance premiums surge",source:"Khaleej Times",when:"6h"},
+        {title:"War-risk insurance premiums for Gulf tankers reach 1% of hull value",source:"S&P Global",when:"12h"},
+        {title:"Major maritime insurers suspend or reprice war-risk coverage for Persian Gulf",source:"Al Jazeera",when:"18h"},
+      ] } },
+      { label: "Few items (3)", data: { subtitle:"3 headlines · last 24h · 1 source", items: [
+        {title:"Tanker rerouted around Cape of Good Hope as Hormuz risk premium spikes",source:"TradeWinds",when:"4h"},
+        {title:"VLCC rates jump on Middle East Gulf-to-China route",source:"Baltic Exchange",when:"8h"},
+        {title:"OFAC designates three vessels in Iran shadow-fleet enforcement",source:"US Treasury",when:"21h"},
+      ] } },
+      { label: "Very long titles (wrap)", data: { subtitle:"3 headlines · last 24h", items: [
+        {title:"In a sweeping move that markets analysts described as 'the most significant intervention in maritime insurance markets in two decades,' major underwriters today suspended Persian Gulf war-risk coverage for a list of named tanker operators",source:"Lloyd's List",when:"3h"},
+        {title:"Iran's foreign minister, in a televised statement that ran on state TV for over fifteen minutes without interruption, signalled an openness to renewed talks while warning that any attempt at maritime escort operations would be met with 'decisive consequences'",source:"Reuters",when:"7h"},
+        {title:"Short headline",source:"Wire",when:"1h"},
+      ] } },
+      { label: "Mixed timestamps", data: { subtitle:"5 headlines · last 24h · 4 sources", items: [
+        {title:"Live tracker shows fresh OFAC designation overnight",source:"Bloomberg",when:"32m"},
+        {title:"Singapore bunker prices spike on Hormuz supply fear",source:"Argus",when:"3h"},
+        {title:"Reuters analysis: parallel rial premium widens to 47%",source:"Reuters",when:"9h"},
+        {title:"Gulf naval coalition reports increased coalition aircraft sorties",source:"AP",when:"16h"},
+        {title:"Yesterday's escalation timeline: hour by hour",source:"Bloomberg",when:"22h"},
+      ] } },
+      { label: "Empty (no news)", data: { subtitle:"No fresh headlines in the last 24h", items: [] , emptyMsg:"Quiet news cycle — check back later." } },
+      { label: "Loading", data: { subtitle:"Loading headlines…", items: [] , emptyMsg:"Loading…" } },
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PAGE CONSTRUCTION
+// ═══════════════════════════════════════════════════════════════════════════
+var CURRENT_WIDTH = 340;
+
+function build(){
+  var main = document.getElementById("main");
+  main.innerHTML = "";
+  CARDS.forEach(function(card){
+    var sec = document.createElement("section");
+    sec.className = "section";
+    sec.innerHTML = '<h2 class="section-title">'+card.name+'</h2>'
+      + '<div class="section-hint">'+(card.hint||"")+'</div>'
+      + '<div class="perm-grid"></div>';
+    main.appendChild(sec);
+    var grid = sec.querySelector(".perm-grid");
+    grid.style.gridTemplateColumns = "repeat(auto-fill, minmax(" + CURRENT_WIDTH + "px, 1fr))";
+    card.perms.forEach(function(p, i){
+      var col = document.createElement("div"); col.className = "perm"; col.dataset.label = card.name + " · " + p.label;
+      var lbl = document.createElement("div"); lbl.className = "perm-label";
+      lbl.innerHTML = '<span class="tag">'+String(i+1).padStart(2,"0")+'</span> '+p.label;
+      var mount = document.createElement("div"); mount.className = "perm-mount";
+      mount.style.width = CURRENT_WIDTH + "px";
+      mount.style.maxWidth = "100%";
+      col.appendChild(lbl); col.appendChild(mount);
+      grid.appendChild(col);
+      try { card.render(mount, p.data); }
+      catch(e){ mount.innerHTML = '<div style="color:var(--red);font-family:var(--mono);font-size:11px">RENDER ERROR: '+e.message+'</div>'; }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SELF-TEST — overflow tripwire. Walks rendered cards and flags any element
+// whose right/left edge extends beyond its parent's bounding box. False
+// positives possible on antialias / sub-pixel rounding (we allow ±1px).
+// ═══════════════════════════════════════════════════════════════════════════
+function selfTest(){
+  var issues = [];
+  var checked = 0;
+  document.querySelectorAll(".perm").forEach(function(perm){
+    var permLabel = perm.dataset.label || "?";
+    // Containers we treat as "must contain their children"
+    perm.querySelectorAll(".tbar-row, .tbar-track, .t-meta, .tile-row, .news-item, .rblock, .pulse-row, .pulse-row2").forEach(function(parent){
+      var pb = parent.getBoundingClientRect();
+      if (pb.width === 0) return;
+      Array.from(parent.children).forEach(function(child){
+        checked++;
+        var cb = child.getBoundingClientRect();
+        // Allow 1px tolerance for sub-pixel rendering
+        var rOver = cb.right - pb.right;
+        var lOver = pb.left - cb.left;
+        if (rOver > 1 || lOver > 1) {
+          issues.push({
+            perm: permLabel,
+            parent: parent.className.split(" ").join("."),
+            child: (child.className||child.tagName).toString().split(" ").join("."),
+            rightOver: Math.round(rOver),
+            leftOver: Math.round(lOver),
+          });
+        }
+      });
+    });
+  });
+  return { checked: checked, issues: issues };
+}
+
+function runAssertions(){
+  var sum = document.getElementById("assertSummary");
+  var list = document.getElementById("assertList");
+  list.innerHTML = "";
+  var r = selfTest();
+  if (r.issues.length === 0){
+    sum.innerHTML = '<span class="ok">✓ All clear</span> — ' + r.checked + ' parent-child relationships checked, none overflow.';
+  } else {
+    sum.innerHTML = '<span class="fail">✗ ' + r.issues.length + ' overflow issue(s)</span> across ' + r.checked + ' checks. Fix the live card to match the showcase.';
+    r.issues.forEach(function(i){
+      var li = document.createElement("li");
+      li.innerHTML = '<span class="fail">•</span> <b>'+i.perm+'</b> — <code>'+i.child+'</code> overflows <code>'+i.parent+'</code> '
+        + (i.rightOver>1 ? 'right by '+i.rightOver+'px ' : '')
+        + (i.leftOver>1  ? 'left by '+i.leftOver+'px '   : '');
+      list.appendChild(li);
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COVERAGE WARNING — flag rblock IDs in the live page that aren't in the
+// showcase yet. Fetch index.html same-origin and grep IDs out. Best-effort.
+// ═══════════════════════════════════════════════════════════════════════════
+function coverageCheck(){
+  fetch("/index.html").then(function(r){ return r.ok ? r.text() : null; }).then(function(html){
+    if (!html) return;
+    var live = new Set();
+    var re = /<div\s+class="rblock"[^>]*id="([^"]+)"/g, m;
+    while ((m = re.exec(html))) live.add(m[1]);
+    // Map of showcase cards to live IDs they cover (best-guess)
+    var covered = new Set(["mixBlock","conditionsBlock","politicalBlock","newsBlock","macroBlock"]);
+    var missing = [];
+    live.forEach(function(id){ if (!covered.has(id) && id !== "aerialBlock" && id !== "ofacBlock" && id !== "currencyBlock" && id !== "envBlock" && id !== "eventsBlock") missing.push(id); });
+    if (missing.length){
+      var note = document.createElement("div");
+      note.style.cssText = "margin-top:14px;font-family:var(--mono);font-size:10px;color:var(--amber)";
+      note.innerHTML = "ℹ Coverage hint — live rblocks not covered by this showcase: <code>" + missing.join(", ") + "</code>";
+      document.getElementById("assertPanel").appendChild(note);
+    }
+  }).catch(function(){});
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════════════════════════
+document.querySelectorAll(".wbtn").forEach(function(b){
+  b.addEventListener("click", function(){
+    document.querySelectorAll(".wbtn").forEach(function(x){ x.classList.remove("on"); });
+    b.classList.add("on");
+    CURRENT_WIDTH = parseInt(b.dataset.w, 10);
+    build();
+    setTimeout(runAssertions, 30);
+  });
+});
+
+build();
+setTimeout(function(){ runAssertions(); coverageCheck(); }, 60);
+window.addEventListener("resize", function(){ setTimeout(runAssertions, 100); });
+</script>
+</body>
+</html>
