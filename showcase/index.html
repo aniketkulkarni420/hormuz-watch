@@ -25,15 +25,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 
 /* BEGIN-MIRRORED: card chrome */
 .rblock{border:1px solid var(--border);background:var(--panel);padding:13px 14px;border-radius:7px}
-.rhead{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:700;margin-bottom:4px}
+.rhead{display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;margin-bottom:10px;border-bottom:1px solid var(--border);letter-spacing:.025em;font-family:var(--mono);font-size:9px;color:var(--amber);text-transform:uppercase}
 .rhead-src{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--muted)}
-.src-live{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.2);padding:1px 5px;border-radius:2px}
-.src-est{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.2);padding:1px 5px;border-radius:2px}
-.src-eia{color:var(--blue);background:rgba(56,170,255,.1);border:1px solid rgba(56,170,255,.2);padding:1px 5px;border-radius:2px}
+.src-live{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.2)}
+.src-est{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.2)}
+.src-eia{color:var(--blue);background:rgba(56,170,255,.1);border:1px solid rgba(56,170,255,.2)}
+/* END-MIRRORED */
+/* Showcase-only utility classes — live applies these as additional classes
+   on .rhead-src spans but defines no standalone rules for them. */
 .src-blue{color:var(--blue)}
 .src-green{color:var(--green)}
 .src-muted{color:var(--muted2)}
-/* END-MIRRORED */
+/* Showcase-local padding for source badges (live uses inline styles). */
+.rhead-src.src-live,.rhead-src.src-est,.rhead-src.src-eia{padding:1px 5px;border-radius:2px}
 
 /* BEGIN-MIRRORED: vessel type mix */
 .mix-subhead{font-family:var(--mono);font-size:9.5px;color:var(--muted2);margin:3px 0 10px;line-height:1.5}
@@ -41,14 +45,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .tbar-row{display:grid;grid-template-columns:84px 1fr auto;align-items:center;gap:10px}
 .tbar-label{font-family:var(--mono);font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tbar-track{position:relative;height:14px;background:var(--panel2);border:1px solid var(--border2);border-radius:3px;overflow:hidden}
-.tbar-fill{height:100%;border-radius:2px 0 0 2px}
+.tbar-fill{height:100%;border-radius:2px 0 0 2px;transition:width .8s ease}
 .tbar-pct{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);min-width:34px;text-align:right;white-space:nowrap}
 /* END-MIRRORED */
 
 /* BEGIN-MIRRORED: vessel trend */
 .trend-bars{display:flex;flex-direction:column;gap:5px}
 .trend-bars-only{display:flex;align-items:flex-end;gap:8px;height:56px}
-.t-bar-only{flex:1;border-radius:2px 2px 0 0;min-height:3px}
+.t-bar-only{flex:1;border-radius:2px 2px 0 0;min-height:3px;transition:height .7s ease}
 .trend-meta-row{display:flex;gap:8px}
 .t-meta{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
 .t-meta-val{font-family:var(--mono);font-size:11px;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
@@ -66,7 +70,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .tile-row-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;flex-shrink:0}
 .dot-green{background:var(--green)}
 .dot-amber{background:var(--amber)}
-.dot-orange{background:var(--orange)}
+.dot-orange{background:var(--orange,#ff8c2e)}
 .dot-red{background:var(--red)}
 .dot-muted{background:var(--muted2)}
 /* END-MIRRORED */
@@ -81,12 +85,47 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .pulse-official{display:flex;align-items:center;gap:5px;margin:6px 0 9px;padding:3px 7px;background:var(--panel2);border-radius:3px;border-left:2px solid var(--border2);font-family:var(--mono);font-size:10px;color:var(--muted)}
 /* END-MIRRORED */
 
-/* BEGIN-MIRRORED: news */
+/* Showcase-local: news item classes. Live builds news with inline styles
+   inside a JS loop (#newsList children). The showcase abstracts the same
+   visual to classes so assertions can target them — but they are NOT
+   mirrored from live CSS. Visual match is a manual review responsibility. */
 .news-item{padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;line-height:1.55}
 .news-item:last-child{border-bottom:0}
 .news-item .nm-title{color:var(--text);text-decoration:none;display:block}
 .news-item .nm-meta{font-size:9px;color:var(--muted2);margin-top:2px}
+
+/* BEGIN-MIRRORED: cross-signal verification */
+.xv-rows{display:flex;flex-direction:column;gap:6px}
+.xv-row{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 10px}
+.xv-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.xv-sources{font-family:var(--mono);font-size:9px;color:var(--muted);flex:1}
+.xv-status{font-family:var(--mono);font-size:9px;font-weight:700}
+.xv-body{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.7}
 /* END-MIRRORED */
+
+/* BEGIN-MIRRORED: tanker plays */
+.tanker-rows{display:flex;flex-direction:column;gap:0}
+.tanker-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)}
+.tanker-row:last-child{border-bottom:none}
+.tk-ticker{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--green);width:38px;flex-shrink:0}
+.tk-name{font-family:var(--mono);font-size:9px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-upside{font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;white-space:nowrap}
+/* END-MIRRORED */
+
+/* SHOWCASE-LOCAL: vessel movement card classes (live uses inline styles —
+   we extract to classes here so the assertions can target them). Visual
+   match enforced by HARD_RULE #11 (review the live look on change). */
+.mv-head{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+.mv-big{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--amber);line-height:1}
+.mv-head-lbl{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.mv-dir-bar{display:flex;height:8px;border-radius:3px;overflow:hidden;background:var(--panel2);margin-bottom:6px}
+.mv-dir-bar > div{height:100%}
+.mv-dir-text{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px}
+.mv-tile-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding-top:11px;border-top:1px solid var(--border)}
+.mv-tile{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 9px}
+.mv-tile-val{font-family:var(--mono);font-size:18px;font-weight:700;line-height:1}
+.mv-tile-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.4;margin-top:3px}
+.traffic-grid{display:block}
 
 /* ════════════════ SHOWCASE-ONLY layout (not in live) ════════════════ */
 .page{max-width:1400px;margin:0 auto;padding:32px}
@@ -101,6 +140,8 @@ h1{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
 .controls{display:flex;gap:8px;margin:14px 0 28px;align-items:center;flex-wrap:wrap}
 .controls button{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;border-radius:3px;border:1px solid var(--border);background:var(--panel);color:var(--text);cursor:pointer}
 .controls button.on{background:var(--amber);color:#000;border-color:var(--amber)}
+.controls .tbtn{padding:7px 10px;font-size:9px}
+.controls .cbbtn{padding:7px 10px;font-size:9px}
 .controls span{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-right:6px}
 .section{margin-bottom:48px}
 .section-title{font-size:16px;font-weight:700;margin-bottom:4px;padding-bottom:6px;border-bottom:1px solid var(--border)}
@@ -116,9 +157,39 @@ h1{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
 .assert .fail{color:var(--red)}
 .assert ul{list-style:none;padding:6px 0 0}
 .assert li{padding:2px 0;color:var(--muted)}
-/* Kill transitions in the showcase so screenshots are deterministic. */
-*{transition:none!important}
+/* Transitions disabled by default for deterministic screenshots. Toggle on
+   in the controls to inspect mid-animation states (blindspot #4). */
+body.no-transitions *{transition:none!important}
+/* CB-simulation overlays (blindspot #8). Approximations of common forms of
+   color vision deficiency using SVG matrix filters. */
+body.cb-prot main{filter:url(#cb-protanopia)}
+body.cb-deut main{filter:url(#cb-deuteranopia)}
+body.cb-trit main{filter:url(#cb-tritanopia)}
+body.cb-mono main{filter:grayscale(1)}
+/* Hover-forced state (blindspot #7) — applies :hover styles by class so the
+   showcase shows what tooltips/dotted-underlines/links look like with the
+   pointer on them, without actually needing a pointer. */
+body.force-hover .rblock,
+body.force-hover .news-item .nm-title,
+body.force-hover .tile-row{outline:1px dashed rgba(56,170,255,.25)}
+body.force-hover .news-item .nm-title{color:var(--blue)}
+/* RTL toggle (blindspot #9) — extreme but cheap; mostly a sanity check that
+   nothing assumes LTR for icons / spread directions. */
+body.rtl main{direction:rtl}
+body.rtl .tbar-pct,body.rtl .tile-row-val,body.rtl .t-meta-val{direction:ltr}
+.assert-card{margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--muted2)}
+.assert-card.ok::before{content:"✓ ";color:var(--green)}
+.assert-card.fail::before{content:"✗ ";color:var(--red)}
+.assert-card.fail{color:var(--red)}
 </style>
+<!-- CB-simulation filters (matrix values from common references) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="cb-protanopia"><feColorMatrix type="matrix" values="0.567 0.433 0 0 0  0.558 0.442 0 0 0  0 0.242 0.758 0 0  0 0 0 1 0"/></filter>
+    <filter id="cb-deuteranopia"><feColorMatrix type="matrix" values="0.625 0.375 0 0 0  0.7 0.3 0 0 0  0 0.3 0.7 0 0  0 0 0 1 0"/></filter>
+    <filter id="cb-tritanopia"><feColorMatrix type="matrix" values="0.95 0.05 0 0 0  0 0.433 0.567 0 0  0 0.475 0.525 0 0  0 0 0 1 0"/></filter>
+  </defs>
+</svg>
 </head>
 <body>
 <div class="page">
@@ -147,10 +218,20 @@ h1{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
 
   <div class="controls">
     <span>Width:</span>
-    <button data-w="280" class="wbtn">280 (mobile sidebar)</button>
-    <button data-w="340" class="wbtn on">340 (desktop sidebar)</button>
+    <button data-w="280" class="wbtn">280 (mobile)</button>
+    <button data-w="340" class="wbtn on">340 (desktop)</button>
     <button data-w="480" class="wbtn">480 (wide)</button>
-    <span style="margin-left:auto">Built 2026-05-15</span>
+    <span style="margin-left:14px">State:</span>
+    <button class="tbtn" data-toggle="force-hover">Force hover</button>
+    <button class="tbtn" data-toggle="no-transitions" data-default-on="1">Kill transitions</button>
+    <button class="tbtn" data-toggle="rtl">RTL</button>
+    <span style="margin-left:14px">Color blindness:</span>
+    <button class="cbbtn on" data-cb="">None</button>
+    <button class="cbbtn" data-cb="cb-prot">Protanopia</button>
+    <button class="cbbtn" data-cb="cb-deut">Deuteranopia</button>
+    <button class="cbbtn" data-cb="cb-trit">Tritanopia</button>
+    <button class="cbbtn" data-cb="cb-mono">Greyscale</button>
+    <span style="margin-left:auto;font-family:var(--mono);font-size:9px"><a href="/audit/" style="color:var(--blue)">Data audit ↗</a></span>
   </div>
 
   <main id="main"></main>
@@ -316,6 +397,58 @@ function renderHeadlinesCard(mount, data){
     });
   }
   html += '</div>';
+  mount.innerHTML = html;
+}
+
+// ── Vessel Movement ─────────────────────────────────────────────────────
+function renderMovementCard(mount, data){
+  var totW = data.west + data.east || 1;
+  var wPct = Math.round(data.west / totW * 100);
+  var ePct = 100 - wPct;
+  var html = '<div class="rblock">'
+    + '<div class="rhead">Vessel movement <span class="rhead-src '+(data.srcClass||"src-blue")+'">'+(data.srcLabel||"LIVE")+'</span></div>'
+    + '<div style="margin-bottom:14px">'
+    + '<div class="mv-head"><span class="mv-big">'+data.total24h+'</span><span class="mv-head-lbl">crossings · last 24h</span></div>'
+    + '<div class="mv-dir-bar"><div style="width:'+wPct+'%;background:var(--blue)"></div><div style="width:'+ePct+'%;background:var(--amber)"></div></div>'
+    + '<div class="mv-dir-text">'
+    + '<span style="color:var(--blue)">← <b>'+data.west+'</b> westbound</span>'
+    + '<span style="color:var(--amber);text-align:right"><b>'+data.east+'</b> eastbound →</span>'
+    + '</div></div>'
+    + '<div class="mv-tile-grid">'
+    + '<div class="mv-tile"><div class="mv-tile-val" style="color:var(--green)">'+data.transit+'</div><div class="mv-tile-lbl">Transiting<br>now</div></div>'
+    + '<div class="mv-tile"><div class="mv-tile-val" style="color:var(--red)">'+data.anchored+'</div><div class="mv-tile-lbl">Anchored<br>at ports</div></div>'
+    + '<div class="mv-tile"><div class="mv-tile-val" style="color:var(--amber)">'+data.approach+'</div><div class="mv-tile-lbl">Approach<br>or slow</div></div>'
+    + '</div></div>';
+  mount.innerHTML = html;
+}
+
+// ── Cross-signal Verification ───────────────────────────────────────────
+function renderXVCard(mount, data){
+  var html = '<div class="rblock"><div class="rhead">Cross-signal verification '
+    + '<span class="rhead-src '+(data.srcClass||"src-blue")+'">'+(data.srcLabel||(data.rows.length+" signals"))+'</span></div>'
+    + '<div class="xv-rows">';
+  data.rows.forEach(function(r){
+    html += '<div class="xv-row"><div class="xv-top">'
+      + '<div class="xv-sources">'+r.label+'</div>'
+      + '<div class="xv-status" style="color:'+(r.statusColor||"var(--muted)")+'">'+r.status+'</div></div>'
+      + '<div class="xv-body">'+r.body+'</div></div>';
+  });
+  html += '</div></div>';
+  mount.innerHTML = html;
+}
+
+// ── Tanker Plays ────────────────────────────────────────────────────────
+function renderTankerCard(mount, data){
+  var html = '<div class="rblock"><div class="rhead">Global tanker tension play</div>'
+    + '<div class="tanker-rows">';
+  data.rows.forEach(function(r){
+    html += '<div class="tanker-row">'
+      + '<div class="tk-ticker">'+r.ticker+'</div>'
+      + '<div class="tk-name">'+r.name+'</div>'
+      + '<div class="tk-upside" style="color:'+(r.upsidePos===false?"var(--red)":"var(--green)")+'">'+r.upside+'</div>'
+      + '</div>';
+  });
+  html += '</div></div>';
   mount.innerHTML = html;
 }
 
@@ -513,6 +646,87 @@ var CARDS = [
       { label: "Loading", data: { subtitle:"Loading headlines…", items: [] , emptyMsg:"Loading…" } },
     ]
   },
+
+  {
+    name: "Vessel Movement",
+    hint: "30px headline + W/E direction split + 3 snapshot tiles. Watch the direction bar segment widths and the tile colour-coding (green/red/amber).",
+    render: renderMovementCard,
+    perms: [
+      { label: "Typical (balanced)", data: { total24h:148, west:74, east:74, transit:32, anchored:88, approach:28, srcClass:"src-live", srcLabel:"LIVE FEED" } },
+      { label: "Eastbound surge", data: { total24h:148, west:38, east:110, transit:40, anchored:80, approach:28 } },
+      { label: "Westbound surge", data: { total24h:148, west:120, east:28, transit:35, anchored:85, approach:28 } },
+      { label: "Closure (low total)", data: { total24h:8, west:3, east:5, transit:2, anchored:140, approach:6, srcClass:"src-est", srcLabel:"DEGRADED" } },
+      { label: "All anchored", data: { total24h:0, west:0, east:0, transit:0, anchored:148, approach:0, srcClass:"src-est", srcLabel:"NO CROSSINGS · 24h" } },
+      { label: "Huge values (4-digit)", data: { total24h:1247, west:612, east:635, transit:412, anchored:528, approach:307 } },
+    ]
+  },
+
+  {
+    name: "Cross-signal Verification",
+    hint: "Each row: short label + tight status pill + 1-2 line body. Status colour signals severity; body wraps cleanly.",
+    render: renderXVCard,
+    perms: [
+      { label: "Typical mix", data: { rows: [
+        { label:"Flow reconciliation", status:"ALIGNED",        statusColor:"var(--green)", body:"24h transits within 15% of 30-day baseline. No anomaly." },
+        { label:"Dark traffic share",  status:"-- ·  N/A",      statusColor:"var(--muted)", body:"Dark vessel estimate unavailable." },
+        { label:"Rate-volume divergence", status:"FEAR PREMIUM", statusColor:"var(--amber)", body:"BDTI +9% WoW. AIS transits steady. Rates rising while traffic holds." },
+        { label:"Sanctions tempo",     status:"ELEVATED",        statusColor:"var(--amber)", body:"3 OFAC actions / 30d. Above quarterly run-rate." },
+      ] } },
+      { label: "All clear", data: { rows: [
+        { label:"Flow reconciliation", status:"ALIGNED", statusColor:"var(--green)", body:"24h transits aligned with baseline." },
+        { label:"Rate-volume divergence", status:"NORMAL", statusColor:"var(--green)", body:"BDTI flat WoW. No divergence." },
+        { label:"Sanctions tempo", status:"QUIET", statusColor:"var(--green)", body:"0 OFAC actions / 30d." },
+      ] } },
+      { label: "Acute escalation", data: { srcClass:"src-est", srcLabel:"4 critical · live", rows: [
+        { label:"Flow reconciliation", status:"BELOW NORMAL", statusColor:"var(--red)", body:"24h transits 62% below baseline. Disruption or self-policing." },
+        { label:"Rate-volume divergence", status:"REAL DEMAND", statusColor:"var(--red)", body:"BDTI +24% WoW AND AIS transits above baseline. Both rising = escalation, not just fear." },
+        { label:"Sanctions tempo", status:"HIGH", statusColor:"var(--red)", body:"8 OFAC actions / 30d. Burst typical of enforcement cycles." },
+        { label:"Currency stress", status:"EXTREME", statusColor:"var(--red)", body:"IRR spread 95% — run-on-rial territory." },
+      ] } },
+      { label: "Long body wrap test", data: { rows: [
+        { label:"Flow reconciliation", status:"ELEVATED", statusColor:"var(--amber)", body:"24h transits 22% below the 30-day baseline of 140 vessels/day; the gap is consistent with the historical signature of voluntary self-policing rather than a hard closure, but the absence of any single dominant cause means triangulation against the rest of the signal basket is necessary before drawing a verdict." },
+        { label:"Environmental conditions", status:"NORMAL", statusColor:"var(--green)", body:"Routine weather and seismic conditions support normal shipping operations." },
+      ] } },
+      { label: "Single signal", data: { rows: [
+        { label:"Flow reconciliation", status:"ALIGNED", statusColor:"var(--green)", body:"24h transits within 15% of baseline." },
+      ] } },
+      { label: "Empty (cold start)", data: { srcClass:"src-est", srcLabel:"loading", rows: [] } },
+    ]
+  },
+
+  {
+    name: "Tanker Plays",
+    hint: "Ticker (38px col) · name (flex) · upside (right). Name must truncate with ellipsis — never bleed into the upside column.",
+    render: renderTankerCard,
+    perms: [
+      { label: "Typical", data: { rows: [
+        { ticker:"FRO",  name:"Frontline Plc",                  upside:"+18%" },
+        { ticker:"INSW", name:"International Seaways",          upside:"+14%" },
+        { ticker:"DHT",  name:"DHT Holdings",                   upside:"+11%" },
+        { ticker:"TNK",  name:"Teekay Tankers",                 upside:"+9%"  },
+        { ticker:"STNG", name:"Scorpio Tankers",                upside:"+6%"  },
+      ] } },
+      { label: "Negative upside", data: { rows: [
+        { ticker:"FRO",  name:"Frontline Plc",                  upside:"-4%",  upsidePos:false },
+        { ticker:"INSW", name:"International Seaways",          upside:"-2%",  upsidePos:false },
+        { ticker:"DHT",  name:"DHT Holdings",                   upside:"-7%",  upsidePos:false },
+      ] } },
+      { label: "Long names (ellipsis)", data: { rows: [
+        { ticker:"FRO",  name:"Frontline Plc · VLCC + Suezmax operator", upside:"+18%" },
+        { ticker:"INSW", name:"International Seaways Inc Holdings",       upside:"+14%" },
+        { ticker:"DHT",  name:"DHT Holdings · VLCC pure-play",            upside:"+11%" },
+      ] } },
+      { label: "Two-digit ticker", data: { rows: [
+        { ticker:"NAT",  name:"Nordic American Tankers",         upside:"+22%" },
+        { ticker:"EURN", name:"Euronav NV",                      upside:"+19%" },
+      ] } },
+      { label: "Large upside", data: { rows: [
+        { ticker:"FRO",  name:"Frontline Plc",                   upside:"+187%" },
+        { ticker:"INSW", name:"International Seaways",           upside:"+142%" },
+      ] } },
+      { label: "Empty (no plays)", data: { rows: [] } },
+    ]
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -543,6 +757,24 @@ function build(){
       grid.appendChild(col);
       try { card.render(mount, p.data); }
       catch(e){ mount.innerHTML = '<div style="color:var(--red);font-family:var(--mono);font-size:11px">RENDER ERROR: '+e.message+'</div>'; }
+      // Per-card assertions (blindspot #10): explicit spec encoded as code.
+      var assertFn = CARD_ASSERTIONS[card.name];
+      if (assertFn) {
+        try {
+          var results = assertFn(mount, p.data) || [];
+          results.forEach(function(r){
+            var a = document.createElement("div");
+            a.className = "assert-card " + (r.ok ? "ok" : "fail");
+            a.textContent = r.msg;
+            col.appendChild(a);
+          });
+        } catch(e){
+          var a = document.createElement("div");
+          a.className = "assert-card fail";
+          a.textContent = "Assertion crashed: " + e.message;
+          col.appendChild(a);
+        }
+      }
     });
   });
 }
@@ -555,31 +787,137 @@ function build(){
 function selfTest(){
   var issues = [];
   var checked = 0;
+  // Tolerance tightened from 1px to 0.5px (blindspot #2). Allowlist captures
+  // elements where a small overflow is intentional (tooltips that float
+  // outside their card, sparklines that bleed across panels). Add new
+  // classnames here when needed — don't widen the global tolerance.
+  var TOL = 0.5;
+  var ALLOWLIST = /\b(sig-tooltip|cargo-ticker-overlay|sparkline|tbar-fill)\b/;
+  // .tbar-fill is allowed to "overflow" its parent .tbar-track in the
+  // bounding-box sense because width:Math.max(2,pct) on a 1% data point
+  // creates a fill wider than 1% of the track — but it's clipped by the
+  // track's overflow:hidden. Visually correct, geometrically flagged.
   document.querySelectorAll(".perm").forEach(function(perm){
     var permLabel = perm.dataset.label || "?";
-    // Containers we treat as "must contain their children"
-    perm.querySelectorAll(".tbar-row, .tbar-track, .t-meta, .tile-row, .news-item, .rblock, .pulse-row, .pulse-row2").forEach(function(parent){
+    perm.querySelectorAll(".tbar-row, .tbar-track, .t-meta, .tile-row, .news-item, .rblock, .pulse-row, .pulse-row2, .traffic-grid, .xv-row, .tanker-row").forEach(function(parent){
       var pb = parent.getBoundingClientRect();
       if (pb.width === 0) return;
       Array.from(parent.children).forEach(function(child){
         checked++;
+        if (ALLOWLIST.test(child.className||"")) return;
         var cb = child.getBoundingClientRect();
-        // Allow 1px tolerance for sub-pixel rendering
         var rOver = cb.right - pb.right;
         var lOver = pb.left - cb.left;
-        if (rOver > 1 || lOver > 1) {
+        if (rOver > TOL || lOver > TOL) {
           issues.push({
             perm: permLabel,
             parent: parent.className.split(" ").join("."),
             child: (child.className||child.tagName).toString().split(" ").join("."),
-            rightOver: Math.round(rOver),
-            leftOver: Math.round(lOver),
+            rightOver: rOver.toFixed(1),
+            leftOver: lOver.toFixed(1),
           });
         }
       });
     });
   });
   return { checked: checked, issues: issues };
+}
+
+// ─── Per-card explicit assertions (blindspot #10) ──────────────────────
+// Each entry is a function (mountEl, data) → [{ok:boolean, msg:string}].
+// These encode the SPEC, not just "looks OK". When a card changes shape,
+// the assertion is what tells you the spec was actually followed.
+var CARD_ASSERTIONS = {
+  "Vessel Type Mix": function(mount, data){
+    var R = [];
+    var rows = mount.querySelectorAll(".tbar-row");
+    R.push({ok: rows.length === Object.keys(data.types||{}).length, msg: "Row count matches type count"});
+    var pctTexts = Array.from(mount.querySelectorAll(".tbar-pct")).map(function(e){return e.textContent;});
+    var allConsistent = pctTexts.every(function(t){ return /\d+%$/.test(t); });
+    R.push({ok: allConsistent || rows.length === 0, msg: "Every pct cell ends in a %-token (no clipped text)"});
+    var countPos = pctTexts.every(function(t){ return data.types ? /·/.test(t) : true; });
+    R.push({ok: countPos || rows.length === 0, msg: "Count appears in the SAME column on every row"});
+    var fills = Array.from(mount.querySelectorAll(".tbar-fill"));
+    var widthOk = fills.every(function(f){ var w=parseFloat(f.style.width); return w >= 0 && w <= 100; });
+    R.push({ok: widthOk, msg: "All fill widths ∈ [0, 100]%"});
+    return R;
+  },
+  "Vessel Traffic Trend": function(mount, data){
+    var R = [];
+    var bars = mount.querySelectorAll(".t-bar-only");
+    var metas = mount.querySelectorAll(".t-meta");
+    R.push({ok: bars.length === data.bars.length, msg: "Bar count matches data"});
+    R.push({ok: metas.length === data.bars.length, msg: "Meta-row count matches data"});
+    var nullMatches = data.bars.every(function(d,i){
+      var v = metas[i] && metas[i].querySelector(".t-meta-val");
+      if (d.val == null) return v && v.textContent === "--";
+      return v && /^\d+$/.test(v.textContent);
+    });
+    R.push({ok: nullMatches, msg: "Null bars show '--', valued bars show a number"});
+    return R;
+  },
+  "Conditions": function(mount, data){
+    return _tileAssert(mount, data, "Conditions");
+  },
+  "Political Signals": function(mount, data){
+    return _tileAssert(mount, data, "Political Signals");
+  },
+  "Market Pulse": function(mount, data){
+    var R = [];
+    if (data.brent != null) {
+      var big = mount.querySelector(".pulse-big");
+      R.push({ok: !!big && /\$\d/.test(big.textContent), msg: "Brent price displayed with $-prefix"});
+    } else {
+      R.push({ok: true, msg: "Loading state — no price displayed"});
+    }
+    if (data.wti != null && data.brent != null) {
+      var spread = mount.querySelector(".pulse-spread");
+      R.push({ok: !!spread && /\$/.test(spread.textContent||""), msg: "B-W spread rendered when both legs present"});
+    }
+    return R;
+  },
+  "Headline Pulse": function(mount, data){
+    var R = [];
+    var items = mount.querySelectorAll(".news-item");
+    R.push({ok: items.length === (data.items||[]).length, msg: "Item count matches data"});
+    var titlesOk = Array.from(items).every(function(it){ return !!it.querySelector(".nm-title"); });
+    R.push({ok: titlesOk, msg: "Every item has a title element"});
+    return R;
+  },
+  "Vessel Movement": function(mount, data){
+    var R = [];
+    var tiles = mount.querySelectorAll(".mv-tile");
+    R.push({ok: tiles.length === 3, msg: "Three snapshot tiles (Transit/Anchored/Approach)"});
+    var big = mount.querySelector(".mv-big");
+    R.push({ok: !!big && /^\d+$/.test(big.textContent.trim()), msg: "24h headline is a plain integer"});
+    var bar = mount.querySelector(".mv-dir-bar");
+    R.push({ok: !!bar && bar.children.length === 2, msg: "Direction bar has exactly 2 segments (W/E)"});
+    return R;
+  },
+  "Cross-signal Verification": function(mount, data){
+    var R = [];
+    var rows = mount.querySelectorAll(".xv-row");
+    R.push({ok: rows.length === data.rows.length, msg: "XV row count matches data"});
+    var statusOk = Array.from(rows).every(function(r){ return !!r.querySelector(".xv-status"); });
+    R.push({ok: statusOk || rows.length === 0, msg: "Every row carries a status"});
+    return R;
+  },
+  "Tanker Plays": function(mount, data){
+    var R = [];
+    var rows = mount.querySelectorAll(".tanker-row");
+    R.push({ok: rows.length === data.rows.length, msg: "Tanker row count matches data"});
+    return R;
+  }
+};
+function _tileAssert(mount, data, name){
+  var R = [];
+  var rows = mount.querySelectorAll(".tile-row");
+  R.push({ok: rows.length === data.rows.length, msg: name + " row count matches data"});
+  var dotsOk = Array.from(rows).every(function(r){ return !!r.querySelector(".tile-row-dot"); });
+  R.push({ok: dotsOk, msg: "Every row has a status dot"});
+  var valsOk = Array.from(rows).every(function(r){ var v = r.querySelector(".tile-row-val"); return v && v.textContent.trim().length > 0; });
+  R.push({ok: valsOk, msg: "Every row has a non-empty value"});
+  return R;
 }
 
 function runAssertions(){
@@ -611,10 +949,14 @@ function coverageCheck(){
     var live = new Set();
     var re = /<div\s+class="rblock"[^>]*id="([^"]+)"/g, m;
     while ((m = re.exec(html))) live.add(m[1]);
-    // Map of showcase cards to live IDs they cover (best-guess)
-    var covered = new Set(["mixBlock","conditionsBlock","politicalBlock","newsBlock","macroBlock"]);
+    // Live .rblock IDs the showcase explicitly covers. Add to this set when
+    // you add a new card section above (and stop the warning).
+    var covered = new Set(["mixBlock","conditionsBlock","politicalBlock","newsBlock","macroBlock","verdictBlock"]);
+    // Hidden-legacy IDs that live in index.html under display:none — not part
+    // of the visible UI, so not part of the showcase scope.
+    var hidden  = new Set(["aerialBlock","ofacBlock","currencyBlock","envBlock","eventsBlock"]);
     var missing = [];
-    live.forEach(function(id){ if (!covered.has(id) && id !== "aerialBlock" && id !== "ofacBlock" && id !== "currencyBlock" && id !== "envBlock" && id !== "eventsBlock") missing.push(id); });
+    live.forEach(function(id){ if (!covered.has(id) && !hidden.has(id)) missing.push(id); });
     if (missing.length){
       var note = document.createElement("div");
       note.style.cssText = "margin-top:14px;font-family:var(--mono);font-size:10px;color:var(--amber)";
@@ -627,6 +969,7 @@ function coverageCheck(){
 // ═══════════════════════════════════════════════════════════════════════════
 // CONTROLS
 // ═══════════════════════════════════════════════════════════════════════════
+// Width buttons
 document.querySelectorAll(".wbtn").forEach(function(b){
   b.addEventListener("click", function(){
     document.querySelectorAll(".wbtn").forEach(function(x){ x.classList.remove("on"); });
@@ -634,6 +977,26 @@ document.querySelectorAll(".wbtn").forEach(function(b){
     CURRENT_WIDTH = parseInt(b.dataset.w, 10);
     build();
     setTimeout(runAssertions, 30);
+  });
+});
+
+// Toggles (force-hover / kill-transitions / rtl) — blindspots 4, 7, 9.
+document.querySelectorAll(".tbtn").forEach(function(b){
+  if (b.dataset.defaultOn) { document.body.classList.add(b.dataset.toggle); b.classList.add("on"); }
+  b.addEventListener("click", function(){
+    b.classList.toggle("on");
+    document.body.classList.toggle(b.dataset.toggle);
+    setTimeout(runAssertions, 30);
+  });
+});
+
+// Colour-blindness simulation (blindspot #8).
+document.querySelectorAll(".cbbtn").forEach(function(b){
+  b.addEventListener("click", function(){
+    document.querySelectorAll(".cbbtn").forEach(function(x){ x.classList.remove("on"); });
+    b.classList.add("on");
+    document.body.classList.remove("cb-prot","cb-deut","cb-trit","cb-mono");
+    if (b.dataset.cb) document.body.classList.add(b.dataset.cb);
   });
 });
 

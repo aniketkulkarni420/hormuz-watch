@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hormuz Watch — Data Audit</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0e1320;--border:#18202e;--border2:#222c3d;
+  --amber:#f09014;--blue:#38aaff;--green:#1dd47e;--red:#ff6b35;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;--sans:'Manrope',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;line-height:1.5;padding:32px}
+.page{max-width:1240px;margin:0 auto}
+h1{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.lede{font-family:var(--mono);font-size:12px;color:var(--muted);max-width:860px;margin-bottom:18px}
+.lede b{color:var(--amber)}
+.summary{display:flex;gap:12px;margin:14px 0 28px;flex-wrap:wrap}
+.sumcard{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:12px 14px;flex:1;min-width:160px}
+.sumcard .num{font-family:var(--mono);font-size:24px;font-weight:700}
+.sumcard .lbl{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.sumcard.ok .num{color:var(--green)}
+.sumcard.warn .num{color:var(--amber)}
+.sumcard.bad .num{color:var(--red)}
+.section{margin-bottom:24px}
+.section h2{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px}
+.section .src{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:10px}
+.row{display:grid;grid-template-columns:200px 1fr 100px 120px 160px;gap:10px;padding:9px 14px;font-family:var(--mono);font-size:11px;border-bottom:1px solid var(--border);align-items:center}
+.row.head{background:var(--panel);font-weight:700;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border2);border-radius:5px 5px 0 0}
+.row .lbl{color:var(--text)}
+.row .val{color:var(--text);font-weight:700}
+.row .age{color:var(--muted2)}
+.row .src-cell{color:var(--muted2);font-size:10px}
+.row .status{font-weight:700;text-align:right;font-size:10px}
+.row.green{background:rgba(29,212,126,.04)}
+.row.amber{background:rgba(240,144,20,.06)}
+.row.red{background:rgba(255,107,53,.08)}
+.row.green .status{color:var(--green)}
+.row.amber .status{color:var(--amber)}
+.row.red .status{color:var(--red)}
+.row.muted .status{color:var(--muted2)}
+.flag{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-top:6px;padding:0 14px}
+.legend{font-family:var(--mono);font-size:10px;color:var(--muted2);margin:8px 0 24px;padding:8px 14px;background:var(--panel);border:1px solid var(--border);border-radius:5px}
+.refresh{font-family:var(--mono);font-size:10px;color:var(--muted2);text-align:right;margin-top:14px}
+.refresh button{background:var(--panel);color:var(--text);border:1px solid var(--border);font-family:var(--mono);font-size:10px;padding:5px 10px;border-radius:3px;cursor:pointer;margin-left:8px}
+.section-wrap{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.note-card{margin-top:14px;font-family:var(--mono);font-size:10px;color:var(--muted2);padding:0 14px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Data audit — Hormuz Watch</h1>
+<p class="lede">
+  Counterpart to <a href="/showcase/" style="color:var(--blue)">/showcase/</a>: that catches render bugs, this catches
+  <b>data bugs</b>. Pulls every public <code>/api/*</code> endpoint, checks each
+  field against sanity bounds + freshness expectations, and flags fake-live
+  (stale data stamped fresh), missing sources, or out-of-range values. Refresh
+  any time — the data is fetched on load, no cache.
+</p>
+
+<div class="legend">
+  <b>Legend:</b> <span style="color:var(--green)">FRESH+SANE</span> · <span style="color:var(--amber)">STALE or near-bound</span> · <span style="color:var(--red)">EXPIRED / out-of-bound / source label suspect</span> · <span style="color:var(--muted2)">N/A</span>
+</div>
+
+<div class="summary" id="summary"></div>
+
+<main id="main"></main>
+
+<div class="refresh">
+  Last refresh: <span id="ts">—</span>
+  <button onclick="load()">Refresh now</button>
+</div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// ENDPOINT SPEC — what to fetch, what to extract, what bounds apply.
+// Each row: label, path, fieldsExtractor(json), source identifier.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Sanity rule: returns { level: green|amber|red, note }
+function sane(value, opts){
+  if (value == null || (typeof value === "number" && !isFinite(value))) {
+    return { level: "muted", note: "no data" };
+  }
+  if (typeof value === "number"){
+    if (opts.min != null && value < opts.min) return { level: "red", note: "below "+opts.min };
+    if (opts.max != null && value > opts.max) return { level: "red", note: "above "+opts.max };
+    if (opts.warnMin != null && value < opts.warnMin) return { level: "amber", note: "near lower bound" };
+    if (opts.warnMax != null && value > opts.warnMax) return { level: "amber", note: "near upper bound" };
+    return { level: "green", note: "in range" };
+  }
+  return { level: "green", note: "present" };
+}
+
+// Age rule
+function ageLevel(ageMin, ok, warn){
+  if (ageMin == null) return { level: "muted", note: "no timestamp" };
+  if (ageMin <= ok) return { level: "green", note: ageMin.toFixed(0)+"m ago" };
+  if (ageMin <= warn) return { level: "amber", note: ageMin.toFixed(0)+"m ago — getting stale" };
+  return { level: "red", note: ageMin.toFixed(0)+"m ago — EXPIRED" };
+}
+
+// Source rule — flag known-suspect source strings
+function sourceLevel(src){
+  if (!src) return { level: "muted", note: "no source label" };
+  if (/demo|stub|fake/i.test(src)) return { level: "red", note: "DEMO source — not real data" };
+  if (/static|hardcoded|env-var/i.test(src)) return { level: "amber", note: "static/constant value" };
+  return { level: "green", note: src };
+}
+
+function combine(){
+  var args = Array.prototype.slice.call(arguments);
+  var order = { red: 3, amber: 2, green: 1, muted: 0 };
+  var worst = args.reduce(function(a,b){ return order[a.level] > order[b.level] ? a : b; });
+  return worst;
+}
+
+// ── ENDPOINTS ───────────────────────────────────────────────────────────
+var ENDPOINTS = [
+  {
+    label: "Oil prices",
+    path: "/api/oil",
+    rows: function(d){
+      var ageMin = d.ageMin;
+      var b = d.brent || {}, w = d.wti || {};
+      var bo = d.brentOfficial, wo = d.wtiOfficial;
+      var spread = (isFinite(b.level) && isFinite(w.level)) ? (b.level - w.level) : null;
+      return [
+        { lbl:"Brent (live feed)",    val: b.level != null ? "$"+b.level.toFixed(2) : "—", age:ageMin,
+          srcLabel: b.src || d.tier, status: combine(sane(b.level,{min:30,max:250,warnMin:40,warnMax:200}), ageLevel(ageMin,30,90), sourceLevel(b.src)) },
+        { lbl:"WTI (live feed)",      val: w.level != null ? "$"+w.level.toFixed(2) : "—", age:ageMin,
+          srcLabel: w.src || d.tier, status: combine(sane(w.level,{min:30,max:250,warnMin:40,warnMax:200}), ageLevel(ageMin,30,90), sourceLevel(w.src)) },
+        { lbl:"Brent-WTI spread",     val: spread != null ? "$"+spread.toFixed(2) : "—",  age:ageMin,
+          srcLabel: "derived", status: sane(spread, {min:-5, max:20, warnMax:10}) },
+        { lbl:"Brent (EIA official)", val: bo && bo.level != null ? "$"+bo.level.toFixed(2)+" (asOf "+bo.asOf+")" : "—",
+          age:null, srcLabel:bo?bo.src:null, status: bo ? sane(bo.level,{min:30,max:250}) : {level:"muted",note:"missing"} },
+        { lbl:"WTI (EIA official)",   val: wo && wo.level != null ? "$"+wo.level.toFixed(2)+" (asOf "+wo.asOf+")" : "—",
+          age:null, srcLabel:wo?wo.src:null, status: wo ? sane(wo.level,{min:30,max:250}) : {level:"muted",note:"missing"} },
+        { lbl:"Tier",                 val: d.tier || "—", age:null, srcLabel:d.source,
+          status: { level: (d.tier && /xverified|^primary$/.test(d.tier)) ? "green" : (d.tier && /stale|secondary/.test(d.tier) ? "amber" : "red"), note: d.tier || "missing" } },
+      ];
+    }
+  },
+
+  {
+    label: "BDTI",
+    path: "/api/bdti",
+    rows: function(d){
+      var ageDays = d.ageDays;
+      return [
+        { lbl:"BDTI value",   val: d.value != null ? d.value : "—", age: ageDays != null ? ageDays*24*60 : null,
+          srcLabel: d.source, status: combine(sane(d.value,{min:100,max:5000,warnMin:300}), sourceLevel(d.source)) },
+        { lbl:"asOf",         val: d.asOf || "—", age: ageDays != null ? ageDays*24*60 : null, srcLabel: "",
+          status: ageLevel(ageDays != null ? ageDays*24*60 : null, 11*24*60, 14*24*60) },
+        { lbl:"WoW %",        val: d.wow_pct != null ? d.wow_pct.toFixed(1)+"%" : "—",
+          age:null, srcLabel:"history-based", status: sane(d.wow_pct, {min:-60,max:60,warnMin:-30,warnMax:30}) },
+        { lbl:"Confidence",   val: d.confidence || "—", age:null, srcLabel:(d.sources||[]).join(", "),
+          status: d.confidence === "high" ? {level:"green",note:"high"} : d.confidence === "medium" ? {level:"amber",note:"medium"} : d.confidence ? {level:"red",note:"low"} : {level:"muted",note:"none"} },
+      ];
+    }
+  },
+
+  {
+    label: "Snapshot — vessels + flow",
+    path: "/api/snapshot",
+    rows: function(d){
+      var typesSum = d.scraped_vessel_types ? Object.values(d.scraped_vessel_types).reduce(function(a,b){return a+b;},0) : null;
+      var totalMatch = (typesSum != null && d.scraped_vessel_total != null && typesSum === d.scraped_vessel_total);
+      return [
+        { lbl:"Total transits (24h)", val: d.transits_per_day, age: d.ais_state_age_sec != null ? d.ais_state_age_sec/60 : null,
+          srcLabel: d.source, status: combine(sane(d.transits_per_day, {min:0, max:400, warnMin:20, warnMax:300}), ageLevel(d.ais_state_age_sec/60, 60, 360)) },
+        { lbl:"Baseline 30d",         val: d.baseline_30d, age:null, srcLabel:"config",
+          status: sane(d.baseline_30d, {min:80, max:200}) },
+        { lbl:"% of normal",          val: d.pct_of_normal != null ? d.pct_of_normal.toFixed(1)+"%" : "—", age:null, srcLabel:"derived",
+          status: sane(d.pct_of_normal, {min:0, max:300, warnMin:30, warnMax:200}) },
+        { lbl:"Scraped vessel total", val: d.scraped_vessel_total, age: d.scraped_age_sec != null ? d.scraped_age_sec/60 : null,
+          srcLabel: "VesselFinder", status: combine(sane(d.scraped_vessel_total,{min:0,max:400}), ageLevel(d.scraped_age_sec/60, 30, 240)) },
+        { lbl:"Types sum vs total",   val: typesSum != null ? (typesSum + " / " + (d.scraped_vessel_total||"—") + (totalMatch ? " ✓ MATCH" : " ✗ DRIFT")) : "—",
+          age:null, srcLabel:"derived", status: typesSum == null ? {level:"muted",note:"no types"} : totalMatch ? {level:"green",note:"reconciled"} : {level:"red",note:"types-sum != total"} },
+        { lbl:"Dark vessels",         val: d.dark_vessels == null ? "null (no source)" : d.dark_vessels, age:null,
+          srcLabel:"removed 2026-05-14", status: d.dark_vessels == null ? {level:"green",note:"correctly null"} : {level:"red",note:"resurrected"} },
+      ];
+    }
+  },
+
+  {
+    label: "Snapshot — political / currency",
+    path: "/api/snapshot",
+    rows: function(d){
+      return [
+        { lbl:"OFAC actions / 30d",   val: d.ofac_iran_actions_30d, age: d.ofac_age_sec != null ? d.ofac_age_sec/60 : null,
+          srcLabel: "OFAC SDN", status: combine(sane(d.ofac_iran_actions_30d, {min:0, max:50}), ageLevel(d.ofac_age_sec/60, 6*60, 24*60)) },
+        { lbl:"News headlines / 24h", val: d.news_count_24h, age: d.news_age_sec != null ? d.news_age_sec/60 : null,
+          srcLabel: "RSS x" + (d.news_sources_succeeded||0), status: combine(sane(d.news_count_24h, {min:0, max:500}), ageLevel(d.news_age_sec/60, 60, 360)) },
+        { lbl:"GDELT events / 24h",   val: d.gdelt_article_count_24h, age:null, srcLabel:"GDELT",
+          status: sane(d.gdelt_article_count_24h, {min:0, max:2000}) },
+        { lbl:"IRR spread %",         val: d.irr_spread_pct != null ? d.irr_spread_pct.toFixed(1)+"%" : "—",
+          age: d.currency_age_sec != null ? d.currency_age_sec/60 : null,
+          srcLabel:"bonbast vs open.er-api", status: combine(sane(d.irr_spread_pct, {min:0,max:1000}), ageLevel(d.currency_age_sec/60, 6*60, 24*60)) },
+        { lbl:"IRR interpretation",   val: d.currency_interpretation || "—", age:null, srcLabel:"derived",
+          status: d.irr_spread_pct == null ? {level:"muted",note:"no data"} :
+                  (d.irr_spread_pct < 15 && /narrow/i.test(d.currency_interpretation||"")) ? {level:"green",note:"calibrated"} :
+                  (d.irr_spread_pct >= 15 && d.irr_spread_pct < 40 && /moderate|stress/i.test(d.currency_interpretation||"")) ? {level:"green",note:"calibrated"} :
+                  (d.irr_spread_pct >= 40 && d.irr_spread_pct < 80 && /wide|dislocat/i.test(d.currency_interpretation||"")) ? {level:"green",note:"calibrated"} :
+                  (d.irr_spread_pct >= 80 && /extreme/i.test(d.currency_interpretation||"")) ? {level:"green",note:"calibrated"} :
+                  {level:"red",note:"label doesn't match spread band"} },
+      ];
+    }
+  },
+
+  {
+    label: "Snapshot — macro / environment",
+    path: "/api/snapshot",
+    rows: function(d){
+      return [
+        { lbl:"OPEC production (mbpd)", val: d.opec_production_mbpd, age:null, srcLabel:"EIA-STEO ("+(d.opec_production_as_of||"")+")",
+          status: sane(d.opec_production_mbpd, {min:15, max:40, warnMin:18, warnMax:34}) },
+        { lbl:"SPR (kbbl)",           val: d.spr_level_kbbl, age:null, srcLabel:"EIA weekly",
+          status: sane(d.spr_level_kbbl, {min:200000, max:800000}) },
+        { lbl:"Commercial crude (kbbl)", val: d.crude_inventory_kbbl, age:null, srcLabel:"EIA weekly",
+          status: sane(d.crude_inventory_kbbl, {min:300000, max:550000}) },
+        { lbl:"Wind max (knots)",     val: d.weather_wind_max_knots, age:null, srcLabel:"weather scraper",
+          status: sane(d.weather_wind_max_knots, {min:0, max:100, warnMax:40}) },
+        { lbl:"Seismic events 7d",    val: d.earthquake_count_7d, age:null, srcLabel:"USGS",
+          status: sane(d.earthquake_count_7d, {min:0, max:50}) },
+        { lbl:"Aircraft count",       val: d.aircraft_count, age:null, srcLabel:"ADS-B scraper",
+          status: sane(d.aircraft_count, {min:0, max:500}) },
+      ];
+    }
+  },
+
+  {
+    label: "Health endpoint",
+    path: "/api/health",
+    rows: function(d){
+      var stale = (d.staleFeeds || []).join(", ");
+      return [
+        { lbl:"Overall status",       val: d.status, age:null, srcLabel:"derived",
+          status: d.status === "HEALTHY" ? {level:"green",note:"all feeds fresh"} : d.status === "DEGRADED" ? {level:"amber",note:"some feeds stale"} : {level:"red",note:d.status||"unknown"} },
+        { lbl:"Freshest feed (min)",  val: d.freshestFeedMin, age:d.freshestFeedMin, srcLabel:"",
+          status: ageLevel(d.freshestFeedMin, 60, 180) },
+        { lbl:"All scrapers stopped?", val: d.allScrapersStopped ? "YES (CRITICAL)" : "no", age:null, srcLabel:"",
+          status: d.allScrapersStopped ? {level:"red",note:"all schedules failing"} : {level:"green",note:"at least one feed live"} },
+        { lbl:"Stale feeds",          val: stale || "(none)", age:null, srcLabel:"",
+          status: (d.staleFeeds||[]).length ? {level:"amber",note:(d.staleFeeds||[]).length+" stale"} : {level:"green",note:"all fresh"} },
+      ];
+    }
+  },
+
+  {
+    label: "News",
+    path: "/api/news",
+    rows: function(d){
+      var items = d.items || d.headlines || [];
+      return [
+        { lbl:"Headline count",       val: items.length, age:null,
+          srcLabel:"sources: "+ (d.sources_succeeded ||"?"), status: sane(items.length, {min:0, max:500, warnMin:1}) },
+        { lbl:"First headline",       val: items[0] ? items[0].title.slice(0,80) : "(none)", age:null, srcLabel:items[0]?items[0].source:"",
+          status: items[0] ? {level:"green",note:"present"} : {level:"amber",note:"no headlines"} },
+      ];
+    }
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FETCH + RENDER
+// ═══════════════════════════════════════════════════════════════════════════
+function statusToClass(s){ return (s && s.level) || "muted"; }
+
+function load(){
+  var main = document.getElementById("main");
+  var sumEl = document.getElementById("summary");
+  main.innerHTML = "";
+  sumEl.innerHTML = "";
+  document.getElementById("ts").textContent = new Date().toISOString();
+  var totals = { green:0, amber:0, red:0, muted:0 };
+  Promise.all(ENDPOINTS.map(function(ep){
+    return fetch(ep.path + "?_=" + Date.now()).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+      .then(function(json){
+        var sec = document.createElement("div"); sec.className = "section";
+        sec.innerHTML = '<h2>'+ep.label+'</h2>'
+          + '<div class="src"><code>'+ep.path+'</code></div>'
+          + '<div class="section-wrap">'
+          + '<div class="row head"><span>Metric</span><span>Value</span><span>Age</span><span>Source</span><span style="text-align:right">Status</span></div>'
+          + '</div>';
+        if (!json){
+          var r = document.createElement("div"); r.className = "row red";
+          r.innerHTML = '<span class="lbl">— endpoint unreachable —</span><span class="val">—</span><span></span><span></span><span class="status">FAILED</span>';
+          sec.querySelector(".section-wrap").appendChild(r);
+          totals.red++;
+        } else {
+          var rows = ep.rows(json) || [];
+          rows.forEach(function(row){
+            totals[row.status.level] = (totals[row.status.level]||0) + 1;
+            var div = document.createElement("div");
+            div.className = "row " + statusToClass(row.status);
+            div.innerHTML = '<span class="lbl">'+row.lbl+'</span>'
+              + '<span class="val">'+(row.val != null ? row.val : "—")+'</span>'
+              + '<span class="age">'+(row.age != null ? row.age.toFixed(0)+"m" : "—")+'</span>'
+              + '<span class="src-cell">'+(row.srcLabel||"")+'</span>'
+              + '<span class="status">'+(row.status.note||row.status.level).toUpperCase()+'</span>';
+            sec.querySelector(".section-wrap").appendChild(div);
+          });
+        }
+        main.appendChild(sec);
+      });
+  })).then(function(){
+    sumEl.innerHTML = ""
+      + '<div class="sumcard ok"><div class="num">'+totals.green+'</div><div class="lbl">Fresh + sane</div></div>'
+      + '<div class="sumcard warn"><div class="num">'+totals.amber+'</div><div class="lbl">Stale / near-bound</div></div>'
+      + '<div class="sumcard bad"><div class="num">'+totals.red+'</div><div class="lbl">Expired / OOB</div></div>'
+      + '<div class="sumcard"><div class="num" style="color:var(--muted2)">'+(totals.muted||0)+'</div><div class="lbl">No data</div></div>';
+  });
+}
+
+load();
+</script>
+</body>
+</html>

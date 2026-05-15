@@ -1,0 +1,72 @@
+name: showcase-visual
+# Boots a real headless browser, navigates to the deployed /showcase/, runs
+# the in-page self-test (overflow tripwire + per-card explicit assertions)
+# and screenshots every card across three sidebar widths. Fails the job if
+# any tripwire fires. Screenshots upload as artifacts so a reviewer can
+# eyeball the diff without having to render locally.
+#
+# This is the "human-out-of-the-loop" layer for design-bug prevention
+# (blindspot #6 of the showcase). See .process/DECISIONS.md 2026-05-15.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "showcase/**"
+      - "scripts/showcase_screenshot.py"
+      - ".github/workflows/showcase-visual.yml"
+  pull_request:
+    paths:
+      - "index.html"
+      - "showcase/**"
+  workflow_dispatch:
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright + Chromium
+        run: |
+          pip install --quiet playwright==1.47.*
+          playwright install --with-deps chromium
+
+      # Cloudflare Pages serves the showcase on the same site that hosts the
+      # production dashboard. On push to main we wait briefly for CF to
+      # finish deploying before running the visual check.
+      - name: Brief wait for CF Pages deploy
+        if: github.event_name == 'push'
+        run: sleep 45
+
+      - name: Run drift detector
+        run: python scripts/check_mirror.py
+        continue-on-error: true     # report drift but don't fail until cleaned up
+
+      - name: Run showcase screenshot + assertions
+        env:
+          SHOWCASE_URL: https://hormuz-watch-2.pages.dev/showcase/
+          OUT_DIR: ${{ github.workspace }}/showcase-artifacts
+        run: python scripts/showcase_screenshot.py 2>&1 | tee /tmp/visual.log
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: showcase-${{ github.run_id }}
+          path: ${{ github.workspace }}/showcase-artifacts/*.png
+          retention-days: 14
+
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: showcase-log-${{ github.run_id }}
+          path: /tmp/visual.log
+          retention-days: 14
