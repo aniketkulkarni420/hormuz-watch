@@ -208,8 +208,10 @@ header{
 .t-bar-only{flex:1;border-radius:2px 2px 0 0;min-height:3px;transition:height .7s ease}
 .trend-meta-row{display:flex;gap:8px}
 .t-meta{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
-.t-meta-val{font-family:var(--mono);font-size:11px;font-weight:700;text-align:center;white-space:nowrap}
-.t-meta-label{font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;line-height:1.35;white-space:nowrap}
+.t-meta-val{font-family:var(--mono);font-size:11px;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+/* Labels are allowed to wrap — sublabels like "Feb-Mar '26 est" overflow a
+   ~74px sidebar column when forced onto one line, spilling into neighbours. */
+.t-meta-label{font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;line-height:1.35;word-break:break-word;hyphens:auto}
 .trend-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
 .tleg{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;color:var(--muted)}
 .tleg-dot{width:7px;height:7px;border-radius:1px;flex-shrink:0}
@@ -257,8 +259,7 @@ header{
 .tbar-row{display:grid;grid-template-columns:84px 1fr auto;align-items:center;gap:10px}
 .tbar-label{font-family:var(--mono);font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tbar-track{position:relative;height:14px;background:var(--panel2);border:1px solid var(--border2);border-radius:3px;overflow:hidden}
-.tbar-fill{height:100%;border-radius:2px 0 0 2px;display:flex;align-items:center;transition:width .8s ease}
-.tbar-count{font-family:var(--mono);font-size:9px;font-weight:700;color:#07090e;padding-left:6px}
+.tbar-fill{height:100%;border-radius:2px 0 0 2px;transition:width .8s ease}
 .tbar-pct{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);min-width:34px;text-align:right;white-space:nowrap}
 
 /* SCENARIO */
@@ -2373,17 +2374,19 @@ var TYPE_LABEL_ABBREVIATIONS = {
 };
 function _abbrType(label){ return TYPE_LABEL_ABBREVIATIONS[label] || label; }
 
-// "Option A" row builder. Count sits inside the bar fill when the fill is wide
-// enough to hold it (pct >= 14); on narrow bars it falls back into the pct
-// column as "N · P%" so the count is never clipped or hidden.
+// "Option A" row builder. Count + percent both live in the right-hand column
+// as "N · P%". The colored bar is purely proportional — nothing ever sits
+// INSIDE the fill. This avoids three failure modes the in-fill variant had:
+// (1) count text wider than the fill spilling onto the gray track, (2) the
+// smallest bar dropping the count to the column while others kept it inline
+// (3 different positions, no consistency), (3) needing an "is the bar wide
+// enough" heuristic. One placement, every row, every data range. (2026-05-15)
 function _typeBarRow(label, count, pct, color){
-  var wide = pct >= 14;
-  var fillW = wide ? pct : Math.max(2, pct);
-  var inFill = (wide && count != null) ? '<span class="tbar-count">'+count+'</span>' : '';
-  var pctText = (!wide && count != null) ? (count + ' · ' + pct + '%') : (pct + '%');
+  var fillW = Math.max(2, pct);   // floor at 2% so a 0/1% bar is still visible
+  var pctText = (count != null) ? (count + " · " + pct + "%") : (pct + "%");
   var row = document.createElement("div"); row.className = "tbar-row";
   row.innerHTML = '<div class="tbar-label">'+_abbrType(label)+'</div>'
-    + '<div class="tbar-track"><div class="tbar-fill" style="width:'+fillW+'%;background:'+color+'">'+inFill+'</div></div>'
+    + '<div class="tbar-track"><div class="tbar-fill" style="width:'+fillW+'%;background:'+color+'"></div></div>'
     + '<div class="tbar-pct">'+pctText+'</div>';
   return row;
 }
