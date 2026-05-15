@@ -3308,8 +3308,13 @@ function renderEIA() {
   // primaryOil   = KV live estimate (OilPriceAPI demo or Yahoo futures, ~5-min lag)
   // secondaryEtf = FinnHub ETF proxy (NYSE hours only, % change only)
   // officialBrent/Wti = EIA/FRED daily spot included in same KV payload
-  var primaryOil   = (_liveOil && (_liveOil.tier === "primary" || _liveOil.tier === "primary-stale")
-                       && _liveOil.brent && isFinite(_liveOil.brent.level)) ? _liveOil : null;
+  // Treat Tier 0 (cross-verified Stooq / multi-source) as primary alongside
+  // the legacy "primary"/"primary-stale" tiers. Otherwise Tier 0 fires
+  // server-side but the frontend ignores it and falls back to EIA weekly
+  // — that was the source of the 4.2 vs 3.6 spread variance.
+  var primaryOil   = (_liveOil && _liveOil.brent && isFinite(_liveOil.brent.level)
+                       && _liveOil.tier !== "secondary"
+                       && _liveOil.tier !== "tertiary-required") ? _liveOil : null;
   var secondaryEtf = (_liveOil && _liveOil.tier === "secondary"
                        && _liveOil.brent && isFinite(_liveOil.brent.proxyDp)) ? _liveOil : null;
   var officialBrent = (_liveOil && _liveOil.brentOfficial && isFinite(_liveOil.brentOfficial.level))
@@ -4201,15 +4206,21 @@ function renderConsolidatedTiles(){
     }
     _setDot("psGdeltDot", gdLevel);
   }
-  // Currency
+  // Currency — bands calibrated for black-vs-mid-market premium (NOT black-vs-CBI,
+  // which would use much wider bands). 2026-05-15: was <50 stable, which mislabelled
+  // a 46.5% premium as "stable" (matching scrape_currency.py's old interpretation).
   var spread = s.irr_spread_pct;
   if(spread == null){
     _setText("psCurrencyVal", "—"); _setDot("psCurrencyDot", "muted");
   } else {
     var spreadStr = spread.toFixed(0) + "%";
-    var note = spread < 50 ? "stable" : spread < 200 ? "moderate" : "extreme";
+    var note, lvl;
+    if(spread < 15)      { note = "aligned";     lvl = "green"; }
+    else if(spread < 40) { note = "stressed";    lvl = "amber"; }
+    else if(spread < 80) { note = "dislocated";  lvl = "red";   }
+    else                 { note = "extreme";     lvl = "red";   }
     _setText("psCurrencyVal", spreadStr + " (" + note + ")");
-    _setDot("psCurrencyDot", spread < 50 ? "green" : spread < 200 ? "amber" : "red");
+    _setDot("psCurrencyDot", lvl);
   }
 
   // ─── CONDITIONS ────────────────────────────────────────────
