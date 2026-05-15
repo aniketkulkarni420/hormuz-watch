@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hormuz Watch v3 — Redesign Mockup</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0e1320;--border:#18202e;--border2:#222c3d;
+  --amber:#f09014;--blue:#38aaff;--green:#1dd47e;--red:#ff6b35;--red2:#ff3e52;--violet:#b07cf0;--orange:#ff8c2e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;--sans:'Manrope',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;line-height:1.5;padding:24px 32px 80px}
+.page{max-width:1280px;margin:0 auto}
+
+/* Mockup framework */
+h1{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+h2{font-size:16px;font-weight:700;margin:32px 0 6px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.lede{font-family:var(--mono);font-size:12px;color:var(--muted);max-width:880px;margin-bottom:14px;line-height:1.6}
+.lede b{color:var(--amber)}
+.section-hint{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:14px;line-height:1.5;background:rgba(56,170,255,.04);border-left:2px solid var(--blue);padding:8px 12px;border-radius:0 4px 4px 0}
+.tag{display:inline-block;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-right:6px}
+.tag-new{background:rgba(29,212,126,.12);color:var(--green);border:1px solid rgba(29,212,126,.3)}
+.tag-update{background:rgba(56,170,255,.12);color:var(--blue);border:1px solid rgba(56,170,255,.3)}
+.tag-remove{background:rgba(255,62,82,.12);color:var(--red2);border:1px solid rgba(255,62,82,.3)}
+.tag-keep{background:rgba(98,122,149,.12);color:var(--muted);border:1px solid rgba(98,122,149,.3)}
+.mock-wrap{display:flex;gap:14px;align-items:flex-start;margin:14px 0 24px}
+.mock-col{flex:1;min-width:0}
+.mock{background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:13px 14px;font-family:var(--sans)}
+.mock-note{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-top:8px;line-height:1.6;padding-left:6px;border-left:2px solid var(--border2)}
+.mock-source{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:6px}
+.mock-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2);margin-bottom:8px}
+
+/* Card chrome — mirror of live */
+.rhead{display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;margin-bottom:10px;border-bottom:1px solid var(--border);letter-spacing:.025em;font-family:var(--mono);font-size:9px;color:var(--amber);text-transform:uppercase}
+.rhead-src{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--muted)}
+.src-live{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.2);padding:1px 5px;border-radius:2px}
+.src-est{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.2);padding:1px 5px;border-radius:2px}
+.src-blue{color:var(--blue)} .src-muted{color:var(--muted2)} .src-green{color:var(--green)}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HERO STRIP
+   ═══════════════════════════════════════════════════════════════════ */
+.hero{background:linear-gradient(180deg,var(--panel) 0,var(--bg) 100%);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin-bottom:14px}
+.hero-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.hero-band{font-family:var(--sans);font-size:22px;font-weight:800;letter-spacing:.02em;padding:3px 12px;border-radius:4px;display:inline-flex;align-items:center;gap:8px}
+.hero-band.elevated{color:var(--amber);background:rgba(240,144,20,.14);border:1px solid rgba(240,144,20,.4)}
+.hero-band.high{color:var(--red);background:rgba(255,107,53,.14);border:1px solid rgba(255,107,53,.4)}
+.hero-band.normal{color:var(--green);background:rgba(29,212,126,.14);border:1px solid rgba(29,212,126,.4)}
+.hero-band.critical{color:#fff;background:rgba(255,62,82,.85);border:1px solid var(--red2)}
+.hero-day{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+.hero-day b{color:var(--text)}
+.hero-update{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted2)}
+.hero-brief{font-family:var(--sans);font-size:13px;color:var(--text);line-height:1.55;margin-bottom:6px;max-width:880px}
+.hero-brief-meta{font-family:var(--mono);font-size:10px;color:var(--muted2)}
+.tab-nav{display:flex;gap:0;margin-top:12px;border-bottom:1px solid var(--border)}
+.tab-nav a{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--muted);padding:8px 16px;border-bottom:2px solid transparent;transition:color .2s}
+.tab-nav a.on{color:var(--amber);border-bottom-color:var(--amber)}
+.tab-nav a:hover{color:var(--text)}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CROSS-CHOKEPOINT STRIP
+   ═══════════════════════════════════════════════════════════════════ */
+.chk-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.chk-tile{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:10px 11px}
+.chk-name{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.chk-val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);line-height:1}
+.chk-vs{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:3px}
+.chk-delta{font-family:var(--mono);font-size:10px;font-weight:700;margin-top:5px}
+.chk-delta.down{color:var(--red)} .chk-delta.up{color:var(--green)} .chk-delta.flat{color:var(--muted)}
+.chk-bar{height:3px;background:var(--border2);border-radius:2px;margin-top:6px;overflow:hidden}
+.chk-bar-fill{height:100%;background:var(--blue)}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PIPELINE BYPASS
+   ═══════════════════════════════════════════════════════════════════ */
+.pl-headline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:8px 0 12px;border-bottom:1px solid var(--border);margin-bottom:11px}
+.pl-cap{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--green)}
+.pl-cap-sub{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.pl-gap{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--red);font-weight:700}
+.pl-gap-sub{font-family:var(--mono);font-size:9px;color:var(--muted2)}
+.pl-list{display:flex;flex-direction:column;gap:8px}
+.pl-row{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:9px 11px}
+.pl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.pl-row-name{font-family:var(--sans);font-size:12px;font-weight:700;color:var(--text)}
+.pl-row-cap{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)}
+.pl-meta{font-family:var(--mono);font-size:9px;color:var(--muted);display:flex;gap:10px;align-items:center}
+.pl-bar{flex:1;height:5px;background:var(--border2);border-radius:2px;overflow:hidden}
+.pl-bar-fill{height:100%}
+.pl-util{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--text);min-width:40px;text-align:right}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CARRIERS
+   ═══════════════════════════════════════════════════════════════════ */
+.car-sum{display:flex;gap:14px;font-family:var(--mono);font-size:10px;color:var(--muted);padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.car-sum b{color:var(--text);font-weight:700;font-size:12px}
+.car-row{display:grid;grid-template-columns:80px 1fr auto auto;align-items:center;gap:10px;padding:5px 0;font-family:var(--mono);font-size:10px;border-bottom:1px solid var(--border)}
+.car-row:last-child{border-bottom:0}
+.car-name{color:var(--text);font-weight:700}
+.car-status{color:var(--muted)}
+.car-status .st-stranded{color:var(--red);font-weight:700;margin-right:6px}
+.car-status .st-rerouted{color:var(--amber);font-weight:700;margin-right:6px}
+.car-status .st-limited{color:var(--blue);font-weight:700;margin-right:6px}
+.car-trapped{color:var(--text);font-weight:700;text-align:right;white-space:nowrap}
+.car-surch{color:var(--green);font-weight:700;text-align:right;min-width:80px;white-space:nowrap}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CAPE REROUTE
+   ═══════════════════════════════════════════════════════════════════ */
+.cape-total{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);margin-bottom:8px}
+.cape-total-sub{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.cape-row{display:grid;grid-template-columns:74px 1fr 60px;align-items:center;gap:10px;margin:6px 0;font-family:var(--mono);font-size:10px}
+.cape-bar{height:8px;background:var(--panel2);border:1px solid var(--border2);border-radius:2px;overflow:hidden}
+.cape-bar-fill{height:100%}
+.cape-cost{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+
+/* ═══════════════════════════════════════════════════════════════════
+   WAR RISK
+   ═══════════════════════════════════════════════════════════════════ */
+.wr-headline{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+.wr-val{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--red)}
+.wr-unit{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.wr-vs{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px}
+.wr-vs b{color:var(--amber)}
+.wr-vlcc{background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:7px 9px;font-family:var(--mono);font-size:10px;color:var(--muted);margin:8px 0}
+.wr-vlcc b{font-size:14px;color:var(--text);display:block;margin-bottom:2px}
+.wr-clubs{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:8px}
+.wr-clubs b{color:var(--red);text-transform:uppercase;letter-spacing:.04em}
+.wr-club-list{margin-top:4px;color:var(--text);line-height:1.6}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PREDICTION MARKETS
+   ═══════════════════════════════════════════════════════════════════ */
+.pm-group{margin-bottom:12px}
+.pm-group:last-child{margin-bottom:0}
+.pm-title{font-family:var(--mono);font-size:10px;color:var(--text);font-weight:700;margin-bottom:6px}
+.pm-row{display:grid;grid-template-columns:90px 1fr 44px;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;margin-bottom:4px}
+.pm-date{color:var(--muted)}
+.pm-bar{height:8px;background:var(--panel2);border:1px solid var(--border2);border-radius:2px;overflow:hidden}
+.pm-bar-fill{height:100%;background:var(--blue)}
+.pm-pct{color:var(--text);font-weight:700;text-align:right}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TD3C
+   ═══════════════════════════════════════════════════════════════════ */
+.td3c-headline{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:4px}
+.td3c-headline b{font-size:20px;color:var(--text);font-weight:700;margin-right:8px}
+.td3c-bar{height:10px;background:var(--panel2);border:1px solid var(--border2);border-radius:2px;overflow:hidden;margin:8px 0}
+.td3c-bar-fill{height:100%;background:var(--amber)}
+.td3c-vs{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.td3c-vs b{color:var(--red)}
+
+/* ═══════════════════════════════════════════════════════════════════
+   UNCTAD SCENARIOS
+   ═══════════════════════════════════════════════════════════════════ */
+.un-row{display:grid;grid-template-columns:1fr 100px 130px;gap:10px;align-items:center;padding:8px 0;font-family:var(--mono);font-size:10px;border-bottom:1px solid var(--border)}
+.un-row:last-child{border-bottom:0}
+.un-row.head{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;border-bottom-color:var(--border2)}
+.un-scenario{color:var(--text)}
+.un-oil{color:var(--amber);font-weight:700;text-align:right}
+.un-gdp{color:var(--red);font-weight:700;text-align:right;white-space:nowrap}
+.un-foot{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LNG / FERTILIZER
+   ═══════════════════════════════════════════════════════════════════ */
+.fl-big{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1}
+.fl-big.crash{color:var(--red2)}
+.fl-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5}
+.fl-list{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.fl-row{display:grid;grid-template-columns:90px 1fr 50px;align-items:center;gap:10px;font-family:var(--mono);font-size:10px}
+.fl-bar{height:8px;background:var(--panel2);border:1px solid var(--border2);border-radius:2px;overflow:hidden}
+.fl-bar-fill{height:100%}
+.fl-pct{color:var(--text);font-weight:700;text-align:right}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SANCTIONED MATCH
+   ═══════════════════════════════════════════════════════════════════ */
+.sdn-count{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px}
+.sdn-count b{font-size:22px;color:var(--red);display:block}
+.sdn-match{background:rgba(255,62,82,.06);border:1px solid rgba(255,62,82,.25);border-radius:4px;padding:8px 10px;font-family:var(--mono);font-size:10px;margin-bottom:6px}
+.sdn-name{font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px}
+.sdn-meta{color:var(--muted);line-height:1.5}
+.sdn-foot{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:8px}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HISTORICAL COMPARISON
+   ═══════════════════════════════════════════════════════════════════ */
+.hc-row{display:grid;grid-template-columns:1fr 60px 80px 90px 1fr;gap:10px;align-items:center;padding:7px 0;font-family:var(--mono);font-size:10px;border-bottom:1px solid var(--border)}
+.hc-row:last-child{border-bottom:0}
+.hc-row.head{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;border-bottom-color:var(--border2)}
+.hc-row.now{background:rgba(240,144,20,.05)}
+.hc-event{color:var(--text)}
+.hc-row.now .hc-event{color:var(--amber);font-weight:700}
+.hc-year{color:var(--muted)}
+.hc-dur{color:var(--text)}
+.hc-oil{color:var(--amber);font-weight:700;text-align:right}
+.hc-trade{color:var(--muted);text-align:right;font-size:9px}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PRE-CRISIS BASELINE PATTERN (Market Pulse / Vessel Movement)
+   ═══════════════════════════════════════════════════════════════════ */
+.pulse-row{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.pulse-big{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--text);line-height:1}
+.pulse-chg{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green)}
+.pulse-baseline{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px}
+.pulse-baseline b.up{color:var(--red)}
+.pulse-baseline b.down{color:var(--green)}
+
+/* Highlight what's NEW vs the existing card */
+.new-marker{display:inline-block;margin-left:8px;padding:1px 5px;font-family:var(--mono);font-size:8px;font-weight:700;background:rgba(29,212,126,.15);color:var(--green);border:1px solid rgba(29,212,126,.4);border-radius:2px;text-transform:uppercase;letter-spacing:.05em}
+
+/* Demolition before/after */
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+.demo-before, .demo-after{padding:12px;border-radius:5px}
+.demo-before{background:rgba(255,62,82,.04);border:1px dashed rgba(255,62,82,.3)}
+.demo-after{background:rgba(29,212,126,.04);border:1px dashed rgba(29,212,126,.3)}
+.demo-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.demo-before .demo-label{color:var(--red2)}
+.demo-after .demo-label{color:var(--green)}
+.x{color:var(--red);font-weight:700}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Hormuz Watch v3 — redesign mockup</h1>
+<p class="lede">
+  Every <b>new</b>, <b>updated</b>, and <b>removed</b> card visualised with
+  realistic data before any production code lands. Scroll, eyeball, push back
+  hard. Plan document: <code>.process/REDESIGN_v3_PLAN.md</code>.
+  <br><br>
+  <span class="tag tag-new">NEW</span>=adds a card · <span class="tag tag-update">UPDATE</span>=existing card gains the pattern · <span class="tag tag-remove">REMOVE</span>=card killed entirely
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     1. HERO STRIP + TAB NAV  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>1. Hero strip + tab navigation <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  Replaces the current top bar. <b>Status band</b> (matches verdict vocabulary —
+  NORMAL/ELEVATED/HIGH/CRITICAL) + <b>day counter</b> (shown when ≠ NORMAL) +
+  <b>daily brief</b> (2-3 sentences, manually written, time-stamped) +
+  <b>tab nav</b> (sticky, anchor-scroll, mobile = horizontal scroll).
+</div>
+
+<div class="hero">
+  <div class="hero-row">
+    <div class="hero-band elevated">ELEVATED</div>
+    <div class="hero-day"><b>Day 76</b> since closure · 2026-02-28</div>
+    <div class="hero-update">Verdict 4m ago · AIS 12m · Brent 3m · BDTI 22h</div>
+  </div>
+  <div class="hero-brief">
+    Vessel transits running ~70% of pre-crisis baseline; Brent <b>$107</b> vs <b>$72</b> pre-Feb-26 (+49%).
+    ~13M bbl/day cannot be rerouted via pipeline — the unrouteable gap drives the freight + insurance
+    spikes downstream. OFAC tempo elevated this week (2 designations); IRR parallel-market
+    premium widened to 47% (dislocated).
+  </div>
+  <div class="hero-brief-meta">Daily brief · written 9h ago · next update at 18:00 IST</div>
+  <nav class="tab-nav">
+    <a href="#overview" class="on">Overview</a>
+    <a href="#supply">Supply</a>
+    <a href="#markets">Markets</a>
+    <a href="#macro">Macro</a>
+    <a href="#india">India</a>
+  </nav>
+</div>
+
+<p class="mock-note">
+  Day counter colour matches band. Brief is the editorial voice — your read in your words.
+  Tab labels chosen to map to user intent: <i>Overview</i>=quick scan, <i>Supply</i>=alt routes &amp;
+  carriers, <i>Markets</i>=prices &amp; equities &amp; bets, <i>Macro</i>=slow signals &amp; references,
+  <i>India</i>=your audience. Per-feed age chips honest about staleness.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     2. CROSS-CHOKEPOINT STRIP  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>2. Cross-chokepoint strip <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  The single most powerful new signal in the space. Frames Hormuz in
+  context — is the disruption local, or are alternatives also stressed?
+  Five chokepoints with day-over-day deltas. Same AIS feed, just extended
+  bboxes — no new data source.
+</div>
+
+<div class="mock">
+  <div class="rhead">Global chokepoints — last 24h <span class="rhead-src src-blue">AIS · 28m ago</span></div>
+  <div class="chk-strip">
+    <div class="chk-tile">
+      <div class="chk-name">Strait of Hormuz</div>
+      <div class="chk-val">4</div>
+      <div class="chk-vs">/d · 4% pre-crisis</div>
+      <div class="chk-delta up">Δ +3 vs yesterday</div>
+      <div class="chk-bar"><div class="chk-bar-fill" style="width:4%"></div></div>
+    </div>
+    <div class="chk-tile">
+      <div class="chk-name">Suez Canal</div>
+      <div class="chk-val">26</div>
+      <div class="chk-vs">/d · 65% pre-crisis</div>
+      <div class="chk-delta down">Δ -16</div>
+      <div class="chk-bar"><div class="chk-bar-fill" style="width:65%"></div></div>
+    </div>
+    <div class="chk-tile">
+      <div class="chk-name">Cape of Good Hope</div>
+      <div class="chk-val">60</div>
+      <div class="chk-vs">/d · 170% pre-crisis</div>
+      <div class="chk-delta up">Δ +63 (diversion)</div>
+      <div class="chk-bar"><div class="chk-bar-fill" style="width:100%;background:var(--amber)"></div></div>
+    </div>
+    <div class="chk-tile">
+      <div class="chk-name">Bab el-Mandeb</div>
+      <div class="chk-val">31</div>
+      <div class="chk-vs">/d · 91% pre-crisis</div>
+      <div class="chk-delta up">Δ +4</div>
+      <div class="chk-bar"><div class="chk-bar-fill" style="width:91%"></div></div>
+    </div>
+    <div class="chk-tile">
+      <div class="chk-name">Strait of Malacca</div>
+      <div class="chk-val">226</div>
+      <div class="chk-vs">/d · 96% pre-crisis</div>
+      <div class="chk-delta flat">Δ +7</div>
+      <div class="chk-bar"><div class="chk-bar-fill" style="width:96%"></div></div>
+    </div>
+  </div>
+</div>
+
+<p class="mock-note">
+  Reader gets the answer in one glance: <i>"Hormuz collapsed (4%), Cape surged (+63
+  diversion), Suez halved, Malacca unaffected."</i> That story doesn't exist in our
+  current tool. Source: same AIS scraper, 5 bboxes instead of 1.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     3. PIPELINE BYPASS  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>3. Pipeline bypass capacity <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  Answers the #1 investor question: <i>"How much oil can actually move if
+  Hormuz stays closed?"</i> Four pipelines, capacity vs utilization, and the
+  explicit <b>unrouteable gap</b>. Static config (capacity changes rarely);
+  utilization updated manually. No live scraper.
+</div>
+
+<div class="mock">
+  <div class="rhead">Pipeline bypass capacity <span class="rhead-src src-est">CONFIG · updated 3d</span></div>
+  <div class="pl-headline">
+    <span class="pl-cap">6.85M</span><span class="pl-cap-sub">bbl/day bypass capacity</span>
+    <span class="pl-gap">Gap: 13.15M bbl/d</span><span class="pl-gap-sub">unrouteable</span>
+  </div>
+  <div class="pl-list">
+    <div class="pl-row">
+      <div class="pl-top">
+        <div class="pl-row-name">Saudi Petroline (East-West)</div>
+        <div class="pl-row-cap">5.0M bpd</div>
+      </div>
+      <div class="pl-meta">
+        <span style="min-width:130px">Yanbu · Red Sea · Saudi Aramco</span>
+        <div class="pl-bar"><div class="pl-bar-fill" style="width:95%;background:var(--green)"></div></div>
+        <div class="pl-util">95%</div>
+      </div>
+    </div>
+    <div class="pl-row">
+      <div class="pl-top">
+        <div class="pl-row-name">UAE ADCOP (Habshan-Fujairah)</div>
+        <div class="pl-row-cap">1.5M bpd</div>
+      </div>
+      <div class="pl-meta">
+        <span style="min-width:130px">Fujairah · ADNOC · op 2012</span>
+        <div class="pl-bar"><div class="pl-bar-fill" style="width:100%;background:var(--green)"></div></div>
+        <div class="pl-util">100%</div>
+      </div>
+    </div>
+    <div class="pl-row">
+      <div class="pl-top">
+        <div class="pl-row-name">Iraq-Turkey (Kirkuk-Ceyhan)</div>
+        <div class="pl-row-cap">0.5M bpd</div>
+      </div>
+      <div class="pl-meta">
+        <span style="min-width:130px">Ceyhan · intermittent · ITP</span>
+        <div class="pl-bar"><div class="pl-bar-fill" style="width:25%;background:var(--amber)"></div></div>
+        <div class="pl-util">25%</div>
+      </div>
+    </div>
+    <div class="pl-row">
+      <div class="pl-top">
+        <div class="pl-row-name">Iran Goreh-Jask</div>
+        <div class="pl-row-cap">0.35M bpd</div>
+      </div>
+      <div class="pl-meta">
+        <span style="min-width:130px">Jask Bay · partial · NIOC</span>
+        <div class="pl-bar"><div class="pl-bar-fill" style="width:40%;background:var(--amber)"></div></div>
+        <div class="pl-util">40%</div>
+      </div>
+    </div>
+  </div>
+  <div class="mock-source">Source: operator filings + trade press · pre-crisis Hormuz flow 20M bpd</div>
+</div>
+
+<p class="mock-note">
+  Headline "13.15M bbl/d unrouteable" is the number an analyst quotes in a
+  paragraph. Bar colour: green if utilisation high (good), amber if partial.
+  Static config in <code>config/pipelines.json</code>; you update via PR
+  when capacity changes.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     4. CARRIER SUSPENSION  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>4. Carrier suspension <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  Container-shipping disruption is the part of the story Indian importers care
+  about most. 9 majors with status, trapped vessels, and surcharge per TEU.
+  Static config + admin form for weekly updates.
+</div>
+
+<div class="mock">
+  <div class="rhead">Container carrier suspensions <span class="rhead-src src-est">CONFIG · updated 5d</span></div>
+  <div class="car-sum">
+    <div><b>9 of 9</b> majors disrupted</div>
+    <div><b>41+</b> vessels trapped</div>
+    <div><b>~204K</b> TEU stranded</div>
+    <div><b>$750–1,500</b>/TEU surcharge range</div>
+  </div>
+  <div class="car-row">
+    <div class="car-name">MSC</div>
+    <div class="car-status"><span class="st-stranded">STRANDED</span>15 vessels · 109K TEU · Cape rerouting</div>
+    <div class="car-trapped">109K TEU</div>
+    <div class="car-surch">$1,200/TEU</div>
+  </div>
+  <div class="car-row">
+    <div class="car-name">Maersk</div>
+    <div class="car-status"><span class="st-stranded">STRANDED</span>14 vessels · 70K TEU · Cape rerouting</div>
+    <div class="car-trapped">70K TEU</div>
+    <div class="car-surch">$1,000/TEU</div>
+  </div>
+  <div class="car-row">
+    <div class="car-name">Hapag-Lloyd</div>
+    <div class="car-status"><span class="st-stranded">STRANDED</span>6 vessels · 25K TEU · $40-50M/wk cost</div>
+    <div class="car-trapped">25K TEU</div>
+    <div class="car-surch">$1,100/TEU</div>
+  </div>
+  <div class="car-row">
+    <div class="car-name">COSCO</div>
+    <div class="car-status"><span class="st-limited">LIMITED</span>5 vessels · 2 exited via Larak corridor</div>
+    <div class="car-trapped">5 vsl</div>
+    <div class="car-surch">$600/TEU</div>
+  </div>
+  <div class="car-row">
+    <div class="car-name">CMA CGM</div>
+    <div class="car-status"><span class="st-rerouted">REROUTED</span>1 vessel · Cape · Clause 10 active</div>
+    <div class="car-trapped">1 vsl</div>
+    <div class="car-surch">$950/TEU</div>
+  </div>
+  <div class="car-row">
+    <div class="car-name">ONE</div>
+    <div class="car-status"><span class="st-rerouted">REROUTED</span>Cape · ~147 vsl trapped basin-wide</div>
+    <div class="car-trapped">—</div>
+    <div class="car-surch">$900/TEU</div>
+  </div>
+  <div class="car-row">
+    <div class="car-name">HMM</div>
+    <div class="car-status"><span class="st-rerouted">REROUTED</span>Cape · "volatile security" advisory</div>
+    <div class="car-trapped">—</div>
+    <div class="car-surch">$800/TEU</div>
+  </div>
+  <div class="car-row">
+    <div class="car-name">Evergreen</div>
+    <div class="car-status"><span class="st-rerouted">REROUTED</span>Cape · all Hormuz transits halted</div>
+    <div class="car-trapped">—</div>
+    <div class="car-surch">$850/TEU</div>
+  </div>
+  <div class="car-row">
+    <div class="car-name">Yang Ming</div>
+    <div class="car-status"><span class="st-rerouted">REROUTED</span>Cape</div>
+    <div class="car-trapped">—</div>
+    <div class="car-surch">$750/TEU</div>
+  </div>
+</div>
+
+<p class="mock-note">
+  Sortable by stranded TEU (default). Status pill colour-codes the severity.
+  Surcharge column is the leading indicator of supply-chain cost transmission
+  to Indian retail. Each row supports a click-through to the carrier's
+  official advisory.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     5. CAPE OF GOOD HOPE REROUTE  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>5. Cape of Good Hope rerouting <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  Quantifies the displacement — not just <i>"Hormuz down"</i> but <i>"where did
+  the cargo go and at what cost?"</i> Same AIS infrastructure, new bbox for
+  SA waters.
+</div>
+
+<div class="mock">
+  <div class="rhead">Cape of Good Hope reroute mix <span class="rhead-src src-blue">AIS · 1h ago</span></div>
+  <div class="cape-total">435 <span style="font-size:11px;color:var(--muted);font-weight:400">vessels currently diverted</span></div>
+  <div class="cape-total-sub">+14 days per leg · ~$4M extra fuel per VLCC voyage</div>
+
+  <div style="margin-top:14px">
+    <div class="cape-row">
+      <div style="color:var(--text)">Tanker</div>
+      <div class="cape-bar"><div class="cape-bar-fill" style="width:18%;background:var(--amber)"></div></div>
+      <div style="text-align:right;color:var(--text);font-weight:700">80 · 18%</div>
+    </div>
+    <div class="cape-row">
+      <div style="color:var(--text)">Cargo</div>
+      <div class="cape-bar"><div class="cape-bar-fill" style="width:69%;background:var(--green)"></div></div>
+      <div style="text-align:right;color:var(--text);font-weight:700">300 · 69%</div>
+    </div>
+    <div class="cape-row">
+      <div style="color:var(--text)">Other</div>
+      <div class="cape-bar"><div class="cape-bar-fill" style="width:13%;background:var(--blue)"></div></div>
+      <div style="text-align:right;color:var(--text);font-weight:700">55 · 13%</div>
+    </div>
+  </div>
+
+  <div class="cape-cost">
+    Active SA port arrivals (24h):
+    <b style="color:var(--text)">Durban 30</b> · Port Elizabeth 28 · Cape Town 24 · Saldanha Bay 21
+  </div>
+</div>
+
+<p class="mock-note">
+  Pairs naturally with the cross-chokepoint strip above (Cape transits up,
+  Hormuz down → here's the mix doing the diverting).
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     6. WAR-RISK INSURANCE  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>6. War-risk insurance premium <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  No reliable auto-feed exists for this — premiums are quoted per-vessel by
+  marine insurers. Source: Howden Re reports + S&amp;P Global trade press +
+  Lloyd's JWC circulars. <b>Admin-entered weekly via /admin/war-risk.</b>
+</div>
+
+<div class="mock">
+  <div class="rhead">War-risk insurance premium <span class="rhead-src src-est">ADMIN · 3d ago</span></div>
+  <div class="wr-headline">
+    <div class="wr-val">1.0%</div>
+    <div class="wr-unit">of hull value · per 7 days</div>
+  </div>
+  <div class="wr-vs">vs pre-crisis <b>0.125%</b> — <b style="color:var(--red)">8.0×</b> higher</div>
+  <div class="wr-vlcc">
+    <b>$2.5M</b>
+    Per-VLCC transit cost · was ~$125k pre-crisis (+1,900%)
+  </div>
+  <div class="wr-clubs">
+    <b>P&amp;I clubs withdrawn (6 of ~13):</b>
+    <div class="wr-club-list">Gard · Skuld · North Standard · London P&amp;I · American · Steamship Mutual</div>
+  </div>
+  <div class="mock-source" style="margin-top:10px">Source: Howden Re 27-Mar-26 + S&amp;P Global · Lloyd's JWC listings</div>
+</div>
+
+<p class="mock-note">
+  Single number that anchors the freight-cost story. The 8× multiplier and
+  $2.5M VLCC transit cost are the headlines analysts cite. Admin form means
+  values stay current with weekly Howden updates.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     7. PREDICTION MARKETS  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>7. Prediction markets <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  Market-implied forward probabilities. Kalshi (US-regulated) + Polymarket
+  (crypto-collateralised). Adds the forward-looking layer our backward-looking
+  composite signals don't have.
+</div>
+
+<div class="mock">
+  <div class="rhead">Prediction markets <span class="rhead-src src-blue">Kalshi · Polymarket · 18m ago</span></div>
+  <div class="pm-group">
+    <div class="pm-title">Strait of Hormuz traffic normal by:</div>
+    <div class="pm-row">
+      <div class="pm-date">May 31, 2026</div>
+      <div class="pm-bar"><div class="pm-bar-fill" style="width:7%"></div></div>
+      <div class="pm-pct">7%</div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-date">Jun 30, 2026</div>
+      <div class="pm-bar"><div class="pm-bar-fill" style="width:28%"></div></div>
+      <div class="pm-pct">28%</div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-date">Sep 30, 2026</div>
+      <div class="pm-bar"><div class="pm-bar-fill" style="width:54%"></div></div>
+      <div class="pm-pct">54%</div>
+    </div>
+  </div>
+  <div class="pm-group">
+    <div class="pm-title">Iranian regime change by:</div>
+    <div class="pm-row">
+      <div class="pm-date">May 31, 2026</div>
+      <div class="pm-bar"><div class="pm-bar-fill" style="width:1%"></div></div>
+      <div class="pm-pct">1%</div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-date">Jun 30, 2026</div>
+      <div class="pm-bar"><div class="pm-bar-fill" style="width:5%"></div></div>
+      <div class="pm-pct">5%</div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-date">Dec 31, 2026</div>
+      <div class="pm-bar"><div class="pm-bar-fill" style="width:18%"></div></div>
+      <div class="pm-pct">18%</div>
+    </div>
+  </div>
+</div>
+
+<p class="mock-note">
+  Kalshi + Polymarket public APIs polled hourly. Cache 5 min. Display the
+  highest-liquidity contract per question; show only contracts with &gt;$1k
+  volume.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     8. TD3C VLCC  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>8. TD3C VLCC freight rate <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  The Hormuz-specific freight signal — Middle East Gulf → China VLCC route,
+  published weekly by Baltic Exchange. Admin-entered initially (the source is
+  paid; Playwright scraper as Phase D follow-up).
+</div>
+
+<div class="mock">
+  <div class="rhead">TD3C · MEG → China VLCC <span class="rhead-src src-est">ADMIN · weekly · week 11 2026</span></div>
+  <div class="td3c-headline">
+    <b>WS 348.89</b> · ~$326,200 / day TCE
+  </div>
+  <div class="td3c-bar">
+    <div class="td3c-bar-fill" style="width:90%"></div>
+  </div>
+  <div class="td3c-vs">
+    vs <b>WS 126.5</b> (Week 4 2026) — <b style="color:var(--red)">+176%</b> · pre-crisis baseline WS 60-80
+  </div>
+  <div class="mock-source" style="margin-top:10px">Source: Baltic Exchange weekly tanker report · update each Friday after Baltic close</div>
+</div>
+
+<p class="mock-note">
+  Worldscale points + TCE in $/day, the two formats analysts use. Bar shows
+  position vs the 1-year peak. Single most direct freight indicator for
+  Hormuz crude — no BDTI broad-basket dilution.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     9. UNCTAD SCENARIOS  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>9. UNCTAD scenario panel <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  Reference scenarios from UNCTAD's <i>osginf2026d2</i> report — gives the
+  macroeconomic frame retail readers can anchor on. Static config; refresh
+  when UNCTAD republishes.
+</div>
+
+<div class="mock">
+  <div class="rhead">UNCTAD reference scenarios <span class="rhead-src src-blue">osginf2026d2 · May 2026</span></div>
+  <div class="un-row head">
+    <div>Scenario</div>
+    <div style="text-align:right">WTI peak</div>
+    <div style="text-align:right">GDP impact</div>
+  </div>
+  <div class="un-row">
+    <div class="un-scenario">Closed 1 quarter, then reopens</div>
+    <div class="un-oil">$98/bbl</div>
+    <div class="un-gdp">-2.9pp Q2</div>
+  </div>
+  <div class="un-row">
+    <div class="un-scenario">Closed 2 quarters, then reopens</div>
+    <div class="un-oil">$115 → $76</div>
+    <div class="un-gdp">larger near-term</div>
+  </div>
+  <div class="un-row">
+    <div class="un-scenario">Reopens within 1 quarter</div>
+    <div class="un-oil">$68/bbl</div>
+    <div class="un-gdp">+2.2pp Q3 recovery</div>
+  </div>
+  <div class="un-foot">
+    Global merchandise trade growth: <b style="color:var(--text)">4.7%</b> (2025) → <b style="color:var(--amber)">1.5–2.5%</b> (2026)<br>
+    Global GDP: <b style="color:var(--text)">2.9%</b> → <b style="color:var(--amber)">2.6%</b>
+  </div>
+</div>
+
+<p class="mock-note">
+  Anchors today's reading against the policymaker frame. Current 1.7/4.0
+  reading maps roughly between scenarios 2 and 3.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     10. LNG FLOW  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>10. LNG flow through Hormuz <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  Qatar exports ~20% of global LNG, all through Hormuz. WTO Datalab pegs LNG
+  traffic at -99% since closure. Drives the European energy story. AIS filter
+  on ship type "Liquefied Gas Carrier" + WTO snapshot.
+</div>
+
+<div class="mock">
+  <div class="rhead">LNG flow <span class="rhead-src src-blue">WTO DATALAB · AIS · 12h</span></div>
+  <div class="fl-big crash">1<span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px">LNG transit / day</span></div>
+  <div class="fl-sub">vs ~30 / day pre-crisis · <b style="color:var(--red2)">-99% collapse</b></div>
+  <div class="fl-sub" style="margin-top:8px;color:var(--text)">
+    Qatar ≈ <b style="color:var(--amber)">20%</b> of global LNG · all routes via Hormuz<br>
+    European energy security: <b style="color:var(--red)">CRITICAL exposure</b>
+  </div>
+</div>
+
+<p class="mock-note">
+  -99% is the headline; the 20% global share is the "why this matters" beat.
+  Pairs with fertiliser below to round out the non-oil disruption story.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     11. FERTILIZER FLOW  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>11. Fertilizer flow <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  Almost nobody else (in our target audience's space) tracks this. Persian
+  Gulf supplies 50% global sulphur, 25% urea, 18% ammonia. India is a
+  fertilizer-importing nation — direct agri-input transmission. WTO Datalab
+  static snapshot + UN Comtrade for trends.
+</div>
+
+<div class="mock">
+  <div class="rhead">Fertilizer flow <span class="rhead-src src-blue">WTO DATALAB · Apr-May</span></div>
+  <div class="fl-big crash" style="color:var(--red)">-87%<span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px">monthly shipment volume vs pre-crisis</span></div>
+  <div class="fl-sub">Pre-crisis: ~60 shipments / mo · 2.7-3.1 Mt / mo</div>
+
+  <div class="fl-list">
+    <div class="fl-row">
+      <div style="color:var(--text)">Sulphur</div>
+      <div class="fl-bar"><div class="fl-bar-fill" style="width:50%;background:var(--red)"></div></div>
+      <div class="fl-pct">50%</div>
+    </div>
+    <div class="fl-row">
+      <div style="color:var(--text)">Urea</div>
+      <div class="fl-bar"><div class="fl-bar-fill" style="width:25%;background:var(--amber)"></div></div>
+      <div class="fl-pct">25%</div>
+    </div>
+    <div class="fl-row">
+      <div style="color:var(--text)">Ammonia</div>
+      <div class="fl-bar"><div class="fl-bar-fill" style="width:18%;background:var(--amber)"></div></div>
+      <div class="fl-pct">18%</div>
+    </div>
+    <div class="fl-row">
+      <div style="color:var(--text)">Phosphate</div>
+      <div class="fl-bar"><div class="fl-bar-fill" style="width:13%;background:var(--blue)"></div></div>
+      <div class="fl-pct">13%</div>
+    </div>
+  </div>
+
+  <div class="fl-sub" style="margin-top:10px;color:var(--text)">
+    Persian Gulf share of global supply (the bar widths). <br>
+    India agri-import exposure: <b style="color:var(--red)">CRITICAL</b> (urea + DAP).
+  </div>
+</div>
+
+<p class="mock-note">
+  Specifically: India imports ~10M MT urea/yr. Hormuz disruption =
+  fertilizer-cost transmission to Indian farmgate by 6-12 months. Strong
+  India-relevance angle no other tracker carries.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     12. SANCTIONED VESSEL MATCH  (new)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>12. Sanctioned vessel SDN match <span class="tag tag-new">NEW</span></h2>
+<div class="section-hint">
+  Cross-reference OFAC SDN list (which we already pull) against live AIS
+  (which we already pull). Surfaces SPECIFIC named vessels currently in the
+  corridor — far more visceral than an OFAC count.
+</div>
+
+<div class="mock">
+  <div class="rhead">Sanctioned vessel match <span class="rhead-src src-est">OFAC SDN × AIS · 14m ago</span></div>
+  <div class="sdn-count"><b>1</b> match currently in/near Hormuz corridor</div>
+
+  <div class="sdn-match">
+    <div class="sdn-name">ELEGANCE</div>
+    <div class="sdn-meta">
+      IMO 9475349 · Panama flag · Cargo · in-transit<br>
+      Position: 26.45°N 56.42°E (Hormuz corridor)<br>
+      OFAC SDN: Iran-related (NIOC tanker affiliate)
+    </div>
+  </div>
+
+  <div class="sdn-foot">
+    Total OFAC-listed vessels: ~485 · Iran-related: ~120 · last SDN refresh: 4h ago
+  </div>
+</div>
+
+<p class="mock-note">
+  Hits enforcement-watchers + traders looking for actionable sanctions risk
+  signals. When match count rises, headline "<b>3 sanctioned vessels currently
+  transiting</b>" is real news, not a derived metric.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     13. HISTORICAL COMPARISON  (replaces Closure Scenario)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>13. Historical comparison <span class="tag tag-new">NEW</span> — replaces Closure Scenario <span class="tag tag-remove">REMOVE</span></h2>
+<div class="section-hint">
+  Replaces the existing <i>Closure Scenario Impact</i> table (invented
+  forward scenarios) with real historical events. Five peer events with peak
+  oil spike + trade impact. Static config.
+</div>
+
+<div class="mock">
+  <div class="rhead">Historical comparison <span class="rhead-src src-blue">EIA · IEA · Clarksons</span></div>
+  <div class="hc-row head">
+    <div>Event</div><div>Year</div><div>Duration</div><div style="text-align:right">Oil spike</div><div style="text-align:right">Trade impact</div>
+  </div>
+  <div class="hc-row now">
+    <div class="hc-event">Hormuz closure (now)</div>
+    <div class="hc-year">2026</div>
+    <div class="hc-dur">Day 76+</div>
+    <div class="hc-oil">+49%</div>
+    <div class="hc-trade">~20% global oil throughput blocked</div>
+  </div>
+  <div class="hc-row">
+    <div class="hc-event">Red Sea (Houthi)</div>
+    <div class="hc-year">2024</div>
+    <div class="hc-dur">~14 mo</div>
+    <div class="hc-oil">+5-8%</div>
+    <div class="hc-trade">15% global shipping rerouted</div>
+  </div>
+  <div class="hc-row">
+    <div class="hc-event">Suez Canal block</div>
+    <div class="hc-year">2021</div>
+    <div class="hc-dur">6 days</div>
+    <div class="hc-oil">+4%</div>
+    <div class="hc-trade">12% global trade delayed</div>
+  </div>
+  <div class="hc-row">
+    <div class="hc-event">Kuwait / Gulf War</div>
+    <div class="hc-year">1990</div>
+    <div class="hc-dur">7 mo</div>
+    <div class="hc-oil">+130%</div>
+    <div class="hc-trade">4.6M bpd offline</div>
+  </div>
+  <div class="hc-row">
+    <div class="hc-event">Tanker War (Iran-Iraq)</div>
+    <div class="hc-year">1984</div>
+    <div class="hc-dur">4 yr</div>
+    <div class="hc-oil">+15-25%</div>
+    <div class="hc-trade">~2% Gulf tankers damaged</div>
+  </div>
+  <div class="hc-row">
+    <div class="hc-event">OPEC oil embargo</div>
+    <div class="hc-year">1973</div>
+    <div class="hc-dur">5 mo</div>
+    <div class="hc-oil">+300%</div>
+    <div class="hc-trade">7.5% global supply cut</div>
+  </div>
+</div>
+
+<p class="mock-note">
+  Anchors "is this 1973 or 2021?" in one glance. Current row highlighted.
+  Replaces speculative scenarios with reproducible references.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     14. MARKET PULSE WITH PRE-CRISIS BASELINE  (update)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>14. Market pulse — pre-crisis baseline pattern <span class="tag tag-update">UPDATE</span></h2>
+<div class="section-hint">
+  The pattern that goes on EVERY card with a quantitative headline. Static
+  baselines from <code>config/pre_crisis.json</code> locked to <b>2026-02-26</b>.
+  Below: market-pulse mocked with the new line.
+</div>
+
+<div class="mock">
+  <div class="rhead">Market pulse <span class="rhead-src src-live">LIVE · Stooq</span></div>
+  <div class="pulse-row">
+    <div class="pulse-big">$107.0</div>
+    <div class="pulse-chg">▲ +0.5%</div>
+  </div>
+  <div class="pulse-baseline">vs <b style="color:var(--muted)">$72</b> pre-Feb-26 · <b class="up">+49%</b><span class="new-marker">NEW LINE</span></div>
+  <div class="pulse-row">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted)">WTI</div>
+    <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)">$102.5</div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--muted)">spread $4.5</div>
+  </div>
+  <div class="pulse-baseline">vs <b style="color:var(--muted)">$65</b> pre-Feb-26 · <b class="up">+58%</b><span class="new-marker">NEW LINE</span></div>
+</div>
+
+<p class="mock-note">
+  Single most impactful UX pattern in the redesign. Applied to: Market pulse
+  (Brent, WTI), Vessel movement (transits), Currency (IRR), Vessel-traffic
+  trend. Always shows "vs pre-Feb-26 · ±N%".
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     15. VESSEL TYPE MIX — TIGHTENED  (update)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>15. Vessel type mix — tightened to 4 buckets <span class="tag tag-update">UPDATE</span></h2>
+<div class="section-hint">
+  Current 6 buckets (Tanker / Offshore-Service / Other / Bulker / Container /
+  Passenger) over-fragments for retail. Collapse to 4 retail-readable buckets:
+  <b>Tanker · Cargo · Military · Other</b>. Keeps the underlying classification
+  for analyst drill-down later.
+</div>
+
+<div class="demo-pair">
+  <div class="demo-before">
+    <div class="demo-label">Before · 6 buckets</div>
+    <div style="font-family:var(--mono);font-size:11px;line-height:2;color:var(--muted)">
+      <div>Tanker <span style="float:right">64 · 35%</span></div>
+      <div>Offshore <span style="float:right">50 · 27%</span></div>
+      <div>Other <span style="float:right">29 · 16%</span></div>
+      <div>Bulker <span style="float:right">28 · 15%</span></div>
+      <div>Container <span style="float:right">13 · 7%</span></div>
+      <div>Passenger <span style="float:right">1 · 1%</span></div>
+    </div>
+    <div class="mock-note">Six buckets, retail reader's eye bounces.</div>
+  </div>
+  <div class="demo-after">
+    <div class="demo-label">After · 4 buckets</div>
+    <div style="font-family:var(--mono);font-size:11px;line-height:2;color:var(--text)">
+      <div>Tanker <span style="float:right">98 · 53% (incl bulk)</span></div>
+      <div>Cargo <span style="float:right">73 · 40% (container+bulker+other)</span></div>
+      <div>Military <span style="float:right">7 · 4%</span></div>
+      <div>Other <span style="float:right">7 · 4%</span></div>
+    </div>
+    <div class="mock-note">Four buckets, story reads instantly.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     16. DEMOLITION — CONDITIONS CARD  (remove)
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>16. Conditions card — removed <span class="tag tag-remove">REMOVE</span></h2>
+<div class="section-hint">
+  Each component of the Conditions card carries ~0.03 weight in the verdict —
+  rounding error. Aerial activity is also chronically stale (11h+ in recent
+  audits). The signal still flows through <i>Cross-signal verification</i> as
+  a single "Environmental" row.
+</div>
+
+<div class="demo-pair">
+  <div class="demo-before">
+    <div class="demo-label">Before · standalone card (gone)</div>
+    <div style="font-family:var(--mono);font-size:11px;line-height:2;color:var(--muted)">
+      <div>Aerial activity <span style="float:right">10 aircraft · 0 mil <span class="x">●</span></span></div>
+      <div>Weather (4 wp) <span style="float:right">wind 16kn · clear <span style="color:var(--green)">●</span></span></div>
+      <div>Seismic 7d ≥M4 <span style="float:right">3 events · max 4.7 <span style="color:var(--green)">●</span></span></div>
+    </div>
+    <div class="mock-note">Whole card. ~0.03 weight per signal. Real estate above the fold.</div>
+  </div>
+  <div class="demo-after">
+    <div class="demo-label">After · one XV row only</div>
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:var(--mono);font-size:10px;color:var(--muted)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+        <span>Environmental conditions</span>
+        <span style="color:var(--green);font-weight:700">NORMAL</span>
+      </div>
+      <div style="font-size:9px;line-height:1.6">
+        Wind 16kn · 3 quakes M≥4 max 4.7 · 10 aircraft · routine.
+      </div>
+    </div>
+    <div class="mock-note">One XV row in the existing Cross-signal block. Signal preserved, cognitive load gone.</div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
