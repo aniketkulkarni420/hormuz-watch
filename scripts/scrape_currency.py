@@ -283,16 +283,24 @@ def main():
     if official_irr and black_irr and official_irr > 0:
         spread_pct = round((black_irr - official_irr) / official_irr * 100.0, 1)
 
+    # Bands recalibrated 2026-05-15.
+    # `spread_pct` here is black-market (bonbast) vs mid-market aggregate
+    # (open.er-api) — NOT black-vs-CBI. The mid-market aggregate tracks much
+    # closer to the parallel market than CBI does, so the typical spread is
+    # 10-60%, NOT the 200-1000% you'd see against the CBI official rate.
+    # Old bands (>=500 extreme, >=200 wide, >=50 moderate, else narrow) were
+    # calibrated for black-vs-CBI and labelled 46.5% as "stable", which is
+    # wrong for this basis.
     interpretation = "insufficient data"
     if spread_pct is not None:
-        if spread_pct >= 500:
-            interpretation = "extreme spread — severe capital flight / sanction pressure"
-        elif spread_pct >= 200:
-            interpretation = "wide spread — elevated capital flight / sanction pressure"
-        elif spread_pct >= 50:
-            interpretation = "moderate spread — typical sanction-regime conditions"
+        if spread_pct >= 80:
+            interpretation = "extreme spread — currency-crisis territory (run-on-rial)"
+        elif spread_pct >= 40:
+            interpretation = "wide spread — significant parallel-market dislocation"
+        elif spread_pct >= 15:
+            interpretation = "moderate spread — visible FX stress"
         else:
-            interpretation = "narrow spread — relative FX stability"
+            interpretation = "narrow spread — mid-market and parallel aligned"
     elif official_irr or black_irr:
         interpretation = "partial data — only one IRR rate available"
 
