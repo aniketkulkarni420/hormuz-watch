@@ -926,6 +926,23 @@ header{
       </div>
     </div>
 
+    <!-- HEADLINE PULSE — restored 2026-05-15 as a separate section so readers
+         can drill from the "X headlines" count above into the actual stories.
+         Block was previously folded into Political Signals (count only) and
+         the full rblock was sitting in the hidden-legacy wrapper. JS that
+         populates #newsList / #newsSubtitle was always running. -->
+    <div class="rblock" id="newsBlock">
+      <div class="rhead">
+        Headline pulse
+        <span class="rhead-src src-blue" style="color:var(--blue)" id="newsSrc">NEWS FEED</span>
+      </div>
+      <div id="newsSubtitle" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px">Loading headlines&hellip;</div>
+      <div id="newsList" style="font-family:var(--mono);font-size:11px;line-height:1.55"></div>
+      <div style="margin-top:8px;font-family:var(--mono);font-size:9px;color:var(--muted)">
+        <a id="newsMore" href="#" style="color:var(--blue);text-decoration:none;display:none">show all 20 &rsaquo;</a>
+      </div>
+    </div>
+
     <!-- ═══════════ SECTION 3: CONTEXT ═══════════ -->
     <div class="rsection">Context</div>
 
@@ -1058,18 +1075,8 @@ header{
       <div id="evSources" style="font-family:var(--mono);font-size:10px;color:var(--text);line-height:1.6">—</div>
     </div>
 
-    <!-- HEADLINE PULSE (Phase 2 — RSS news aggregator) -->
-    <div class="rblock" id="newsBlock">
-      <div class="rhead">
-        Headline pulse
-        <span class="rhead-src src-blue" style="color:var(--blue)" id="newsSrc">NEWS FEED</span>
-      </div>
-      <div id="newsSubtitle" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px">Loading headlines&hellip;</div>
-      <div id="newsList" style="font-family:var(--mono);font-size:11px;line-height:1.55"></div>
-      <div style="margin-top:8px;font-family:var(--mono);font-size:9px;color:var(--muted)">
-        <a id="newsMore" href="#" style="color:var(--blue);text-decoration:none;display:none">show all 20 &rsaquo;</a>
-      </div>
-    </div>
+    <!-- HEADLINE PULSE moved out of the hidden wrapper 2026-05-15 — it is now
+         a visible section right under Political Signals. -->
 
     <!-- SANCTIONS ACTIVITY (now part of Political Signals tile) -->
     <div class="rblock" id="ofacBlock">
