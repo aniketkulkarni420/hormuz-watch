@@ -238,6 +238,32 @@ header{
 .verdict-override{background:rgba(255,140,46,.07);border:1px solid rgba(255,140,46,.25);border-radius:4px;padding:6px 8px;margin-top:6px}
 .verdict-override-title{font-family:var(--mono);font-size:9px;color:var(--orange,#ff8c2e);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:2px}
 .verdict-trigger{font-family:var(--mono);font-size:9px;color:var(--text);line-height:1.5}
+/* Verdict v2 — inverted-pyramid layout (2026-05-15). Replaces the three
+   stacked verdict-cards with band-first + drivers-second + breakdown-
+   collapsed. Designed to defeat anchoring on the decimal and to cap
+   visible items at ~3 (working-memory budget). */
+.v2-band{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px}
+.v2-band-name{font-family:var(--sans);font-size:28px;font-weight:800;letter-spacing:.01em;line-height:1}
+.v2-band-meta{text-align:right;font-family:var(--mono)}
+.v2-score{font-size:11px;color:var(--muted)}
+.v2-trend{font-size:9px;color:var(--muted2);margin-top:2px}
+.v2-summary{font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.55;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.v2-summary b{font-weight:700}
+.v2-section-title{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 6px}
+.v2-section-hint{text-transform:none;letter-spacing:0;color:var(--muted2);font-weight:400}
+.v2-rows{display:flex;flex-direction:column;gap:5px}
+.v2-row{display:grid;grid-template-columns:78px 1fr 44px;align-items:center;gap:10px;font-family:var(--mono);font-size:10px}
+.v2-row-label{color:var(--text);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2-row-bar{height:6px;background:var(--panel2);border:1px solid var(--border2);border-radius:2px;overflow:hidden}
+.v2-row-fill{height:100%;transition:width .6s ease}
+.v2-row-val{color:var(--text);font-weight:700;text-align:right;white-space:nowrap}
+.v2-details{margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
+.v2-details:first-of-type{margin-top:14px}
+.v2-details summary{cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--blue);padding:2px 0;list-style:none}
+.v2-details summary::-webkit-details-marker{display:none}
+.v2-details summary::before{content:"\25B8  ";color:var(--muted2)}
+.v2-details[open] summary::before{content:"\25BE  ";color:var(--muted2)}
+.v2-details[open] summary{color:var(--text)}
 
 /* CONSOLIDATED TILE ROWS */
 .tile-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px}
@@ -745,38 +771,43 @@ header{
     <div class="rsection">Top priority</div>
 
     <!-- TENSION GAUGE / VERDICT (two-stage) -->
+    <!-- HORMUZ RISK VERDICT — Option C (inverted pyramid). Replaced 2026-05-15
+         the three stacked verdict-cards (Stage 1 / Stage 2 / Final + SVG
+         gauge). The "1.73 / 4.0 · weighted avg of 12 components" hero was
+         a working-memory blowout and an anchoring-bias trap; the band and
+         a one-line driver sentence now lead. Full breakdown stays in two
+         <details> elements one click away. -->
     <div class="rblock" id="verdictBlock">
       <div class="rhead">
         Hormuz risk verdict
         <span class="rhead-src" id="verdictMode" style="color:var(--muted)">composite · 2-stage</span>
       </div>
-      <div class="verdict-wrap" id="verdictWrap">
-        <!-- Stage 1 · structural baseline -->
-        <div class="verdict-card" id="verdictStage1">
-          <div class="verdict-title">Stage 1 · Structural baseline</div>
-          <div class="verdict-level" id="verdictStructural" style="color:var(--amber)">—</div>
-          <div class="verdict-meta" id="verdictStructuralMeta">Awaiting first compute&hellip;</div>
+      <!-- Tier 1 · the conclusion -->
+      <div class="v2-band">
+        <div class="v2-band-name" id="v2BandName" style="color:var(--amber)">—</div>
+        <div class="v2-band-meta">
+          <div class="v2-score" id="v2Score">— / 4.0</div>
+          <div class="v2-trend" id="v2Trend"></div>
         </div>
-        <!-- Stage 2 · override triggers -->
-        <div class="verdict-card" id="verdictStage2" style="border-color:rgba(255,140,46,.3)">
-          <div class="verdict-title" style="color:var(--orange)">Stage 2 · Override triggers (last 48h)</div>
-          <div id="verdictTriggers" style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 0">—</div>
-        </div>
-        <!-- Final composite -->
-        <div class="verdict-card" id="verdictFinal" style="background:rgba(255,62,82,.06);border-color:rgba(255,62,82,.3)">
-          <div class="verdict-title" style="color:var(--red)">Final composite verdict</div>
-          <div class="gauge-wrap" style="flex-direction:row;align-items:center;gap:12px">
-            <svg viewBox="0 0 120 72" width="80" height="50" style="flex-shrink:0">
-              <path d="M 10 66 A 50 50 0 0 1 110 66" fill="none" stroke="#222d3f" stroke-width="8" stroke-linecap="round"/>
-              <path id="gaugeArc" d="M 10 66 A 50 50 0 0 1 60 16" fill="none" stroke="#f09014" stroke-width="8" stroke-linecap="round"/>
-              <circle id="gaugeDot" cx="60" cy="16" r="4" fill="#f09014"/>
-            </svg>
-            <div style="flex:1">
-              <div class="gauge-level" id="gaugeLevel" style="color:#f09014;text-align:left">ELEVATED</div>
-              <div class="gauge-desc" id="gaugeDesc" style="text-align:left;margin-top:3px">Computing from live signals&hellip;</div>
-            </div>
-          </div>
-        </div>
+      </div>
+      <div class="v2-summary" id="v2Summary">Computing from live signals&hellip;</div>
+      <!-- Tier 2 · top 3 drivers (always visible) -->
+      <div class="v2-section-title">Top contributors <span class="v2-section-hint">— bar: signal level (0–4) · number: weight × signal</span></div>
+      <div class="v2-rows" id="v2Top"></div>
+      <!-- Tier 3 · click to reveal -->
+      <details class="v2-details">
+        <summary><span id="v2AllSummary">See all contributors</span></summary>
+        <div class="v2-rows" id="v2All" style="margin-top:6px"></div>
+      </details>
+      <details class="v2-details">
+        <summary><span id="v2TriggersSummary">No overrides evaluated yet</span></summary>
+        <div id="v2Triggers" style="margin-top:6px"></div>
+      </details>
+      <!-- Legacy gauge IDs kept (display:none) so existing wiring no-ops cleanly. -->
+      <div style="display:none" aria-hidden="true">
+        <span id="verdictStructural"></span><span id="verdictStructuralMeta"></span>
+        <span id="verdictTriggers"></span><span id="gaugeLevel"></span><span id="gaugeDesc"></span>
+        <svg><path id="gaugeArc"/><circle id="gaugeDot"/></svg>
       </div>
     </div>
 
@@ -4341,60 +4372,74 @@ function _renderTrigger(t){
              '<div class="verdict-trigger">' + (t.reason || "—") + firedTxt + '</div></div>';
   return html;
 }
+// Build one driver-bar row for the verdict v2 layout. Bar width = signal
+// level (0–4 → 0–100%). Right-column value = weight × signal (the actual
+// contribution this component is making to the score right now).
+function _v2Row(c){
+  var pct = Math.max(0, Math.min(100, Math.round((c.input / 4) * 100)));
+  // Colour the bar by the signal LEVEL, not the weight — visually consistent
+  // with the dot-coding used elsewhere.
+  var fillColor = c.input >= 3 ? "#ff6b35" : c.input >= 2 ? "#f09014" : c.input >= 1 ? "#38aaff" : "#627a95";
+  return '<div class="v2-row">'
+    + '<div class="v2-row-label">'+c.name+'</div>'
+    + '<div class="v2-row-bar"><div class="v2-row-fill" style="width:'+pct+'%;background:'+fillColor+'"></div></div>'
+    + '<div class="v2-row-val">'+c.contribution.toFixed(2)+'</div></div>';
+}
+
 function renderVerdictBlock(v){
   if(!v) return;
-  var lvl = v.verdict || "ELEVATED";
+  var lvl    = v.verdict || "ELEVATED";
   var struct = v.structural_verdict || lvl;
-  var fired = v.stage2_fired_count || 0;
+  var score  = v.structural_score != null ? v.structural_score : v.score;
+  var fired  = v.stage2_fired_count || 0;
+  var hex    = VERDICT_HEX[lvl] || "#f09014";
 
-  // Stage 1
-  var sEl = document.getElementById("verdictStructural");
-  if(sEl){
-    sEl.textContent = struct;
-    sEl.style.color = VERDICT_COLORS[struct] || "var(--amber)";
-  }
-  var metaEl = document.getElementById("verdictStructuralMeta");
-  if(metaEl){
-    var w = v.stage1_weights || {};
-    var inputs = v.stage1_inputs || v.inputs || {};
-    var parts = [];
-    var keyOrder = ["transits","oil","stocks","bdti","aircraft","events","seismic","weather","ofac","currency","news","inventory","production"];
-    keyOrder.forEach(function(k){
-      if(w[k] != null && w[k] > 0) parts.push(k + " " + w[k].toFixed(2));
-    });
-    metaEl.innerHTML = "score " + (v.structural_score != null ? v.structural_score : v.score) + " / 4.0 · weighted avg of:<br>" + parts.join(" · ");
+  // ── Band + score (Tier 1: the conclusion) ───────────────────────────
+  var bandEl  = document.getElementById("v2BandName");
+  var scoreEl = document.getElementById("v2Score");
+  var sumEl   = document.getElementById("v2Summary");
+  if(bandEl){ bandEl.textContent = lvl; bandEl.style.color = hex; }
+  if(scoreEl){ scoreEl.textContent = (score != null ? score.toFixed(1) : "—") + " / 4.0"; }
+  if(sumEl){
+    var structColor = VERDICT_HEX[struct] || hex;
+    var line = "Structural <b style=\"color:"+structColor+"\">"+struct+"</b>";
+    if(fired > 0) line += " + <b>"+fired+"</b> override"+(fired>1?"s":"")+" fired → <b style=\"color:"+hex+"\">"+lvl+"</b>.";
+    else line += " · no overrides fired.";
+    sumEl.innerHTML = line;
   }
 
-  // Stage 2 triggers
-  var trigEl = document.getElementById("verdictTriggers");
-  if(trigEl){
-    var triggers = v.stage2_triggers || [];
-    if(!triggers.length){
-      trigEl.innerHTML = '<div style="color:var(--muted);padding:4px 0">No overrides evaluated yet.</div>';
-    } else {
-      trigEl.innerHTML = triggers.map(_renderTrigger).join("");
-    }
+  // ── Contributors (Tier 2: drivers visible; Tier 3: rest collapsed) ──
+  var weights = v.stage1_weights || {};
+  var inputs  = v.stage1_inputs  || v.inputs || {};
+  var contribs = Object.keys(weights)
+    .filter(function(k){ return weights[k] > 0 && inputs[k] != null; })
+    .map(function(k){ return { name:k, weight:weights[k], input:inputs[k], contribution: weights[k] * inputs[k] }; })
+    .sort(function(a,b){ return b.contribution - a.contribution; });
+
+  var topEl = document.getElementById("v2Top");
+  if(topEl){ topEl.innerHTML = contribs.slice(0, 3).map(_v2Row).join(""); }
+
+  var allEl   = document.getElementById("v2All");
+  var allSum  = document.getElementById("v2AllSummary");
+  var rest    = contribs.slice(3);
+  if(allEl){ allEl.innerHTML = rest.map(_v2Row).join(""); }
+  if(allSum){
+    allSum.textContent = rest.length ? "See all " + contribs.length + " contributors" : "All contributors above";
   }
 
-  // Final
-  var levelEl = document.getElementById("gaugeLevel");
-  var descEl  = document.getElementById("gaugeDesc");
-  var arcEl   = document.getElementById("gaugeArc");
-  var dotEl   = document.getElementById("gaugeDot");
+  // ── Override triggers (Tier 3: collapsed) ───────────────────────────
+  var trigEl     = document.getElementById("v2Triggers");
+  var trigSumEl  = document.getElementById("v2TriggersSummary");
+  var triggers   = v.stage2_triggers || [];
+  var firedList  = triggers.filter(function(t){ return t.fires || t.fired; });
+  if(trigSumEl){
+    if(!triggers.length)            trigSumEl.textContent = "No overrides evaluated yet";
+    else if(!firedList.length)      trigSumEl.textContent = "0 of " + triggers.length + " override triggers fired";
+    else                             trigSumEl.textContent = firedList.length + " of " + triggers.length + " override triggers FIRED";
+  }
+  if(trigEl) trigEl.innerHTML = triggers.length ? triggers.map(_renderTrigger).join("") : "";
+
   var modeEl  = document.getElementById("verdictMode");
-  var hex     = VERDICT_HEX[lvl] || "#f09014";
-  if(levelEl){ levelEl.textContent = lvl; levelEl.style.color = hex; }
-  if(arcEl){
-    var g = GAUGE_PATHS[lvl] || GAUGE_PATHS["ELEVATED"];
-    arcEl.setAttribute("d", g.path); arcEl.setAttribute("stroke", hex);
-    if(dotEl){ dotEl.setAttribute("cx", g.dot[0]); dotEl.setAttribute("cy", g.dot[1]); dotEl.setAttribute("fill", hex); }
-  }
-  if(descEl){
-    var explain = "Structural <b>" + struct + "</b>";
-    if(fired > 0) explain += " + " + fired + " override" + (fired > 1 ? "s" : "") + " fired = <b>" + lvl + "</b>.";
-    else explain += " · no overrides fired.";
-    descEl.innerHTML = explain;
-  }
   if(modeEl) modeEl.textContent = (v.mode || "composite") + " · 2-stage";
 }
 function fetchVerdict(){

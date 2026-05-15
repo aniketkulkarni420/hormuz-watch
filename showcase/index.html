@@ -112,6 +112,29 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .tk-upside{font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;white-space:nowrap}
 /* END-MIRRORED */
 
+/* BEGIN-MIRRORED: verdict v2 (inverted pyramid) */
+.v2-band{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px}
+.v2-band-name{font-family:var(--sans);font-size:28px;font-weight:800;letter-spacing:.01em;line-height:1}
+.v2-band-meta{text-align:right;font-family:var(--mono)}
+.v2-score{font-size:11px;color:var(--muted)}
+.v2-trend{font-size:9px;color:var(--muted2);margin-top:2px}
+.v2-summary{font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.55;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.v2-section-title{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 6px}
+.v2-section-hint{text-transform:none;letter-spacing:0;color:var(--muted2);font-weight:400}
+.v2-rows{display:flex;flex-direction:column;gap:5px}
+.v2-row{display:grid;grid-template-columns:78px 1fr 44px;align-items:center;gap:10px;font-family:var(--mono);font-size:10px}
+.v2-row-label{color:var(--text);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2-row-bar{height:6px;background:var(--panel2);border:1px solid var(--border2);border-radius:2px;overflow:hidden}
+.v2-row-fill{height:100%;transition:width .6s ease}
+.v2-row-val{color:var(--text);font-weight:700;text-align:right;white-space:nowrap}
+.v2-details{margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
+.v2-details summary{cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--blue);padding:2px 0;list-style:none}
+.v2-details summary::-webkit-details-marker{display:none}
+.v2-details summary::before{content:"\25B8  ";color:var(--muted2)}
+.v2-details[open] summary::before{content:"\25BE  ";color:var(--muted2)}
+.v2-details[open] summary{color:var(--text)}
+/* END-MIRRORED */
+
 /* SHOWCASE-LOCAL: vessel movement card classes (live uses inline styles —
    we extract to classes here so the assertions can target them). Visual
    match enforced by HARD_RULE #11 (review the live look on change). */
@@ -400,6 +423,56 @@ function renderHeadlinesCard(mount, data){
   mount.innerHTML = html;
 }
 
+// ── Verdict v2 (Option C — inverted pyramid) ───────────────────────────
+// MIRRORED from index.html renderVerdictBlock + _v2Row.
+var VERDICT_HEX = {"NORMAL":"#1dd47e","ELEVATED":"#f09014","HIGH":"#ff6b35","CRITICAL":"#ff3e52"};
+function _v2Row(c){
+  var pct = Math.max(0, Math.min(100, Math.round((c.input / 4) * 100)));
+  var fillColor = c.input >= 3 ? "#ff6b35" : c.input >= 2 ? "#f09014" : c.input >= 1 ? "#38aaff" : "#627a95";
+  return '<div class="v2-row">'
+    + '<div class="v2-row-label">'+c.name+'</div>'
+    + '<div class="v2-row-bar"><div class="v2-row-fill" style="width:'+pct+'%;background:'+fillColor+'"></div></div>'
+    + '<div class="v2-row-val">'+c.contribution.toFixed(2)+'</div></div>';
+}
+function renderVerdictCard(mount, d){
+  var hex = VERDICT_HEX[d.verdict] || "#f09014";
+  var structHex = VERDICT_HEX[d.structural] || hex;
+  var weights = d.weights || {}, inputs = d.inputs || {};
+  var contribs = Object.keys(weights)
+    .filter(function(k){ return weights[k] > 0 && inputs[k] != null; })
+    .map(function(k){ return { name:k, weight:weights[k], input:inputs[k], contribution: weights[k] * inputs[k] }; })
+    .sort(function(a,b){ return b.contribution - a.contribution; });
+  var top = contribs.slice(0,3), rest = contribs.slice(3);
+  var fired = d.fired || 0;
+  var trigCount = (d.triggers||[]).length;
+  var trigSummary;
+  if(!trigCount) trigSummary = "No overrides evaluated yet";
+  else if(!fired) trigSummary = "0 of "+trigCount+" override triggers fired";
+  else trigSummary = fired+" of "+trigCount+" override triggers FIRED";
+
+  var summaryLine = "Structural <b style=\"color:"+structHex+"\">"+d.structural+"</b>";
+  if(fired > 0) summaryLine += " + <b>"+fired+"</b> override"+(fired>1?"s":"")+" fired → <b style=\"color:"+hex+"\">"+d.verdict+"</b>.";
+  else summaryLine += " · no overrides fired.";
+
+  mount.innerHTML = '<div class="rblock"><div class="rhead">Hormuz risk verdict <span class="rhead-src" style="color:var(--muted)">composite · 2-stage</span></div>'
+    + '<div class="v2-band">'
+    +   '<div class="v2-band-name" style="color:'+hex+'">'+d.verdict+'</div>'
+    +   '<div class="v2-band-meta"><div class="v2-score">'+(d.score != null ? d.score.toFixed(1) : "—")+' / 4.0</div></div>'
+    + '</div>'
+    + '<div class="v2-summary">'+summaryLine+'</div>'
+    + '<div class="v2-section-title">Top contributors <span class="v2-section-hint">— bar: signal level (0–4) · number: weight × signal</span></div>'
+    + '<div class="v2-rows">'+ top.map(_v2Row).join("") +'</div>'
+    + '<details class="v2-details"><summary>'+(rest.length ? "See all "+contribs.length+" contributors" : "All contributors above")+'</summary>'
+    +   '<div class="v2-rows" style="margin-top:6px">'+ rest.map(_v2Row).join("") +'</div></details>'
+    + '<details class="v2-details"><summary>'+trigSummary+'</summary><div style="margin-top:6px;font-family:var(--mono);font-size:9px;color:var(--muted)">'
+    +   (d.triggers||[]).map(function(t){
+          var dot = t.fires ? '<span style="color:'+hex+';font-weight:700">●</span>' : '<span style="color:var(--muted2)">○</span>';
+          return '<div style="padding:4px 0">'+dot+' <b>'+t.id+'</b> — '+(t.reason||"—")+(t.fires?' <span style="color:'+hex+'">[FIRED]</span>':'')+'</div>';
+        }).join("")
+    + '</div></details>'
+    + '</div>';
+}
+
 // ── Vessel Movement ─────────────────────────────────────────────────────
 function renderMovementCard(mount, data){
   var totW = data.west + data.east || 1;
@@ -459,6 +532,38 @@ function renderTankerCard(mount, data){
 // ═══════════════════════════════════════════════════════════════════════════
 
 var CARDS = [
+  {
+    name: "Hormuz Risk Verdict",
+    hint: "Option C — inverted pyramid (2026-05-15). Band leads (kills anchoring on the decimal), top 3 drivers visible (working-memory budget), rest collapsed in <details>. Replaces the previous '1.73 / 4.0 · weighted avg of 12 components' wall.",
+    render: renderVerdictCard,
+    perms: [
+      { label: "Typical (current live)", data: { verdict:"ELEVATED", structural:"ELEVATED", score:1.7, fired:0,
+        weights:{oil:0.18,stocks:0.13,bdti:0.07,aircraft:0.13,events:0.10,seismic:0.03,weather:0.03,ofac:0.10,currency:0.06,news:0.05,inventory:0.05,production:0.02},
+        inputs:{oil:3,stocks:3,bdti:2,aircraft:0,events:1,seismic:0,weather:0,ofac:2,currency:0,news:1,inventory:3,production:0},
+        triggers:[{id:"ofac",reason:"OFAC last action: 2026-05-11",fires:false},{id:"currency",reason:"IRR spread 46%",fires:false},{id:"news",reason:"17 headlines in 24h (threshold 40)",fires:false}] } },
+      { label: "NORMAL — quiet basket", data: { verdict:"NORMAL", structural:"NORMAL", score:0.4, fired:0,
+        weights:{oil:0.18,stocks:0.13,bdti:0.07,aircraft:0.13,events:0.10,ofac:0.10,currency:0.06,news:0.05,inventory:0.05},
+        inputs:{oil:1,stocks:0,bdti:0,aircraft:0,events:0,ofac:0,currency:1,news:0,inventory:0},
+        triggers:[{id:"ofac",reason:"No OFAC actions in 48h",fires:false},{id:"currency",reason:"IRR spread 12%",fires:false}] } },
+      { label: "HIGH — 1 override fired", data: { verdict:"HIGH", structural:"ELEVATED", score:2.1, fired:1,
+        weights:{oil:0.18,stocks:0.13,bdti:0.07,aircraft:0.13,events:0.10,ofac:0.10,currency:0.06,news:0.05,inventory:0.05,production:0.02},
+        inputs:{oil:3,stocks:3,bdti:3,aircraft:2,events:2,ofac:3,currency:2,news:3,inventory:2,production:1},
+        triggers:[{id:"news",reason:"57 headlines in 24h (threshold 40)",fires:true},{id:"ofac",reason:"OFAC last action: today",fires:false}] } },
+      { label: "CRITICAL — multiple overrides", data: { verdict:"CRITICAL", structural:"HIGH", score:3.2, fired:3,
+        weights:{oil:0.18,stocks:0.13,bdti:0.07,aircraft:0.13,events:0.10,ofac:0.10,currency:0.06,news:0.05,inventory:0.05,production:0.02},
+        inputs:{oil:4,stocks:4,bdti:4,aircraft:4,events:3,ofac:4,currency:4,news:4,inventory:3,production:2},
+        triggers:[{id:"news",reason:"84 headlines in 24h",fires:true},{id:"ofac",reason:"OFAC action <24h ago",fires:true},{id:"currency",reason:"IRR spread 312%",fires:true},{id:"aircraft",reason:"5 military aircraft",fires:false}] } },
+      { label: "Cold start (no inputs)", data: { verdict:"ELEVATED", structural:"ELEVATED", score:null, fired:0,
+        weights:{oil:0.18,stocks:0.13,bdti:0.07},
+        inputs:{},
+        triggers:[] } },
+      { label: "Only 2 components active", data: { verdict:"ELEVATED", structural:"ELEVATED", score:1.5, fired:0,
+        weights:{oil:0.18,stocks:0.13,bdti:0.07,aircraft:0.13,events:0.10,ofac:0.10,currency:0.06,news:0.05,inventory:0.05,production:0.02},
+        inputs:{oil:3,stocks:3},
+        triggers:[{id:"news",reason:"Awaiting first news scrape",fires:false}] } },
+    ]
+  },
+
   {
     name: "Vessel Type Mix",
     hint: "After 2026-05-15 fix: count + percent always in the right-hand column ('N · P%'). Bar is purely proportional. No in-fill text.",
@@ -828,6 +933,20 @@ function selfTest(){
 // These encode the SPEC, not just "looks OK". When a card changes shape,
 // the assertion is what tells you the spec was actually followed.
 var CARD_ASSERTIONS = {
+  "Hormuz Risk Verdict": function(mount, data){
+    var R = [];
+    var band = mount.querySelector(".v2-band-name");
+    R.push({ok: !!band && band.textContent.trim().length > 0, msg: "Band name is rendered prominently (not empty)"});
+    var visibleContribs = mount.querySelectorAll(".v2-rows")[0]?.children || [];
+    var weightCount = Object.keys(data.weights||{}).filter(function(k){ return (data.weights[k]||0) > 0 && (data.inputs||{})[k] != null; }).length;
+    R.push({ok: visibleContribs.length === Math.min(3, weightCount), msg: "At most 3 contributors visible upfront (working-memory budget)"});
+    var details = mount.querySelectorAll("details");
+    R.push({ok: details.length === 2, msg: "Two collapsible <details> sections (all-contributors + override-triggers)"});
+    var fills = Array.from(mount.querySelectorAll(".v2-row-fill"));
+    var fillOk = fills.every(function(f){ var w = parseFloat(f.style.width); return w >= 0 && w <= 100; });
+    R.push({ok: fillOk, msg: "All driver-bar widths ∈ [0, 100]%"});
+    return R;
+  },
   "Vessel Type Mix": function(mount, data){
     var R = [];
     var rows = mount.querySelectorAll(".tbar-row");
