@@ -1,7 +1,7 @@
-name: bdti-weekly
+name: bdti-daily
 on:
   schedule:
-    - cron: "30 18 * * 5"   # Friday 18:30 UTC — after Baltic Exchange close (16:30 UTC)
+    - cron: "0 14 * * 1-5"   # Mon-Fri 14:00 UTC — Baltic publishes ~13:00 UTC, 1h buffer
   workflow_dispatch:
 
 jobs:

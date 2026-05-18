@@ -46,7 +46,7 @@ STOCKQ_URL = "https://en.stockq.org/index/BDTI.php"
 
 BDTI_MIN = 100
 BDTI_MAX = 5000
-MAX_SOURCE_AGE_DAYS = 12   # BDTI publishes on business days; >12d stale = reject
+MAX_SOURCE_AGE_DAYS = 5    # BDTI publishes business days; >5d stale = reject (daily cron now)
 
 
 def sanity_ok(v):
