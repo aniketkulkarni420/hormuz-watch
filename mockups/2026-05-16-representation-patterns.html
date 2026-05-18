@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hormuz Watch — Representation patterns (before / after)</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0e1320;--border:#18202e;--border2:#222c3d;
+  --amber:#f09014;--blue:#38aaff;--green:#1dd47e;--red:#ff6b35;--red2:#ff3e52;
+  --orange:#ff8c2e;--violet:#b07cf0;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --sans:'Manrope',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;line-height:1.5;padding:32px 28px 80px}
+.page{max-width:1280px;margin:0 auto}
+
+h1{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+.lede{font-family:var(--mono);font-size:12px;color:var(--muted);max-width:920px;line-height:1.7;margin-bottom:14px}
+.lede b{color:var(--amber)}
+.principle{background:rgba(56,170,255,.04);border-left:3px solid var(--blue);padding:10px 14px;
+  font-family:var(--mono);font-size:11px;color:var(--text);margin:14px 0 24px;line-height:1.65;border-radius:0 4px 4px 0}
+.principle b{color:var(--blue)}
+h2{font-size:14px;font-weight:700;margin:32px 0 4px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.h2-meta{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:12px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.before, .after{padding:14px;border-radius:6px;min-height:140px}
+.before{background:rgba(255,62,82,.04);border:1px dashed rgba(255,62,82,.35)}
+.after{background:rgba(29,212,126,.04);border:1px dashed rgba(29,212,126,.35)}
+.tag{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;padding:1px 7px;border-radius:2px;margin-bottom:10px}
+.tag-before{color:var(--red2);background:rgba(255,62,82,.12);border:1px solid rgba(255,62,82,.3)}
+.tag-after{color:var(--green);background:rgba(29,212,126,.12);border:1px solid rgba(29,212,126,.3)}
+.note{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-top:10px;line-height:1.6}
+.note b{color:var(--text)}
+
+/* ── Card chrome (matches live) ─────────────────────────────── */
+.rhead-mini{font-family:var(--mono);font-size:9px;color:var(--amber);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:8px}
+
+/* ── Pattern 1: Number + sparkline ──────────────────────────── */
+.big-num{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--text);line-height:1}
+.big-num-row{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.spark-row{display:flex;align-items:center;gap:10px;margin:6px 0}
+.spark-row .sl-name{font-family:var(--mono);font-size:10px;color:var(--muted);min-width:74px}
+.spark-row .sl-val{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);min-width:54px;text-align:right}
+.spark-row .sl-delta{font-family:var(--mono);font-size:10px;min-width:50px;text-align:right}
+.spark-row .sl-delta.up{color:var(--red)} .spark-row .sl-delta.down{color:var(--green)}
+.spark{flex:1;height:24px}
+
+/* ── Pattern 2: Range bar / position-on-scale ───────────────── */
+.range-bar{position:relative;height:18px;background:var(--panel2);border:1px solid var(--border2);
+  border-radius:9px;margin:8px 0}
+.range-fill{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,
+  rgba(56,170,255,.2) 0%, rgba(240,144,20,.2) 60%, rgba(255,62,82,.2) 100%);
+  border-radius:9px;left:0;right:0}
+.range-tick{position:absolute;top:-2px;bottom:-2px;width:1.5px;background:var(--muted)}
+.range-tick.baseline{background:var(--muted)}
+.range-tick.current{background:var(--text);width:3px;border-radius:1.5px;box-shadow:0 0 6px rgba(205,216,232,.5)}
+.range-tick-label{position:absolute;top:-14px;font-family:var(--mono);font-size:8px;color:var(--muted2);
+  transform:translateX(-50%);white-space:nowrap}
+.range-tick-label.current{color:var(--text);font-weight:700}
+.range-axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;
+  color:var(--muted2);margin-top:6px}
+
+/* ── Pattern 3: Zone-banded gauge (linear) ──────────────────── */
+.zone-bar{display:flex;height:14px;border-radius:3px;overflow:hidden;border:1px solid var(--border2);
+  position:relative;margin:14px 0 4px}
+.zone-seg{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;
+  font-weight:700;color:rgba(7,9,14,.7);letter-spacing:.04em;text-transform:uppercase}
+.zone-seg.aligned{background:var(--green)}
+.zone-seg.stressed{background:var(--amber)}
+.zone-seg.dislocated{background:var(--red)}
+.zone-seg.extreme{background:var(--red2)}
+.zone-marker{position:absolute;top:-6px;bottom:-6px;width:3px;background:var(--text);border-radius:2px;
+  box-shadow:0 0 8px rgba(205,216,232,.6)}
+.zone-marker::before{content:"";position:absolute;left:50%;top:-7px;transform:translateX(-50%);
+  width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;
+  border-top:7px solid var(--text)}
+.zone-labels{display:flex;font-family:var(--mono);font-size:9px;color:var(--muted2)}
+.zone-axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;
+  color:var(--muted2);margin-top:6px}
+
+/* ── Pattern 4: Arc gauge for verdict ───────────────────────── */
+.arc-wrap{display:flex;align-items:center;gap:14px}
+.arc-svg{width:140px;height:90px;flex-shrink:0}
+.arc-text{flex:1}
+.arc-band-name{font-family:var(--sans);font-size:24px;font-weight:800;color:var(--amber);line-height:1.1}
+.arc-score{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px}
+.arc-summary{font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.5;margin-top:8px}
+
+/* ── Pattern 5: Small-multiples (chokepoints) ───────────────── */
+.sm-row{display:grid;grid-template-columns:90px 1fr 60px 40px;align-items:center;gap:10px;
+  padding:7px 0;border-bottom:1px solid var(--border)}
+.sm-row:last-child{border-bottom:0}
+.sm-name{font-family:var(--mono);font-size:11px;color:var(--text)}
+.sm-spark{height:30px}
+.sm-val{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text);text-align:right}
+.sm-delta{font-family:var(--mono);font-size:9px;text-align:right}
+.sm-delta.up{color:var(--green)} .sm-delta.down{color:var(--red)} .sm-delta.flat{color:var(--muted)}
+
+/* ── Pattern 6: Duration / progress strip ──────────────────── */
+.dur-strip{display:flex;align-items:center;gap:10px;margin-top:6px}
+.dur-bar{position:relative;flex:1;height:18px;background:var(--panel2);border:1px solid var(--border2);
+  border-radius:3px;overflow:hidden}
+.dur-fill{height:100%;background:linear-gradient(90deg,var(--amber) 0%,var(--red) 100%);width:76%}
+.dur-mark{position:absolute;top:0;bottom:0;width:2px;background:var(--muted)}
+.dur-mark-label{position:absolute;top:-14px;font-family:var(--mono);font-size:8px;color:var(--muted2);transform:translateX(-50%)}
+.dur-label{font-family:var(--mono);font-size:11px;color:var(--text);font-weight:700;min-width:60px}
+
+/* ── Thermometer (war-risk) ─────────────────────────────────── */
+.therm-wrap{display:flex;align-items:center;gap:14px}
+.therm-svg{flex-shrink:0;width:60px;height:160px}
+.therm-text{flex:1}
+.therm-val{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--red);line-height:1}
+.therm-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px;line-height:1.55}
+
+/* ── Plain mock card (existing style) for "before" examples ─ */
+.plain-num{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--text);line-height:1}
+.plain-sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px}
+.plain-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;padding:3px 0;color:var(--muted)}
+.plain-row b{color:var(--text);font-weight:700}
+.plain-row .red{color:var(--red);font-weight:700}
+.plain-row .amber{color:var(--amber);font-weight:700}
+
+/* ── Vessel-dot legend with shape semantics ─────────────────── */
+.dot-legend{display:flex;gap:14px;font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:14px;flex-wrap:wrap}
+.dot-leg{display:flex;align-items:center;gap:6px}
+.dot-leg svg{flex-shrink:0}
+
+/* ── News-density strip ─────────────────────────────────────── */
+.news-strip{display:flex;height:36px;gap:1px;margin-bottom:10px}
+.news-bar{flex:1;background:var(--panel2);border-radius:1px;position:relative}
+.news-bar .fill{position:absolute;bottom:0;left:0;right:0;background:var(--amber);border-radius:1px}
+.news-bar.neg .fill{background:var(--red)}
+.news-axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--muted2)}
+.news-item{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-family:var(--mono);font-size:10px;border-bottom:1px solid var(--border)}
+.news-item:last-child{border-bottom:0}
+.news-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.news-dot.urgent{background:var(--red);box-shadow:0 0 6px rgba(255,62,82,.5)}
+.news-dot.warn{background:var(--amber)}
+.news-dot.info{background:var(--blue)}
+.news-time{color:var(--muted2);min-width:30px}
+.news-title{color:var(--text);line-height:1.4;flex:1}
+.news-title.stale{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Representation patterns — before / after</h1>
+<p class="lede">
+  Same data we already collect. Same metrics that work. <b>Different presentation.</b>
+  Each pair below shows a current "just-a-number-or-word" card on the left, and the
+  proposed visual representation on the right. Open each pair, ask which one tells you
+  the situation faster.
+</p>
+
+<div class="principle">
+  <b>Principle:</b> The human visual system parses position, size, length, hue, and slope
+  in &lt;200ms (pre-attentive). Reading a number with context — "Brent $107 is 49% above
+  baseline" — requires 4 cognitive operations and 1.5+ seconds. Numbers and words alone
+  are post-attentive. A dashboard of 30 metrics presented as text is asking the user to
+  do 45 seconds of cognitive work before forming a judgement. Visual representation cuts
+  that to under 5 seconds.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     1. MARKET PULSE — Brent
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>1. Market pulse — Brent price</h2>
+<div class="h2-meta">Same data, three additions: sparkline (trend), range bar (position-on-scale), pre-crisis tick (anchor).</div>
+
+<div class="pair">
+  <div class="before">
+    <div class="tag tag-before">Before · text</div>
+    <div class="plain-num">$107.0</div>
+    <div class="plain-sub">▲ +0.5% · vs $72 pre-Feb-26 · +49%</div>
+    <div class="note"><b>What the brain has to do:</b> read $107, recall pre-crisis $72, divide, decide if 49% is "a lot" — four operations, ~2 seconds, prone to mis-anchoring on the headline number.</div>
+  </div>
+  <div class="after">
+    <div class="tag tag-after">After · visual</div>
+    <div class="big-num-row"><div class="big-num">$107</div>
+      <svg class="spark" viewBox="0 0 200 24" preserveAspectRatio="none" style="flex:1">
+        <polyline points="0,18 12,17 24,14 36,16 48,12 60,11 72,13 84,10 96,8 108,9 120,7 132,5 144,6 156,4 168,5 180,3 200,2"
+          stroke="#f09014" stroke-width="1.6" fill="none"/>
+      </svg>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--red)">▲ +49% YTD</span>
+    </div>
+    <div style="position:relative;margin-top:30px">
+      <div class="range-tick-label" style="left:35%">$72 pre-crisis</div>
+      <div class="range-tick-label current" style="left:65%">$107 now</div>
+      <div class="range-bar">
+        <div class="range-fill"></div>
+        <div class="range-tick" style="left:0%"></div>
+        <div class="range-tick baseline" style="left:35%"></div>
+        <div class="range-tick current" style="left:65%"></div>
+        <div class="range-tick" style="left:100%"></div>
+      </div>
+      <div class="range-axis"><span>$60 1Y low</span><span>$130 1Y high</span></div>
+    </div>
+    <div class="note"><b>What the eye does:</b> sees rising sparkline (trend) + position of marker past the baseline tick (anchor) + 65% along the 1Y range (relative magnitude). One glance, ~250ms, three insights.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     2. VERDICT — band + score → arc gauge
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>2. Verdict — band + score → arc gauge</h2>
+<div class="h2-meta">The 4-band scale (NORMAL/ELEVATED/HIGH/CRITICAL) IS a gauge. Treat it like one.</div>
+
+<div class="pair">
+  <div class="before">
+    <div class="tag tag-before">Before · banded text + decimal</div>
+    <div style="font-family:var(--sans);font-size:28px;font-weight:800;color:var(--amber);margin-bottom:4px">ELEVATED</div>
+    <div class="plain-sub">1.7 / 4.0</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--text);margin-top:10px;line-height:1.5">Structural ELEVATED · no overrides fired.</div>
+    <div class="note"><b>The decimal is anchoring noise.</b> "1.7" doesn't map to a felt sense. The word "ELEVATED" requires recalling the 4-band ladder.</div>
+  </div>
+  <div class="after">
+    <div class="tag tag-after">After · arc gauge with zones</div>
+    <div class="arc-wrap">
+      <svg class="arc-svg" viewBox="0 0 140 90">
+        <!-- Background arc segments -->
+        <path d="M 14 78 A 56 56 0 0 1 35 32" stroke="#1dd47e" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <path d="M 38 30 A 56 56 0 0 1 67 14" stroke="#f09014" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <path d="M 70 14 A 56 56 0 0 1 103 30" stroke="#ff6b35" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <path d="M 106 32 A 56 56 0 0 1 126 78" stroke="#ff3e52" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <!-- Zone labels -->
+        <text x="14" y="88" fill="#1dd47e" font-family="JetBrains Mono" font-size="8" font-weight="700">NORM</text>
+        <text x="40" y="22" fill="#f09014" font-family="JetBrains Mono" font-size="8" font-weight="700">ELEV</text>
+        <text x="83" y="22" fill="#ff6b35" font-family="JetBrains Mono" font-size="8" font-weight="700">HIGH</text>
+        <text x="106" y="88" fill="#ff3e52" font-family="JetBrains Mono" font-size="8" font-weight="700">CRIT</text>
+        <!-- Needle at 1.7 / 4.0 = 42.5% of half-arc = pointing into ELEVATED -->
+        <line x1="70" y1="78" x2="56" y2="32" stroke="#cdd8e8" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="70" cy="78" r="4" fill="#cdd8e8"/>
+        <circle cx="56" cy="32" r="3.5" fill="#f09014" stroke="#cdd8e8" stroke-width="1"/>
+      </svg>
+      <div class="arc-text">
+        <div class="arc-band-name">ELEVATED</div>
+        <div class="arc-score">1.7 / 4.0 · needle past mid-elevated</div>
+        <div class="arc-summary">Structural ELEVATED · no overrides fired. Two notches from CRITICAL.</div>
+      </div>
+    </div>
+    <div class="note"><b>What the eye does:</b> sees needle at second of four zones, immediately knows "in the second band, closer to HIGH than to NORMAL." No decimal-decoding, no band-name memorisation.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     3. IRR SPREAD — zone-banded scale
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>3. IRR spread — zone-banded scale</h2>
+<div class="h2-meta">Bands (&lt;15 aligned / 15–40 stressed / 40–80 dislocated / 80+ extreme) ARE the meaning. Show position in band, not just the label.</div>
+
+<div class="pair">
+  <div class="before">
+    <div class="tag tag-before">Before · number + label</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:6px">
+      <span>Currency IRR spread</span>
+      <span style="color:var(--red);font-weight:700">47% (dislocated)</span>
+    </div>
+    <div class="note">User reads "47%" then "(dislocated)" — two values to integrate. <b>Where in dislocated?</b> Just above the threshold (40) or near extreme (80)? Word doesn't tell you.</div>
+  </div>
+  <div class="after">
+    <div class="tag tag-after">After · zone-banded scale</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:6px">Currency IRR spread <span style="color:var(--text);font-weight:700;float:right">47%</span></div>
+    <div style="position:relative">
+      <div class="zone-bar">
+        <div class="zone-seg aligned" style="width:15%">ALIGNED</div>
+        <div class="zone-seg stressed" style="width:25%">STRESSED</div>
+        <div class="zone-seg dislocated" style="width:40%">DISLOCATED</div>
+        <div class="zone-seg extreme" style="width:20%">EXTREME</div>
+        <div class="zone-marker" style="left:47%"></div>
+      </div>
+      <div class="zone-axis"><span>0%</span><span>15</span><span>40</span><span>80</span><span>100+</span></div>
+    </div>
+    <div class="note"><b>What the eye does:</b> sees marker in third zone (red), about a quarter of the way in — knows "dislocated, recent entry, not yet extreme." Eye + position + colour all simultaneously.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     4. WAR-RISK PREMIUM — thermometer
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>4. War-risk premium — thermometer with zones</h2>
+<div class="h2-meta">Premium % of hull value · zone-banded vertical scale with pre-crisis tick.</div>
+
+<div class="pair">
+  <div class="before">
+    <div class="tag tag-before">Before · numbers + multipliers</div>
+    <div class="plain-num" style="color:var(--red)">1.0%</div>
+    <div class="plain-sub">of hull · per 7 days</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px">vs pre-crisis <b style="color:var(--amber)">0.125%</b> — <b style="color:var(--red)">8.0×</b> higher</div>
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:7px 9px;font-family:var(--mono);font-size:10px;color:var(--muted);margin:8px 0">
+      <b style="font-size:14px;color:var(--text);display:block">$2.5M</b>per-VLCC transit (was $125k)</div>
+    <div class="note">"8.0×" is a number. The brain still has to decide whether 8× is normal-bad or crisis-bad.</div>
+  </div>
+  <div class="after">
+    <div class="tag tag-after">After · banded thermometer</div>
+    <div class="therm-wrap">
+      <svg class="therm-svg" viewBox="0 0 60 160">
+        <!-- Thermometer body -->
+        <rect x="22" y="6" width="16" height="120" rx="8" fill="#0e1320" stroke="#222c3d" stroke-width="1.5"/>
+        <!-- Zone fills inside the thermometer (top to bottom: extreme → normal) -->
+        <rect x="22" y="6" width="16" height="30" fill="#ff3e52" opacity="0.5"/>
+        <rect x="22" y="36" width="16" height="35" fill="#ff6b35" opacity="0.5"/>
+        <rect x="22" y="71" width="16" height="35" fill="#f09014" opacity="0.5"/>
+        <rect x="22" y="106" width="16" height="20" fill="#1dd47e" opacity="0.5"/>
+        <!-- Bulb -->
+        <circle cx="30" cy="136" r="14" fill="#ff6b35"/>
+        <circle cx="30" cy="136" r="10" fill="#ff3e52"/>
+        <!-- Mercury level at 1.0% (between 0.5 and 2.0%, in red zone) -->
+        <line x1="30" y1="55" x2="30" y2="136" stroke="#ff3e52" stroke-width="7" stroke-linecap="round"/>
+        <!-- Pre-crisis tick at 0.125% (in green zone) -->
+        <line x1="20" y1="118" x2="40" y2="118" stroke="#1dd47e" stroke-width="1.5"/>
+        <text x="42" y="121" fill="#1dd47e" font-family="JetBrains Mono" font-size="7">0.125%</text>
+        <!-- Scale labels -->
+        <text x="2" y="14" fill="#ff3e52" font-family="JetBrains Mono" font-size="7">5%</text>
+        <text x="2" y="44" fill="#ff6b35" font-family="JetBrains Mono" font-size="7">2%</text>
+        <text x="2" y="79" fill="#f09014" font-family="JetBrains Mono" font-size="7">0.5%</text>
+        <text x="2" y="114" fill="#1dd47e" font-family="JetBrains Mono" font-size="7">0.1%</text>
+        <!-- Current marker -->
+        <line x1="20" y1="55" x2="40" y2="55" stroke="#cdd8e8" stroke-width="2"/>
+        <text x="42" y="58" fill="#cdd8e8" font-family="JetBrains Mono" font-size="9" font-weight="700">1.0%</text>
+      </svg>
+      <div class="therm-text">
+        <div class="therm-val">1.0%</div>
+        <div class="therm-sub">of hull · per 7 days<br>VLCC transit: <b style="color:var(--text)">$2.5M</b> (was $125k)<br>Mercury sits in <b style="color:var(--red)">crisis-band</b>; pre-crisis tick visible at base.</div>
+      </div>
+    </div>
+    <div class="note"><b>What the eye does:</b> sees mercury filling 3/4 of the tube, sitting in the red band, with the green pre-crisis tick way below. Multiplier 8× is implicit in the visual.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     5. CROSS-CHOKEPOINT — small multiples
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>5. Cross-chokepoint — small-multiples (the divergence story)</h2>
+<div class="h2-meta">5 numbers side-by-side don't show what's actually happening. 5 sparklines do.</div>
+
+<div class="pair">
+  <div class="before">
+    <div class="tag tag-before">Before · 5 tiles of numbers</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:7px 5px;text-align:center">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase">Hormuz</div>
+        <div style="font-family:var(--mono);font-size:14px;color:var(--text);font-weight:700">4</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--green);margin-top:2px">▲ +3</div>
+      </div>
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:7px 5px;text-align:center">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase">Suez</div>
+        <div style="font-family:var(--mono);font-size:14px;color:var(--text);font-weight:700">26</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--red);margin-top:2px">▼ -16</div>
+      </div>
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:7px 5px;text-align:center">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase">Cape</div>
+        <div style="font-family:var(--mono);font-size:14px;color:var(--text);font-weight:700">60</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--green);margin-top:2px">▲ +63</div>
+      </div>
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:7px 5px;text-align:center">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase">Bab</div>
+        <div style="font-family:var(--mono);font-size:14px;color:var(--text);font-weight:700">31</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--green);margin-top:2px">▲ +4</div>
+      </div>
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:7px 5px;text-align:center">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase">Malacca</div>
+        <div style="font-family:var(--mono);font-size:14px;color:var(--text);font-weight:700">226</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px">+7</div>
+      </div>
+    </div>
+    <div class="note">5 numbers, 5 deltas. User has to <i>read</i> all ten + remember pre-crisis levels to construct the story.</div>
+  </div>
+  <div class="after">
+    <div class="tag tag-after">After · stacked sparklines (small multiples)</div>
+    <div class="sm-row">
+      <div class="sm-name">Hormuz</div>
+      <svg class="sm-spark" viewBox="0 0 200 30" preserveAspectRatio="none">
+        <polyline points="0,4 14,4 28,5 42,8 56,16 70,20 84,24 98,25 112,26 126,26 140,27 154,27 168,26 182,27 200,26" stroke="#ff3e52" stroke-width="1.6" fill="none"/>
+        <line x1="0" y1="4" x2="200" y2="4" stroke="#627a95" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.4"/>
+      </svg>
+      <div class="sm-val" style="color:var(--red)">4</div>
+      <div class="sm-delta up">+3</div>
+    </div>
+    <div class="sm-row">
+      <div class="sm-name">Suez</div>
+      <svg class="sm-spark" viewBox="0 0 200 30" preserveAspectRatio="none">
+        <polyline points="0,5 14,6 28,6 42,7 56,10 70,11 84,13 98,14 112,15 126,16 140,17 154,17 168,17 182,16 200,17" stroke="#f09014" stroke-width="1.6" fill="none"/>
+        <line x1="0" y1="5" x2="200" y2="5" stroke="#627a95" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.4"/>
+      </svg>
+      <div class="sm-val">26</div>
+      <div class="sm-delta down">-16</div>
+    </div>
+    <div class="sm-row">
+      <div class="sm-name">Cape</div>
+      <svg class="sm-spark" viewBox="0 0 200 30" preserveAspectRatio="none">
+        <polyline points="0,22 14,22 28,21 42,18 56,14 70,11 84,9 98,7 112,6 126,4 140,3 154,3 168,3 182,2 200,2" stroke="#1dd47e" stroke-width="1.6" fill="none"/>
+        <line x1="0" y1="22" x2="200" y2="22" stroke="#627a95" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.4"/>
+      </svg>
+      <div class="sm-val" style="color:var(--green)">60</div>
+      <div class="sm-delta up">+63</div>
+    </div>
+    <div class="sm-row">
+      <div class="sm-name">Bab el-Mandeb</div>
+      <svg class="sm-spark" viewBox="0 0 200 30" preserveAspectRatio="none">
+        <polyline points="0,8 14,8 28,9 42,8 56,9 70,8 84,9 98,9 112,8 126,9 140,8 154,9 168,8 182,8 200,7" stroke="#38aaff" stroke-width="1.6" fill="none"/>
+        <line x1="0" y1="8" x2="200" y2="8" stroke="#627a95" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.4"/>
+      </svg>
+      <div class="sm-val">31</div>
+      <div class="sm-delta up">+4</div>
+    </div>
+    <div class="sm-row">
+      <div class="sm-name">Malacca</div>
+      <svg class="sm-spark" viewBox="0 0 200 30" preserveAspectRatio="none">
+        <polyline points="0,4 14,5 28,4 42,5 56,4 70,5 84,4 98,4 112,5 126,4 140,5 154,4 168,4 182,5 200,4" stroke="#38aaff" stroke-width="1.6" fill="none"/>
+      </svg>
+      <div class="sm-val">226</div>
+      <div class="sm-delta flat">+7</div>
+    </div>
+    <div class="note"><b>What the eye does:</b> sees Hormuz line crashing, Cape line surging, others flat. The DIVERGENCE STORY is told by the shape of two lines in opposite directions. The numbers confirm; they don't lead.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     6. DURATION — Day counter
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>6. Days since closure — duration as shape</h2>
+<div class="h2-meta">"Day 76" is one number with no felt sense. Show it against the longest comparable closure.</div>
+
+<div class="pair">
+  <div class="before">
+    <div class="tag tag-before">Before · just a number</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em">
+      <b style="color:var(--text);font-size:14px">Day 76</b> since closure · 2026-02-28</div>
+    <div class="note">76 days. Is that a long time? Compared to what? User has to recall the Tanker War lasted 4 years and Suez was 6 days to triangulate.</div>
+  </div>
+  <div class="after">
+    <div class="tag tag-after">After · progress bar vs peer events</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted)">Days since closure</div>
+    <div class="dur-strip">
+      <span class="dur-label">Day 76</span>
+      <div class="dur-bar">
+        <div class="dur-fill" style="width:36%"></div>
+        <div class="dur-mark" style="left:3%"><span class="dur-mark-label">Suez '21<br>6d</span></div>
+        <div class="dur-mark" style="left:36%"><span class="dur-mark-label">today</span></div>
+        <div class="dur-mark" style="left:99%"><span class="dur-mark-label">Tanker War<br>4 yr</span></div>
+      </div>
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:18px">
+      Already longer than Suez '21 (6d). 5% into Tanker War territory (4y). Kuwait/Gulf War (210d) ahead at 80% mark.
+    </div>
+    <div class="note"><b>What the eye does:</b> position on a duration scale with peer markers means "76 days" has felt magnitude. No memory recall needed.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     7. NEWS HEADLINES — density + urgency
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>7. Headlines pulse — density strip + urgency dots</h2>
+<div class="h2-meta">Flat text list gives no temporal context, no urgency hierarchy. A 24h density strip + sentiment dots adds both.</div>
+
+<div class="pair">
+  <div class="before">
+    <div class="tag tag-before">Before · flat list</div>
+    <div style="font-family:var(--mono);font-size:10px;line-height:1.6">
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)">Shipping industry fears fuel shortages as Iran war squeezes bunker fuel supply</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)">Strait of Hormuz reopening won't mean cheaper shipping</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)">War-risk insurance premiums for Gulf tankers reach 1% of hull</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)">VLCC rates jump on MEG-China route</div>
+      <div style="padding:4px 0">OFAC designates three vessels in Iran shadow-fleet</div>
+    </div>
+    <div class="note">All headlines look equal. No sense of "when did it happen" or "how serious." 17 in 24h is the only signal.</div>
+  </div>
+  <div class="after">
+    <div class="tag tag-after">After · density + urgency</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">News density · last 24h · 19 headlines</div>
+    <div class="news-strip">
+      <div class="news-bar"><div class="fill" style="height:30%"></div></div>
+      <div class="news-bar"><div class="fill" style="height:15%"></div></div>
+      <div class="news-bar"><div class="fill" style="height:20%"></div></div>
+      <div class="news-bar"><div class="fill" style="height:40%"></div></div>
+      <div class="news-bar neg"><div class="fill" style="height:75%"></div></div>
+      <div class="news-bar neg"><div class="fill" style="height:90%"></div></div>
+      <div class="news-bar"><div class="fill" style="height:35%"></div></div>
+      <div class="news-bar"><div class="fill" style="height:50%"></div></div>
+      <div class="news-bar"><div class="fill" style="height:55%"></div></div>
+      <div class="news-bar neg"><div class="fill" style="height:80%"></div></div>
+      <div class="news-bar"><div class="fill" style="height:25%"></div></div>
+      <div class="news-bar"><div class="fill" style="height:30%"></div></div>
+    </div>
+    <div class="news-axis"><span>24h ago</span><span>now</span></div>
+    <div style="margin-top:10px">
+      <div class="news-item">
+        <div class="news-dot urgent"></div>
+        <div class="news-time">35m</div>
+        <div class="news-title"><b>OFAC designates three vessels in Iran shadow-fleet</b></div>
+      </div>
+      <div class="news-item">
+        <div class="news-dot warn"></div>
+        <div class="news-time">3h</div>
+        <div class="news-title">VLCC rates jump on MEG–China route</div>
+      </div>
+      <div class="news-item">
+        <div class="news-dot info"></div>
+        <div class="news-time">9h</div>
+        <div class="news-title">War-risk insurance premiums for Gulf tankers reach 1% of hull</div>
+      </div>
+      <div class="news-item">
+        <div class="news-dot info"></div>
+        <div class="news-time">14h</div>
+        <div class="news-title stale">Strait of Hormuz reopening won't mean cheaper shipping</div>
+      </div>
+      <div class="news-item">
+        <div class="news-dot info"></div>
+        <div class="news-time">21h</div>
+        <div class="news-title stale">Shipping industry fears fuel shortages as Iran war squeezes bunker</div>
+      </div>
+    </div>
+    <div class="note"><b>What the eye does:</b> density spike around hours 5–10 (red bars = negative tone). Latest item is urgent (red dot). Older items fade. Time + urgency + tone, all visible at once.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     8. MAP — vessel dots → typed/sized/directional glyphs
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>8. Map — vessel glyphs (size = tonnage · shape = direction · colour = type)</h2>
+<div class="h2-meta">Real implementation: Leaflet/Mapbox with proper coastline projection. Visual variable encoding shown here as a legend pattern.</div>
+
+<div class="pair">
+  <div class="before">
+    <div class="tag tag-before">Before · uniform circle dots</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+      <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="4" fill="#f09014"/></svg>
+      <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="4" fill="#1dd47e"/></svg>
+      <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="4" fill="#f09014"/></svg>
+      <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="4" fill="#b07cf0"/></svg>
+    </div>
+    <div class="note">A VLCC and a fishing boat look the same. Westbound and eastbound look the same. Vessel type encoded only in colour (4 categories, hard to differentiate).</div>
+  </div>
+  <div class="after">
+    <div class="tag tag-after">After · typed/sized/oriented glyphs</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin:10px 0">
+      <!-- VLCC westbound -->
+      <svg width="50" height="40" viewBox="0 0 50 40">
+        <polygon points="5,20 22,12 22,28" fill="#f09014" stroke="#cdd8e8" stroke-width="0.6"/>
+        <rect x="22" y="14" width="20" height="12" rx="2" fill="#f09014" stroke="#cdd8e8" stroke-width="0.6"/>
+      </svg>
+      <!-- Aframax eastbound -->
+      <svg width="40" height="40" viewBox="0 0 40 40">
+        <polygon points="32,20 18,13 18,27" fill="#f09014" stroke="#cdd8e8" stroke-width="0.6" transform="rotate(180,25,20)"/>
+        <rect x="13" y="15" width="13" height="10" rx="2" fill="#f09014" stroke="#cdd8e8" stroke-width="0.6"/>
+      </svg>
+      <!-- Cargo container, anchored -->
+      <svg width="30" height="40" viewBox="0 0 30 40">
+        <rect x="6" y="12" width="18" height="16" rx="2" fill="#1dd47e" stroke="#cdd8e8" stroke-width="0.6"/>
+        <line x1="15" y1="28" x2="15" y2="36" stroke="#1dd47e" stroke-width="1.5"/>
+        <path d="M 10 36 Q 15 32 20 36" stroke="#1dd47e" stroke-width="1" fill="none"/>
+      </svg>
+      <!-- SDN match -->
+      <svg width="34" height="40" viewBox="0 0 34 40">
+        <rect x="6" y="12" width="22" height="16" rx="2" fill="#ff3e52" stroke="#cdd8e8" stroke-width="1"/>
+        <text x="17" y="24" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fff" font-weight="700">SDN</text>
+      </svg>
+      <!-- Military -->
+      <svg width="34" height="40" viewBox="0 0 34 40">
+        <polygon points="17,8 26,28 8,28" fill="#ef4444" stroke="#cdd8e8" stroke-width="0.6"/>
+        <line x1="17" y1="14" x2="17" y2="22" stroke="#fff" stroke-width="1.2"/>
+        <line x1="13" y1="18" x2="21" y2="18" stroke="#fff" stroke-width="1.2"/>
+      </svg>
+    </div>
+    <div class="dot-legend">
+      <div class="dot-leg"><svg width="22" height="14"><polygon points="2,7 9,3 9,11" fill="#f09014"/><rect x="9" y="4" width="11" height="7" rx="1" fill="#f09014"/></svg>Tanker (size = tonnage, point = direction)</div>
+      <div class="dot-leg"><svg width="14" height="14"><rect x="2" y="3" width="10" height="8" rx="1" fill="#1dd47e"/></svg>Cargo container</div>
+      <div class="dot-leg"><svg width="14" height="14"><rect x="2" y="3" width="10" height="8" rx="1" fill="#ff3e52"/><text x="7" y="10" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#fff" font-weight="700">SDN</text></svg>Sanctioned (SDN match)</div>
+      <div class="dot-leg"><svg width="14" height="14"><polygon points="7,2 11,11 3,11" fill="#ef4444"/></svg>Military</div>
+      <div class="dot-leg"><svg width="14" height="14"><circle cx="7" cy="7" r="3" fill="#b07cf0"/></svg>Passenger</div>
+      <div class="dot-leg"><svg width="20" height="14"><rect x="2" y="3" width="10" height="8" rx="1" fill="#1dd47e"/><path d="M 4 11 Q 7 8 10 11" stroke="#1dd47e" fill="none"/></svg>Anchored (sub-glyph)</div>
+    </div>
+    <div class="note"><b>What the eye does:</b> sees a big arrow → tanker westbound, big. Small box with anchor-sub-glyph → small cargo, anchored. Red SDN box → enforcement target. Visual variables (size · orientation · colour · sub-glyph) carry 4 dimensions of meaning in one icon.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     9. SUMMARY — what changes across the page
+     ═══════════════════════════════════════════════════════════════════ -->
+<h2>9. The pattern catalogue — where each pattern applies</h2>
+<div class="h2-meta">Six patterns, applied consistently across every card. Same data, faster comprehension.</div>
+
+<div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px;margin-top:14px">
+  <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border)">
+        <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:9px">Pattern</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:9px">Applies to</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:9px">Encodes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 10px;color:var(--text)">1 · Sparkline</td><td style="padding:7px 10px;color:var(--muted)">Brent · WTI · BDTI · vessel transits · IRR · OPEC prod · SPR · prediction-market odds</td><td style="padding:7px 10px;color:var(--muted)">Slope (trend)</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 10px;color:var(--text)">2 · Range bar</td><td style="padding:7px 10px;color:var(--muted)">Brent · WTI · BDTI · vessel transits · TD3C · pipeline utilization</td><td style="padding:7px 10px;color:var(--muted)">Position (anchor vs current)</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 10px;color:var(--text)">3 · Zone-banded scale</td><td style="padding:7px 10px;color:var(--muted)">IRR spread · verdict · GDELT tone · news count buckets</td><td style="padding:7px 10px;color:var(--muted)">Threshold (band membership)</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 10px;color:var(--text)">4 · Arc gauge</td><td style="padding:7px 10px;color:var(--muted)">Verdict · overall risk</td><td style="padding:7px 10px;color:var(--muted)">Position on ordinal scale</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 10px;color:var(--text)">5 · Thermometer</td><td style="padding:7px 10px;color:var(--muted)">War-risk · TD3C · oil price</td><td style="padding:7px 10px;color:var(--muted)">Value + zone</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 10px;color:var(--text)">6 · Small-multiples</td><td style="padding:7px 10px;color:var(--muted)">Cross-chokepoint · verdict contributors · carriers · macro signals</td><td style="padding:7px 10px;color:var(--muted)">Comparison across categories</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 10px;color:var(--text)">7 · Duration bar</td><td style="padding:7px 10px;color:var(--muted)">Day counter · staleness</td><td style="padding:7px 10px;color:var(--muted)">Time elapsed vs peers</td></tr>
+      <tr><td style="padding:7px 10px;color:var(--text)">8 · Glyph encoding (map)</td><td style="padding:7px 10px;color:var(--muted)">Vessel markers · SDN · military · pipelines</td><td style="padding:7px 10px;color:var(--muted)">Multiple dimensions per icon</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p class="lede" style="margin-top:24px">
+  <b>The asks:</b><br>
+  1. Are these patterns the right ones, or am I missing some?<br>
+  2. Which 3 do you want me to wire into live first? (My pick: sparkline-next-to-number, zone-banded scale, small-multiples — highest impact, lowest implementation risk.)<br>
+  3. The map: real Leaflet/Mapbox with vessel-glyph encoding (Pattern 8), OR keep the existing live map and just upgrade the markers?
+</p>
+
+</div>
+</body>
+</html>

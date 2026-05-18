@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hormuz Watch — Design taste options</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --sans:'Manrope','Inter',system-ui,sans-serif;
+  --serif:'Georgia','Times New Roman',serif;
+}
+body{background:#06080d;color:#cdd8e8;font-family:var(--sans);line-height:1.5;font-size:14px}
+.page{max-width:1280px;margin:0 auto}
+
+/* Sticky nav */
+.nav{position:sticky;top:0;background:rgba(6,8,13,.92);backdrop-filter:blur(10px);z-index:50;
+  border-bottom:1px solid #18202e;padding:12px 24px;display:flex;align-items:center;gap:18px}
+.nav-brand{font-family:var(--sans);font-weight:800;font-size:13px;color:#cdd8e8;letter-spacing:.01em}
+.nav-brand span{color:#f09014}
+.nav-links{display:flex;gap:18px;margin-left:auto}
+.nav-links a{font-family:var(--mono);font-size:10px;font-weight:700;color:#8099b3;text-decoration:none;
+  letter-spacing:.06em;text-transform:uppercase;transition:color .15s}
+.nav-links a:hover{color:#f09014}
+
+/* Page header */
+.intro{padding:48px 24px 24px}
+.intro h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:10px}
+.intro p{font-family:var(--mono);font-size:12px;color:#8099b3;max-width:860px;line-height:1.7}
+.intro p b{color:#f09014}
+.intro .ref{font-family:var(--mono);font-size:10px;color:#627a95;margin-top:8px}
+
+/* Section per option */
+.opt{padding:64px 24px;border-top:1px solid #0e1320}
+.opt-head{margin-bottom:36px}
+.opt-tag{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;
+  padding:3px 8px;border-radius:3px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.opt-title{font-size:22px;font-weight:800;margin-bottom:4px;letter-spacing:-.01em}
+.opt-sub{font-family:var(--mono);font-size:11px;color:#8099b3;max-width:760px;line-height:1.65;margin-bottom:8px}
+.opt-meta{font-family:var(--mono);font-size:10px;color:#627a95}
+.opt-meta b{color:#cdd8e8}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+@media (max-width:780px){.grid{grid-template-columns:1fr}}
+
+/* ═══════════════════════════════════════════════════════════════════
+   OPTION A — EDITORIAL MINIMAL (Stripe-vibes)
+   Whitespace, mono numbers, single-color accents, thin bars
+   ═══════════════════════════════════════════════════════════════════ */
+.opt-a{background:#07090e}
+.opt-a .opt-tag{background:#cdd8e8;color:#07090e}
+.opt-a .grid{gap:0}
+.opt-a .card{padding:30px 0;border-bottom:1px solid #18202e}
+.opt-a .card:last-child{border-bottom:0}
+.opt-a .grid > .card{padding:30px 32px}
+.opt-a .grid > .card:nth-child(odd){border-right:1px solid #18202e}
+.opt-a .label{font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:.12em;
+  color:#8099b3;margin-bottom:14px;font-weight:600}
+.opt-a .num{font-family:var(--mono);font-size:40px;font-weight:300;color:#f5f0e5;letter-spacing:-.01em;line-height:1}
+.opt-a .num-amber{color:#f09014}
+.opt-a .num-red{color:#ff6b35}
+.opt-a .num-green{color:#1dd47e}
+.opt-a .sub{font-family:var(--mono);font-size:11px;color:#627a95;margin-top:8px;line-height:1.6}
+.opt-a .sub b{color:#cdd8e8;font-weight:500}
+.opt-a .a-row{display:grid;grid-template-columns:90px 56px 1fr 50px;align-items:center;gap:14px;padding:7px 0}
+.opt-a .a-row + .a-row{border-top:1px solid #0e1320}
+.opt-a .a-row .rn{font-family:var(--sans);font-size:11px;color:#8099b3}
+.opt-a .a-row .rv{font-family:var(--mono);font-size:14px;color:#f5f0e5;font-weight:500;text-align:right}
+.opt-a .a-row .rb{height:2px;background:#18202e;border-radius:1px;overflow:hidden;position:relative}
+.opt-a .a-row .rf{height:100%;background:#f09014;border-radius:1px}
+.opt-a .a-row .rf.green{background:#1dd47e}
+.opt-a .a-row .rf.red{background:#ff6b35}
+.opt-a .a-row .rd{font-family:var(--mono);font-size:10px;text-align:right}
+.opt-a .a-row .rd.up{color:#ff6b35}
+.opt-a .a-row .rd.down{color:#1dd47e}
+.opt-a .a-row .rd.flat{color:#627a95}
+.opt-a .a-mark{height:3px;background:#0e1320;border-radius:2px;margin-top:14px;position:relative}
+.opt-a .a-mark .ck{position:absolute;top:-3px;width:2px;height:9px;background:#cdd8e8}
+.opt-a .a-mark .zone{position:absolute;top:0;bottom:0;border-radius:2px}
+.opt-a .a-axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;
+  color:#627a95;margin-top:6px;letter-spacing:.04em}
+
+/* ═══════════════════════════════════════════════════════════════════
+   OPTION B — FINTECH BOLD (Groww-vibes)
+   Solid card backs, colored left borders, big numbers, gradient bars
+   ═══════════════════════════════════════════════════════════════════ */
+.opt-b{background:linear-gradient(180deg,#0a0d14 0,#06080d 100%)}
+.opt-b .opt-tag{background:#1dd47e;color:#07090e}
+.opt-b .card{background:#0f1421;border-left:4px solid #f09014;border-radius:0 12px 12px 0;
+  padding:20px 24px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.opt-b .card.crit{border-left-color:#ff3e52}
+.opt-b .card.up{border-left-color:#1dd47e}
+.opt-b .card.warn{border-left-color:#f09014}
+.opt-b .card.info{border-left-color:#38aaff}
+.opt-b .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.opt-b .head h3{font-family:var(--sans);font-size:14px;font-weight:700;color:#cdd8e8;letter-spacing:-.005em}
+.opt-b .pill{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;
+  padding:3px 9px;border-radius:6px;letter-spacing:.04em}
+.opt-b .pill.up{background:rgba(29,212,126,.15);color:#1dd47e}
+.opt-b .pill.crit{background:rgba(255,62,82,.15);color:#ff3e52}
+.opt-b .pill.warn{background:rgba(240,144,20,.15);color:#f09014}
+.opt-b .pill.info{background:rgba(56,170,255,.15);color:#38aaff}
+.opt-b .pill.muted{background:rgba(98,122,149,.15);color:#8099b3}
+.opt-b .num{font-family:var(--sans);font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.opt-b .num.up{color:#1dd47e}
+.opt-b .num.crit{color:#ff3e52}
+.opt-b .num.warn{color:#f09014}
+.opt-b .num.neutral{color:#cdd8e8}
+.opt-b .b-row{display:grid;grid-template-columns:84px 1fr 50px;align-items:center;gap:12px;margin:8px 0}
+.opt-b .b-row .l{font-family:var(--sans);font-size:11px;color:#8099b3;font-weight:600}
+.opt-b .b-bar{height:10px;background:#18202e;border-radius:5px;overflow:hidden}
+.opt-b .b-bar > div{height:100%;border-radius:5px}
+.opt-b .b-pct{font-family:var(--mono);font-size:12px;font-weight:700;color:#cdd8e8;text-align:right}
+.opt-b .b-bw{height:14px;background:#18202e;border-radius:7px;overflow:hidden;margin-top:12px;position:relative}
+.opt-b .b-bw .seg{height:100%;float:left}
+.opt-b .b-bw .seg.crit{background:#ff3e52}
+.opt-b .b-bw .seg.warn{background:#f09014}
+.opt-b .b-bw .seg.up{background:#1dd47e}
+.opt-b .b-bw .seg.info{background:#38aaff}
+.opt-b .b-stack{display:flex;gap:6px;flex-wrap:wrap}
+.opt-b .b-stack > div{flex:1;min-width:120px;background:#18202e;padding:10px 12px;border-radius:6px}
+.opt-b .b-stack .lab{font-family:var(--sans);font-size:10px;color:#8099b3;text-transform:uppercase;letter-spacing:.06em}
+.opt-b .b-stack .val{font-family:var(--sans);font-size:18px;font-weight:700;color:#cdd8e8;margin-top:2px}
+
+/* ═══════════════════════════════════════════════════════════════════
+   OPTION C — TERMINAL DENSE (Bloomberg-vibes)
+   Compact tables, color-coded cells, mono everywhere
+   ═══════════════════════════════════════════════════════════════════ */
+.opt-c{background:#040608;font-family:var(--mono)}
+.opt-c .opt-tag{background:#f09014;color:#07090e;font-family:var(--mono)}
+.opt-c .opt-title,.opt-c .opt-sub,.opt-c .opt-meta{font-family:var(--mono)}
+.opt-c .grid{gap:8px}
+.opt-c .card{background:#0a0d14;border:1px solid #18202e;padding:0;font-family:var(--mono)}
+.opt-c .ch{display:flex;justify-content:space-between;align-items:center;
+  background:#0e1320;padding:7px 12px;border-bottom:1px solid #18202e;
+  font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#f09014;font-weight:700}
+.opt-c .ch .src{color:#627a95;font-weight:500;font-size:9px}
+.opt-c table{width:100%;border-collapse:collapse}
+.opt-c th,.opt-c td{padding:5px 12px;font-size:11px;text-align:left;border-bottom:1px solid #0e1320}
+.opt-c th{font-size:9px;color:#627a95;text-transform:uppercase;letter-spacing:.06em;font-weight:600;
+  background:#0a0d14}
+.opt-c td.n{font-weight:700;color:#cdd8e8;text-align:right;font-variant-numeric:tabular-nums}
+.opt-c td.red{color:#ff6b35;background:rgba(255,62,82,.08)}
+.opt-c td.green{color:#1dd47e;background:rgba(29,212,126,.08)}
+.opt-c td.amber{color:#f09014;background:rgba(240,144,20,.08)}
+.opt-c td.muted{color:#627a95}
+.opt-c td .micro{display:inline-block;width:60px;height:6px;background:#18202e;border-radius:3px;
+  vertical-align:middle;margin-right:6px;overflow:hidden}
+.opt-c td .micro > div{height:100%}
+.opt-c .pad{padding:10px 12px}
+.opt-c .big{font-size:32px;font-weight:700;color:#cdd8e8;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.opt-c .lbl{font-size:9px;color:#627a95;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.opt-c .grid12{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#0e1320}
+.opt-c .grid12 > div{background:#0a0d14;padding:8px 10px}
+.opt-c .grid12 .cn{font-size:9px;color:#627a95;text-transform:uppercase;letter-spacing:.04em}
+.opt-c .grid12 .cv{font-size:13px;font-weight:700;color:#cdd8e8;margin-top:2px;font-variant-numeric:tabular-nums}
+.opt-c .grid12 .cd{font-size:9px;margin-top:2px}
+.opt-c .grid12 .cd.up{color:#1dd47e}
+.opt-c .grid12 .cd.down{color:#ff6b35}
+.opt-c .grid12 .cd.flat{color:#8099b3}
+
+/* ═══════════════════════════════════════════════════════════════════
+   OPTION D — VISUAL STORYTELLING (WSJ-vibes)
+   Editorial type, hero charts, annotations
+   ═══════════════════════════════════════════════════════════════════ */
+.opt-d{background:#080a10;padding-bottom:80px}
+.opt-d .opt-tag{background:#f5f0e5;color:#07090e}
+.opt-d .opt-title{font-family:var(--serif);font-size:26px;letter-spacing:-.01em}
+.opt-d .grid{gap:0}
+.opt-d .card{padding:40px 0;border-top:3px solid #18202e}
+.opt-d .grid > .card{padding:40px 36px}
+.opt-d .grid > .card:nth-child(odd){border-right:1px solid #18202e}
+.opt-d .d-eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.18em;
+  text-transform:uppercase;color:#f09014;font-weight:700;margin-bottom:10px}
+.opt-d .d-headline{font-family:var(--serif);font-size:22px;font-weight:700;
+  color:#f5f0e5;line-height:1.25;margin-bottom:6px;letter-spacing:-.005em}
+.opt-d .d-sub{font-family:var(--serif);font-size:14px;color:#8099b3;line-height:1.55;
+  margin-bottom:24px;font-style:italic}
+.opt-d .d-row{display:grid;grid-template-columns:120px 1fr 70px;align-items:center;gap:14px;
+  padding:9px 0;border-bottom:1px solid #0e1320}
+.opt-d .d-row .name{font-family:var(--serif);font-size:13px;color:#f5f0e5;font-weight:500}
+.opt-d .d-row .name small{display:block;font-family:var(--mono);font-size:9px;color:#627a95;
+  font-weight:400;margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.opt-d .d-row .barwrap{position:relative;height:22px}
+.opt-d .d-row .baseline{position:absolute;height:22px;background:rgba(98,122,149,.18);border-radius:2px}
+.opt-d .d-row .current{position:absolute;height:22px;border-radius:2px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:var(--mono);font-size:10px;font-weight:700;color:#07090e}
+.opt-d .d-row .current.red{background:#ff6b35}
+.opt-d .d-row .current.green{background:#1dd47e}
+.opt-d .d-row .current.warn{background:#f09014}
+.opt-d .d-row .current.info{background:#38aaff}
+.opt-d .d-row .delta{font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.opt-d .d-row .delta.up{color:#1dd47e}
+.opt-d .d-row .delta.down{color:#ff6b35}
+.opt-d .d-callout{background:rgba(240,144,20,.06);border-left:3px solid #f09014;padding:14px 18px;
+  margin-top:18px;font-family:var(--serif);font-size:13px;color:#cdd8e8;line-height:1.6;font-style:italic}
+.opt-d .d-callout b{color:#f09014;font-style:normal;font-family:var(--mono);font-weight:700}
+.opt-d .d-num{font-family:var(--serif);font-size:48px;font-weight:700;color:#f5f0e5;letter-spacing:-.02em;line-height:1}
+.opt-d .d-stacked{height:32px;background:#18202e;border-radius:4px;display:flex;overflow:hidden;margin:18px 0 8px}
+.opt-d .d-stacked > div{display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+  font-size:11px;font-weight:700;color:#07090e}
+.opt-d .d-therm{display:flex;gap:24px;align-items:flex-end;margin-top:18px}
+.opt-d .d-therm-bar{flex-shrink:0;width:42px;height:180px;background:#0e1320;border:1px solid #18202e;
+  border-radius:6px;position:relative;overflow:hidden}
+.opt-d .d-therm-fill{position:absolute;bottom:0;left:0;right:0}
+.opt-d .d-therm-mark{position:absolute;left:-12px;right:-12px;height:1.5px}
+.opt-d .d-therm-mark .ml{position:absolute;left:-60px;font-family:var(--mono);font-size:9px;
+  white-space:nowrap;color:inherit;top:-6px;font-weight:700}
+.opt-d .d-therm-zones{position:absolute;inset:0}
+.opt-d .d-therm-zones > div{position:absolute;left:0;right:0;opacity:.18}
+.opt-d .d-therm-text{flex:1}
+.opt-d .d-therm-text .lbl{font-family:var(--mono);font-size:9px;color:#627a95;text-transform:uppercase;letter-spacing:.08em;margin-top:6px}
+.opt-d .d-therm-text .val{font-family:var(--serif);font-size:36px;font-weight:700;color:#ff6b35;letter-spacing:-.01em}
+.opt-d .arc-wrap{display:flex;gap:24px;align-items:center}
+.opt-d .arc-wrap svg{flex-shrink:0}
+.opt-d .arc-band{font-family:var(--serif);font-size:30px;font-weight:700;color:#f09014;letter-spacing:-.01em;line-height:1.1}
+.opt-d .arc-meta{font-family:var(--mono);font-size:10px;color:#627a95;margin-top:6px}
+
+/* shared inner table helpers */
+.k{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">Hormuz<span>Watch</span> · design taste options</div>
+  <div class="nav-links">
+    <a href="#a">A · Editorial</a>
+    <a href="#b">B · Fintech bold</a>
+    <a href="#c">C · Terminal dense</a>
+    <a href="#d">D · Storytelling</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="intro">
+    <h1>Four design directions</h1>
+    <p>
+      Same 5 cards in every option (cross-chokepoint · verdict · market pulse · pipeline bypass · war-risk).
+      Same data. Four different design languages. <b>No sparklines.</b> Bars, bullets, tables, stacked compositions, zone scales.
+      Pick one, mix two, or veto a specific element — easier than describing taste from a blank page.
+    </p>
+    <div class="ref">References: A = Stripe / Linear · B = Groww / Zerodha Kite · C = Bloomberg Terminal / n8n executions · D = Wall Street Journal / Publiq editorial</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       OPTION A · EDITORIAL MINIMAL
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="opt opt-a" id="a">
+    <div class="opt-head">
+      <div class="opt-tag">Option A</div>
+      <div class="opt-title">Editorial Minimal</div>
+      <div class="opt-sub">Stripe / Linear. Maximum whitespace, mono numbers in light weight, thin hairline rules, one accent colour used sparingly. Bars are 2-3px tall and exist only to make a comparison visible.</div>
+      <div class="opt-meta"><b>Charts allowed:</b> 2px horizontal bars, zone scales, ranked lists. <b>Not used:</b> stacked bars, gauges, icons, decoration.</div>
+    </div>
+
+    <div class="grid">
+
+      <!-- A1 · Cross-chokepoint -->
+      <div class="card">
+        <div class="label">Global chokepoints</div>
+        <div class="a-row"><div class="rn">Hormuz</div><div class="rv">4</div><div class="rb"><div class="rf red" style="width:4%"></div></div><div class="rd up">▼ 96%</div></div>
+        <div class="a-row"><div class="rn">Suez</div><div class="rv">26</div><div class="rb"><div class="rf" style="width:65%"></div></div><div class="rd up">▼ 35%</div></div>
+        <div class="a-row"><div class="rn">Cape of Good Hope</div><div class="rv">60</div><div class="rb"><div class="rf green" style="width:100%"></div></div><div class="rd down">▲ 71%</div></div>
+        <div class="a-row"><div class="rn">Bab el-Mandeb</div><div class="rv">31</div><div class="rb"><div class="rf" style="width:91%"></div></div><div class="rd flat">▼ 9%</div></div>
+        <div class="a-row"><div class="rn">Malacca</div><div class="rv">226</div><div class="rb"><div class="rf" style="width:96%"></div></div><div class="rd flat">▼ 4%</div></div>
+        <div class="sub" style="margin-top:14px">Transits per day · 24h · <b>vs pre-crisis baseline</b></div>
+      </div>
+
+      <!-- A2 · Verdict -->
+      <div class="card">
+        <div class="label">Hormuz risk verdict</div>
+        <div class="num num-amber">ELEVATED</div>
+        <div class="sub"><b>1.7</b> of 4.0 · structural · no overrides fired</div>
+        <div style="margin-top:22px">
+          <div class="a-row"><div class="rn">Oil</div><div class="rv">0.54</div><div class="rb"><div class="rf red" style="width:75%"></div></div><div class="rd flat">3 / 4</div></div>
+          <div class="a-row"><div class="rn">Stocks</div><div class="rv">0.39</div><div class="rb"><div class="rf red" style="width:75%"></div></div><div class="rd flat">3 / 4</div></div>
+          <div class="a-row"><div class="rn">Sanctions</div><div class="rv">0.20</div><div class="rb"><div class="rf" style="width:50%"></div></div><div class="rd flat">2 / 4</div></div>
+        </div>
+        <div class="sub" style="margin-top:14px">Top contributors · weight × signal · <b>9 more</b></div>
+      </div>
+
+      <!-- A3 · Market pulse -->
+      <div class="card">
+        <div class="label">Brent crude</div>
+        <div class="num">$107.00</div>
+        <div class="sub">▲ +0.5% · vs <b>$72</b> pre-Feb 26 · <b style="color:#ff6b35">+49%</b></div>
+
+        <div class="label" style="margin-top:28px">WTI crude</div>
+        <div class="num">$102.50</div>
+        <div class="sub">▲ +0.4% · vs <b>$65</b> pre-Feb 26 · <b style="color:#ff6b35">+58%</b> · B–W spread $4.50</div>
+      </div>
+
+      <!-- A4 · Pipeline bypass -->
+      <div class="card">
+        <div class="label">Pipeline bypass capacity</div>
+        <div class="num num-amber">6.85M</div>
+        <div class="sub">bbl/day · of <b>20M</b> strait baseline · <b style="color:#ff6b35">13.15M unrouteable</b></div>
+        <div style="margin-top:22px">
+          <div class="a-row"><div class="rn">Saudi Petroline</div><div class="rv">5.0M</div><div class="rb"><div class="rf green" style="width:95%"></div></div><div class="rd flat">95%</div></div>
+          <div class="a-row"><div class="rn">UAE ADCOP</div><div class="rv">1.5M</div><div class="rb"><div class="rf green" style="width:100%"></div></div><div class="rd flat">100%</div></div>
+          <div class="a-row"><div class="rn">Iraq Kirkuk-Ceyhan</div><div class="rv">0.5M</div><div class="rb"><div class="rf" style="width:25%"></div></div><div class="rd flat">25%</div></div>
+          <div class="a-row"><div class="rn">Iran Goreh-Jask</div><div class="rv">0.35M</div><div class="rb"><div class="rf" style="width:40%"></div></div><div class="rd flat">40%</div></div>
+        </div>
+      </div>
+
+      <!-- A5 · War-risk premium -->
+      <div class="card">
+        <div class="label">War-risk insurance</div>
+        <div class="num num-red">1.0%</div>
+        <div class="sub">of hull · per 7 days · vs <b>0.125%</b> pre-crisis · <b style="color:#ff6b35">8×</b> higher</div>
+        <div class="a-mark" style="margin-top:24px">
+          <div class="zone" style="background:rgba(29,212,126,.45);left:0;width:10%"></div>
+          <div class="zone" style="background:rgba(240,144,20,.45);left:10%;width:30%"></div>
+          <div class="zone" style="background:rgba(255,107,53,.45);left:40%;width:40%"></div>
+          <div class="zone" style="background:rgba(255,62,82,.45);left:80%;width:20%"></div>
+          <div class="ck" style="left:2.5%"></div>
+          <div class="ck" style="left:20%;background:#f09014"></div>
+        </div>
+        <div class="a-axis"><span>0%</span><span>pre-crisis</span><span>now</span><span>5%+</span></div>
+        <div class="sub" style="margin-top:14px">VLCC transit cost <b>$2.5M</b> (was $125k) · <b>6 of 13</b> P&I clubs withdrawn</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       OPTION B · FINTECH BOLD
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="opt opt-b" id="b">
+    <div class="opt-head">
+      <div class="opt-tag">Option B</div>
+      <div class="opt-title">Fintech Bold</div>
+      <div class="opt-sub">Groww / Zerodha. Solid card backgrounds with severity-coloured left borders, big sans-serif numbers, gradient bars, pills for status. Familiar to anyone who uses an Indian fintech app.</div>
+      <div class="opt-meta"><b>Charts allowed:</b> horizontal progress bars, stacked composition bars, big number cards, status pills. <b>Not used:</b> dense tables, gauges.</div>
+    </div>
+
+    <div class="grid">
+
+      <!-- B1 · Cross-chokepoint -->
+      <div class="card crit">
+        <div class="head"><h3>Global chokepoints</h3><span class="pill muted">24h · AIS</span></div>
+        <div class="b-row"><div class="l">Hormuz</div><div class="b-bar"><div style="width:4%;background:#ff3e52"></div></div><div class="b-pct">4</div></div>
+        <div class="b-row"><div class="l">Suez</div><div class="b-bar"><div style="width:65%;background:#f09014"></div></div><div class="b-pct">26</div></div>
+        <div class="b-row"><div class="l">Cape</div><div class="b-bar"><div style="width:100%;background:#1dd47e"></div></div><div class="b-pct">60</div></div>
+        <div class="b-row"><div class="l">Bab</div><div class="b-bar"><div style="width:91%;background:#38aaff"></div></div><div class="b-pct">31</div></div>
+        <div class="b-row"><div class="l">Malacca</div><div class="b-bar"><div style="width:96%;background:#38aaff"></div></div><div class="b-pct">226</div></div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="pill crit">Hormuz ▼ 96%</span>
+          <span class="pill up">Cape ▲ 71%</span>
+          <span class="pill warn">Suez ▼ 35%</span>
+        </div>
+      </div>
+
+      <!-- B2 · Verdict -->
+      <div class="card warn">
+        <div class="head"><h3>Hormuz risk verdict</h3><span class="pill warn">composite</span></div>
+        <div class="num warn">ELEVATED</div>
+        <div style="font-family:var(--mono);font-size:11px;color:#8099b3;margin:4px 0 18px">1.7 / 4.0 · structural · no overrides</div>
+        <div class="b-row"><div class="l">Oil</div><div class="b-bar"><div style="width:75%;background:#ff3e52"></div></div><div class="b-pct">0.54</div></div>
+        <div class="b-row"><div class="l">Stocks</div><div class="b-bar"><div style="width:75%;background:#ff3e52"></div></div><div class="b-pct">0.39</div></div>
+        <div class="b-row"><div class="l">Sanctions</div><div class="b-bar"><div style="width:50%;background:#f09014"></div></div><div class="b-pct">0.20</div></div>
+        <div style="font-family:var(--mono);font-size:10px;color:#627a95;margin-top:12px">▾ See all 12 contributors</div>
+      </div>
+
+      <!-- B3 · Market pulse -->
+      <div class="card crit">
+        <div class="head"><h3>Market pulse</h3><span class="pill up">LIVE</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+          <div>
+            <div style="font-family:var(--mono);font-size:10px;color:#8099b3;letter-spacing:.05em;margin-bottom:4px">BRENT</div>
+            <div class="num crit">$107.0</div>
+            <div style="margin-top:8px"><span class="pill crit">▲ +49% YTD</span></div>
+            <div style="font-family:var(--mono);font-size:11px;color:#627a95;margin-top:8px">vs $72 pre-Feb 26 · today ▲ 0.5%</div>
+          </div>
+          <div>
+            <div style="font-family:var(--mono);font-size:10px;color:#8099b3;letter-spacing:.05em;margin-bottom:4px">WTI</div>
+            <div class="num crit">$102.5</div>
+            <div style="margin-top:8px"><span class="pill crit">▲ +58% YTD</span></div>
+            <div style="font-family:var(--mono);font-size:11px;color:#627a95;margin-top:8px">vs $65 pre-Feb 26 · spread $4.5</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B4 · Pipeline -->
+      <div class="card warn">
+        <div class="head"><h3>Pipeline bypass</h3><span class="pill crit">13M unrouteable</span></div>
+        <div style="display:flex;gap:10px;align-items:baseline;margin-bottom:14px">
+          <div class="num warn">6.85M</div>
+          <div style="font-family:var(--mono);font-size:11px;color:#8099b3">of 20M bbl/d strait flow</div>
+        </div>
+        <div class="b-bw">
+          <div class="seg up" style="width:25%"></div>
+          <div class="seg up" style="width:7.5%"></div>
+          <div class="seg warn" style="width:1.75%"></div>
+          <div class="seg warn" style="width:0.7%"></div>
+          <div class="seg crit" style="width:65.05%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:#627a95;margin-top:4px">
+          <span style="color:#1dd47e">Petroline 5M</span><span style="color:#1dd47e">ADCOP 1.5M</span><span style="color:#f09014">Iraq 0.5M</span><span style="color:#f09014">Iran 0.35M</span><span style="color:#ff3e52">Gap 13.15M</span>
+        </div>
+        <div class="b-stack" style="margin-top:16px">
+          <div><div class="lab">Petroline</div><div class="val" style="color:#1dd47e">95%</div></div>
+          <div><div class="lab">ADCOP</div><div class="val" style="color:#1dd47e">100%</div></div>
+          <div><div class="lab">Iraq-Turkey</div><div class="val" style="color:#f09014">25%</div></div>
+          <div><div class="lab">Goreh-Jask</div><div class="val" style="color:#f09014">40%</div></div>
+        </div>
+      </div>
+
+      <!-- B5 · War-risk -->
+      <div class="card crit">
+        <div class="head"><h3>War-risk insurance</h3><span class="pill crit">8× normal</span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:end;margin-bottom:14px">
+          <div>
+            <div class="num crit">1.0%</div>
+            <div style="font-family:var(--mono);font-size:11px;color:#8099b3;margin-top:6px">of hull · per 7d</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:var(--mono);font-size:24px;font-weight:700;color:#cdd8e8">$2.5M</div>
+            <div style="font-family:var(--mono);font-size:10px;color:#8099b3;margin-top:2px">per VLCC transit · was $125k</div>
+          </div>
+        </div>
+        <div class="b-bw">
+          <div class="seg up" style="width:15%"></div>
+          <div class="seg warn" style="width:25%"></div>
+          <div class="seg crit" style="width:40%"></div>
+          <div style="background:#ff3e52;height:100%;width:20%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:#627a95;margin-top:4px">
+          <span>aligned</span><span>stressed</span><span style="color:#ff3e52">⌃ 1.0% here</span><span>extreme</span>
+        </div>
+        <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:6px">
+          <div style="font-family:var(--mono);font-size:10px;color:#8099b3;margin-right:8px;align-self:center">P&I withdrawn:</div>
+          <span class="pill crit">Gard</span><span class="pill crit">Skuld</span><span class="pill crit">North Std</span>
+          <span class="pill crit">London</span><span class="pill crit">American</span><span class="pill crit">Steamship</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       OPTION C · TERMINAL DENSE
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="opt opt-c" id="c">
+    <div class="opt-head">
+      <div class="opt-tag">Option C</div>
+      <div class="opt-title">Terminal Dense</div>
+      <div class="opt-sub">Bloomberg / n8n exec view. Tables dominate. Tabular numbers, micro-bars inside cells, colour-coded backgrounds for risk states. Most metrics per square inch, intended for the user who keeps the dashboard open all day.</div>
+      <div class="opt-meta"><b>Charts allowed:</b> in-cell micro-bars (~60px), heat-tinted cells, compact grids. <b>Not used:</b> hero numbers, large bars, big icons.</div>
+    </div>
+
+    <div class="grid">
+
+      <!-- C1 · Cross-chokepoint -->
+      <div class="card">
+        <div class="ch"><span>Global chokepoints · 24h</span><span class="src">AIS · 28m</span></div>
+        <table>
+          <thead><tr><th>Chokepoint</th><th style="text-align:right">Now</th><th style="text-align:right">Base</th><th style="text-align:right">% base</th><th style="text-align:right">Δ d/d</th></tr></thead>
+          <tbody>
+            <tr><td>Hormuz</td><td class="n red">4</td><td class="n muted">95</td><td class="n red"><span class="micro"><div style="width:4%;background:#ff3e52"></div></span>4%</td><td class="n green">+3</td></tr>
+            <tr><td>Suez</td><td class="n amber">26</td><td class="n muted">40</td><td class="n amber"><span class="micro"><div style="width:65%;background:#f09014"></div></span>65%</td><td class="n red">-16</td></tr>
+            <tr><td>Cape</td><td class="n green">60</td><td class="n muted">35</td><td class="n green"><span class="micro"><div style="width:100%;background:#1dd47e"></div></span>171%</td><td class="n green">+63</td></tr>
+            <tr><td>Bab el-Mandeb</td><td class="n">31</td><td class="n muted">34</td><td class="n"><span class="micro"><div style="width:91%;background:#38aaff"></div></span>91%</td><td class="n green">+4</td></tr>
+            <tr><td>Malacca</td><td class="n">226</td><td class="n muted">235</td><td class="n"><span class="micro"><div style="width:96%;background:#38aaff"></div></span>96%</td><td class="n muted">+7</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- C2 · Verdict 12-cell -->
+      <div class="card">
+        <div class="ch"><span>Verdict · 2-stage composite</span><span class="src">/api/verdict · 4m</span></div>
+        <div class="pad">
+          <span style="color:#f09014;font-size:22px;font-weight:700">ELEVATED</span>
+          <span style="color:#627a95;font-size:11px;margin-left:10px">1.7/4.0 · 0 overrides fired</span>
+        </div>
+        <div class="grid12">
+          <div><div class="cn">Oil</div><div class="cv">3</div><div class="cd up">·0.54</div></div>
+          <div><div class="cn">Stocks</div><div class="cv">3</div><div class="cd up">·0.39</div></div>
+          <div><div class="cn">Sanctions</div><div class="cv">2</div><div class="cd up">·0.20</div></div>
+          <div><div class="cn">Inventory</div><div class="cv">3</div><div class="cd up">·0.15</div></div>
+          <div><div class="cn">BDTI</div><div class="cv">2</div><div class="cd up">·0.14</div></div>
+          <div><div class="cn">Aircraft</div><div class="cv">0</div><div class="cd flat">·0.00</div></div>
+          <div><div class="cn">Events</div><div class="cv">1</div><div class="cd flat">·0.10</div></div>
+          <div><div class="cn">News</div><div class="cv">1</div><div class="cd flat">·0.05</div></div>
+          <div><div class="cn">Currency</div><div class="cv">0</div><div class="cd flat">·0.00</div></div>
+          <div><div class="cn">Seismic</div><div class="cv">0</div><div class="cd flat">·0.00</div></div>
+          <div><div class="cn">Weather</div><div class="cv">0</div><div class="cd flat">·0.00</div></div>
+          <div><div class="cn">Production</div><div class="cv">0</div><div class="cd flat">·0.00</div></div>
+        </div>
+      </div>
+
+      <!-- C3 · Market pulse table -->
+      <div class="card">
+        <div class="ch"><span>Market pulse · crude</span><span class="src">Stooq · 3m</span></div>
+        <table>
+          <thead><tr><th>Sym</th><th style="text-align:right">Last</th><th style="text-align:right">Pre-Feb 26</th><th style="text-align:right">% chg</th><th style="text-align:right">Today</th></tr></thead>
+          <tbody>
+            <tr><td>Brent</td><td class="n">107.00</td><td class="n muted">72.00</td><td class="n red"><span class="micro"><div style="width:80%;background:#ff6b35"></div></span>+48.6%</td><td class="n amber">+0.51%</td></tr>
+            <tr><td>WTI</td><td class="n">102.50</td><td class="n muted">65.00</td><td class="n red"><span class="micro"><div style="width:85%;background:#ff6b35"></div></span>+57.7%</td><td class="n amber">+0.43%</td></tr>
+            <tr><td>B-W spread</td><td class="n">4.50</td><td class="n muted">7.00</td><td class="n green">-35.7%</td><td class="n green">+0.13</td></tr>
+            <tr><td>EIA daily</td><td class="n muted">111.37</td><td colspan="3" class="muted" style="font-size:10px">as of 2026-05-15 · spot ref</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- C4 · Pipeline table -->
+      <div class="card">
+        <div class="ch"><span>Pipeline bypass · capacity</span><span class="src">config · 3d</span></div>
+        <table>
+          <thead><tr><th>Pipeline</th><th style="text-align:right">Cap</th><th style="text-align:right">Util</th><th style="text-align:right">Flow</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Petroline (East-West)</td><td class="n">5.00M</td><td class="n green"><span class="micro"><div style="width:95%;background:#1dd47e"></div></span>95%</td><td class="n">4.75M</td><td class="green" style="font-size:9px">OPERATIONAL</td></tr>
+            <tr><td>UAE ADCOP</td><td class="n">1.50M</td><td class="n green"><span class="micro"><div style="width:100%;background:#1dd47e"></div></span>100%</td><td class="n">1.50M</td><td class="green" style="font-size:9px">OPERATIONAL</td></tr>
+            <tr><td>Iraq Kirkuk-Ceyhan</td><td class="n">0.50M</td><td class="n amber"><span class="micro"><div style="width:25%;background:#f09014"></div></span>25%</td><td class="n">0.13M</td><td class="amber" style="font-size:9px">INTERMITTENT</td></tr>
+            <tr><td>Iran Goreh-Jask</td><td class="n">0.35M</td><td class="n amber"><span class="micro"><div style="width:40%;background:#f09014"></div></span>40%</td><td class="n">0.14M</td><td class="amber" style="font-size:9px">PARTIAL</td></tr>
+            <tr style="background:#0e1320"><td><b>Total bypass</b></td><td class="n"><b>7.35M</b></td><td></td><td class="n"><b>6.52M</b></td><td></td></tr>
+            <tr style="background:rgba(255,62,82,.08)"><td><b style="color:#ff6b35">Unrouteable gap</b></td><td class="n red">12.65M</td><td colspan="3" class="muted" style="font-size:10px">vs 20M strait baseline</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- C5 · War-risk dense -->
+      <div class="card">
+        <div class="ch"><span>War-risk insurance · VLCC</span><span class="src">admin · 3d</span></div>
+        <table>
+          <thead><tr><th>Metric</th><th style="text-align:right">Now</th><th style="text-align:right">Pre-crisis</th><th style="text-align:right">×</th><th>Band</th></tr></thead>
+          <tbody>
+            <tr><td>Premium / hull / 7d</td><td class="n red">1.00%</td><td class="n muted">0.125%</td><td class="n red">8.0×</td><td class="red" style="font-size:9px">CRISIS</td></tr>
+            <tr><td>VLCC transit cost</td><td class="n red">$2.5M</td><td class="n muted">$125k</td><td class="n red">20×</td><td class="red" style="font-size:9px">CRISIS</td></tr>
+            <tr><td>P&I clubs withdrawn</td><td class="n amber">6</td><td class="n muted">0</td><td class="n">—</td><td class="amber" style="font-size:9px">CONSTRAINED</td></tr>
+            <tr><td>Lloyd's JWC status</td><td colspan="4" style="font-size:10px;color:#8099b3">Gulf listed · 27-Mar circular</td></tr>
+          </tbody>
+        </table>
+        <div class="pad" style="font-size:10px;color:#627a95">Withdrawn: <span style="color:#ff6b35">Gard · Skuld · North Standard · London · American · Steamship Mutual</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       OPTION D · VISUAL STORYTELLING
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="opt opt-d" id="d">
+    <div class="opt-head">
+      <div class="opt-tag">Option D</div>
+      <div class="opt-title">Visual Storytelling</div>
+      <div class="opt-sub">Wall Street Journal / Publiq editorial. Each card is a small story: headline, sub-deck, the chart that proves it, an annotated callout. Serif headlines on dark; mono numbers inside the charts. Slower to scan but maximum interpretive payload.</div>
+      <div class="opt-meta"><b>Charts allowed:</b> annotated bullet bars with baseline tracks, stacked composition, vertical thermometer, arc gauge. <b>Not used:</b> pure tables, micro-bars, generic pills.</div>
+    </div>
+
+    <div class="grid">
+
+      <!-- D1 · Cross-chokepoint -->
+      <div class="card">
+        <div class="d-eyebrow">Global chokepoints · last 24 hours</div>
+        <div class="d-headline">Five chokepoints. One collapsed, one surged.</div>
+        <div class="d-sub">Hormuz down to 4% of normal; Cape of Good Hope absorbing the diversion at 171% of its pre-crisis run-rate.</div>
+        <div class="d-row">
+          <div class="name">Hormuz<small>vs 95 base</small></div>
+          <div class="barwrap"><div class="baseline" style="width:100%"></div><div class="current red" style="width:4%">4</div></div>
+          <div class="delta down">−96%</div>
+        </div>
+        <div class="d-row">
+          <div class="name">Suez<small>vs 40 base</small></div>
+          <div class="barwrap"><div class="baseline" style="width:100%"></div><div class="current warn" style="width:65%">26</div></div>
+          <div class="delta down">−35%</div>
+        </div>
+        <div class="d-row">
+          <div class="name">Cape of GH<small>vs 35 base</small></div>
+          <div class="barwrap"><div class="baseline" style="width:58%"></div><div class="current green" style="width:100%">60</div></div>
+          <div class="delta up">+71%</div>
+        </div>
+        <div class="d-row">
+          <div class="name">Bab el-Mandeb<small>vs 34 base</small></div>
+          <div class="barwrap"><div class="baseline" style="width:100%"></div><div class="current info" style="width:91%">31</div></div>
+          <div class="delta down">−9%</div>
+        </div>
+        <div class="d-row">
+          <div class="name">Malacca<small>vs 235 base</small></div>
+          <div class="barwrap"><div class="baseline" style="width:100%"></div><div class="current info" style="width:96%">226</div></div>
+          <div class="delta down">−4%</div>
+        </div>
+        <div class="d-callout">Diverted cargo is bypassing Suez (−16/d) as well as Hormuz — the Cape route is now <b>the only chokepoint above its pre-crisis baseline</b>, by a 71% margin. Watch for Cape capacity exhaustion if closure continues.</div>
+      </div>
+
+      <!-- D2 · Verdict -->
+      <div class="card">
+        <div class="d-eyebrow">Composite verdict</div>
+        <div class="d-headline">Elevated. Two notches from critical.</div>
+        <div class="d-sub">Stage-1 structural read; no Stage-2 overrides have fired. Score 1.7 of 4.0 sits ~42% along the half-arc.</div>
+        <div class="arc-wrap">
+          <svg width="160" height="100" viewBox="0 0 160 100">
+            <path d="M 16 90 A 64 64 0 0 1 40 38" stroke="#1dd47e" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <path d="M 44 36 A 64 64 0 0 1 77 18" stroke="#f09014" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <path d="M 81 18 A 64 64 0 0 1 116 36" stroke="#ff6b35" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <path d="M 120 38 A 64 64 0 0 1 144 90" stroke="#ff3e52" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <text x="16" y="98" fill="#1dd47e" font-family="JetBrains Mono" font-size="9" font-weight="700">NORM</text>
+            <text x="44" y="22" fill="#f09014" font-family="JetBrains Mono" font-size="9" font-weight="700">ELEV</text>
+            <text x="98" y="22" fill="#ff6b35" font-family="JetBrains Mono" font-size="9" font-weight="700">HIGH</text>
+            <text x="120" y="98" fill="#ff3e52" font-family="JetBrains Mono" font-size="9" font-weight="700">CRIT</text>
+            <line x1="80" y1="90" x2="62" y2="38" stroke="#f5f0e5" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="80" cy="90" r="5" fill="#f5f0e5"/>
+            <circle cx="62" cy="38" r="4" fill="#f09014" stroke="#f5f0e5" stroke-width="1.2"/>
+          </svg>
+          <div>
+            <div class="arc-band">ELEVATED</div>
+            <div class="arc-meta">1.7 / 4.0 · structural · no overrides fired</div>
+            <div style="margin-top:14px;font-family:var(--serif);font-size:13px;color:#cdd8e8;line-height:1.55">Oil and equity-stocks signals dominate (0.54 + 0.39 of weighted score). Move to <b>HIGH</b> requires either rising contributor weight on currency/news, or an override trigger.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- D3 · Market pulse -->
+      <div class="card">
+        <div class="d-eyebrow">Crude oil prices</div>
+        <div class="d-headline">Brent back to 2014 territory.</div>
+        <div class="d-sub">Live at $107.0 (Stooq, 3m ago). EIA daily spot $111.37 trails by one session. Pre-Feb-26 baselines drawn as ghost bars beneath the live levels.</div>
+        <div class="d-row">
+          <div class="name">Brent<small>$ / bbl</small></div>
+          <div class="barwrap"><div class="baseline" style="width:55%;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:var(--mono);font-size:10px;color:#8099b3">$72</div><div class="current red" style="width:82%">$107.0</div></div>
+          <div class="delta up">+49%</div>
+        </div>
+        <div class="d-row">
+          <div class="name">WTI<small>$ / bbl</small></div>
+          <div class="barwrap"><div class="baseline" style="width:50%;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:var(--mono);font-size:10px;color:#8099b3">$65</div><div class="current red" style="width:79%">$102.5</div></div>
+          <div class="delta up">+58%</div>
+        </div>
+        <div class="d-row">
+          <div class="name">B–W spread<small>$ / bbl</small></div>
+          <div class="barwrap"><div class="baseline" style="width:54%;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:var(--mono);font-size:10px;color:#8099b3">$7.0</div><div class="current warn" style="width:35%">$4.5</div></div>
+          <div class="delta down">−36%</div>
+        </div>
+        <div class="d-callout">Spread compression (Brent vs WTI) historically pairs with Atlantic-basin tightness. With Brent up 49% and the spread <b>narrower</b> than pre-crisis, this is a global-demand story, not a Hormuz-specific dislocation in crude pricing alone.</div>
+      </div>
+
+      <!-- D4 · Pipeline -->
+      <div class="card">
+        <div class="d-eyebrow">Pipeline bypass · 20M bbl/d strait</div>
+        <div class="d-headline">Twenty million barrels a day. Pipelines move seven.</div>
+        <div class="d-sub">Even at full utilization, the four operational bypasses cannot absorb the strait flow. The thirteen-million-barrel-per-day shortfall is the actual constraint.</div>
+        <div class="d-stacked">
+          <div style="width:25%;background:#1dd47e">Petroline 5.0M</div>
+          <div style="width:7.5%;background:#1dd47e">ADCOP 1.5</div>
+          <div style="width:2.5%;background:#f09014">Iraq</div>
+          <div style="width:1.75%;background:#f09014">Iran</div>
+          <div style="width:63.25%;background:#ff3e52;color:#fff">13.15M unrouteable</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:#627a95;margin-top:4px">
+          <span>0</span><span>5M</span><span>10M</span><span>15M</span><span>20M bbl/d</span>
+        </div>
+        <div style="margin-top:24px">
+          <div class="d-row">
+            <div class="name">Petroline<small>East-West, Yanbu</small></div>
+            <div class="barwrap"><div class="baseline" style="width:100%"></div><div class="current green" style="width:95%">4.75M</div></div>
+            <div class="delta up">95%</div>
+          </div>
+          <div class="d-row">
+            <div class="name">ADCOP<small>Habshan-Fujairah</small></div>
+            <div class="barwrap"><div class="baseline" style="width:100%"></div><div class="current green" style="width:100%">1.50M</div></div>
+            <div class="delta up">100%</div>
+          </div>
+          <div class="d-row">
+            <div class="name">Kirkuk-Ceyhan<small>Iraq-Turkey</small></div>
+            <div class="barwrap"><div class="baseline" style="width:100%"></div><div class="current warn" style="width:25%">0.13M</div></div>
+            <div class="delta up">25%</div>
+          </div>
+          <div class="d-row">
+            <div class="name">Goreh-Jask<small>Iran NIOC</small></div>
+            <div class="barwrap"><div class="baseline" style="width:100%"></div><div class="current warn" style="width:40%">0.14M</div></div>
+            <div class="delta up">40%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- D5 · War-risk -->
+      <div class="card">
+        <div class="d-eyebrow">War-risk insurance · Gulf transit</div>
+        <div class="d-headline">Eight times normal. $2.5M to send a VLCC through.</div>
+        <div class="d-sub">War-risk premium has climbed from a pre-crisis 0.125% of hull value per 7 days to ~1.0%. Six P&I clubs have withdrawn entirely.</div>
+        <div class="d-therm">
+          <div class="d-therm-bar">
+            <div class="d-therm-zones">
+              <div style="bottom:0;height:15%;background:#1dd47e"></div>
+              <div style="bottom:15%;height:25%;background:#f09014"></div>
+              <div style="bottom:40%;height:40%;background:#ff6b35"></div>
+              <div style="bottom:80%;height:20%;background:#ff3e52"></div>
+            </div>
+            <div class="d-therm-fill" style="height:42%;background:linear-gradient(180deg,#ff3e52,#ff6b35);border-radius:0 0 5px 5px"></div>
+            <div class="d-therm-mark" style="bottom:42%;background:#f5f0e5"><span class="ml" style="color:#f5f0e5">1.0% now</span></div>
+            <div class="d-therm-mark" style="bottom:6%;background:#1dd47e"><span class="ml" style="color:#1dd47e">0.125% baseline</span></div>
+          </div>
+          <div class="d-therm-text">
+            <div class="val">8×</div>
+            <div class="lbl">pre-crisis baseline</div>
+            <div style="font-family:var(--serif);font-size:13px;color:#cdd8e8;line-height:1.55;margin-top:14px">
+              VLCC transit cost has moved from <b style="font-family:var(--mono);color:#8099b3">$125k</b> to <b style="font-family:var(--mono);color:#ff6b35">$2.5M</b> — a 20× jump that's now structurally embedded in tanker freight rates.
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:#627a95;margin-top:14px;line-height:1.6">
+              <b style="color:#ff6b35">Withdrawn:</b> Gard · Skuld · North Standard · London · American · Steamship Mutual<br>
+              <b style="color:#cdd8e8">Source:</b> Howden Re 27-Mar · S&P Global · admin entry, 3d ago
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <section style="padding:48px 24px;border-top:1px solid #18202e">
+    <p style="font-family:var(--mono);font-size:11px;color:#8099b3;line-height:1.7;max-width:760px">
+      Open each option, scroll the cards, and either pick one or call out specific elements
+      ("Card 3 in B with the table from C"). The point of having four side-by-side is so you
+      don't have to articulate taste from a blank page — you point at what you want.
+    </p>
+    <p style="font-family:var(--mono);font-size:10px;color:#627a95;margin-top:14px">
+      Built 2026-05-16 · no production code touched · this file is reviewable only.
+    </p>
+  </section>
+
+</div>
+</body>
+</html>

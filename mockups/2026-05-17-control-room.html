@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hormuz Watch — Control Room redesign (3 versions)</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06080d;
+  --panel:#0d111c;     /* one step lighter than bg */
+  --panel2:#11162466;  /* nested elevation, slight tint */
+  --border:#171f30;
+  --border2:#222c44;
+  --text:#dde4ef;
+  --muted:#8896ac;
+  --muted2:#5e6a82;
+  --amber:#f0a014;
+  --blue:#3a9bff;
+  --green:#22d180;
+  --red:#ff5d4c;
+  --orange:#ff8c2e;
+  --violet:#a78bfa;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --sans:'Manrope','Inter',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.45;font-size:13px}
+.page{max-width:1480px;margin:0 auto}
+
+/* ── Page header / nav ─────────────────────────────────────── */
+.nav{position:sticky;top:0;background:rgba(6,8,13,.94);backdrop-filter:blur(10px);z-index:100;
+  padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:24px}
+.nav-brand{font-weight:800;font-size:14px;letter-spacing:-.01em}
+.nav-brand span{color:var(--amber)}
+.nav-links{display:flex;gap:16px;margin-left:auto}
+.nav-links a{font-family:var(--mono);font-size:10px;color:var(--muted);text-decoration:none;
+  letter-spacing:.06em;text-transform:uppercase;font-weight:700;transition:color .15s}
+.nav-links a:hover{color:var(--amber)}
+
+.intro{padding:40px 24px}
+.intro h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px;line-height:1.1}
+.intro p{font-family:var(--mono);font-size:12px;color:var(--muted);max-width:920px;line-height:1.7}
+.intro p b{color:var(--amber)}
+
+.ver{padding:48px 24px;border-top:1px solid var(--border)}
+.ver-head{margin-bottom:28px}
+.ver-tag{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;
+  padding:4px 10px;border-radius:3px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;
+  background:var(--amber);color:var(--bg)}
+.ver-title{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.ver-sub{font-family:var(--mono);font-size:11px;color:var(--muted);max-width:880px;line-height:1.7}
+.ver-rules{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-top:8px;line-height:1.7}
+.ver-rules b{color:var(--text)}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SHARED DASHBOARD CHROME
+   ═══════════════════════════════════════════════════════════════════════ */
+.dash{display:flex;height:760px;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.sb{width:232px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:16px 0}
+.sb-brand{padding:0 20px 18px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.sb-brand .name{font-size:14px;font-weight:800;letter-spacing:-.01em}
+.sb-brand .name span{color:var(--amber)}
+.sb-brand .role{font-family:var(--mono);font-size:9px;color:var(--muted2);text-transform:uppercase;
+  letter-spacing:.08em;margin-top:4px}
+.sb-section{padding:0 12px;margin-bottom:18px}
+.sb-section-title{font-family:var(--mono);font-size:9px;color:var(--muted2);text-transform:uppercase;
+  letter-spacing:.1em;padding:0 8px 6px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:4px;
+  font-family:var(--sans);font-size:13px;color:var(--muted);cursor:pointer;transition:all .15s;font-weight:500}
+.sb-item:hover{color:var(--text);background:var(--panel2)}
+.sb-item.on{color:var(--text);background:rgba(240,160,20,.08);position:relative}
+.sb-item.on::before{content:"";position:absolute;left:-1px;top:6px;bottom:6px;width:2px;background:var(--amber);border-radius:1px}
+.sb-icon{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:var(--muted2);font-size:13px}
+.sb-item.on .sb-icon{color:var(--amber)}
+.sb-spacer{flex:1}
+.sb-foot{padding:12px 20px;border-top:1px solid var(--border);font-family:var(--mono);font-size:9px;color:var(--muted2);line-height:1.6}
+.sb-foot b{color:var(--text)}
+
+.main{flex:1;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+.topbar{padding:12px 24px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;background:var(--bg)}
+.crumbs{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.crumbs b{color:var(--text);font-weight:600}
+.status-strip{display:flex;align-items:center;gap:10px;margin-left:auto;font-family:var(--mono);font-size:10px}
+.status-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:3px;font-weight:700;letter-spacing:.04em}
+.status-pill.elevated{background:rgba(240,160,20,.14);color:var(--amber);border:1px solid rgba(240,160,20,.3)}
+.status-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+.status-meta{color:var(--muted2)}
+
+.content{flex:1;padding:24px;overflow:hidden}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   V1 — STRICT CONTROL ROOM
+   3 × 2 tile grid · stacked lists · no chart decoration
+   ═══════════════════════════════════════════════════════════════════════ */
+.v1-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:16px;height:100%}
+.v1-tile{background:var(--panel);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;
+  min-height:0;overflow:hidden}
+.v1-th{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.1em;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.v1-th .src{color:var(--muted2);font-weight:500}
+.v1-th .src b{color:var(--green)}
+.v1-big{font-family:var(--sans);font-size:22px;font-weight:700;letter-spacing:-.015em;line-height:1}
+.v1-big.amb{color:var(--amber)}
+.v1-big.red{color:var(--red)}
+.v1-big.gr{color:var(--green)}
+.v1-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px}
+.v1-meta b{color:var(--text);font-weight:600}
+.v1-meta b.red{color:var(--red)}
+.v1-meta b.gr{color:var(--green)}
+.v1-spacer{flex:1;min-height:8px}
+.v1-list{display:flex;flex-direction:column;font-family:var(--mono);font-size:11px}
+.v1-list .row{display:grid;grid-template-columns:1fr auto 56px;align-items:center;gap:10px;padding:5px 0}
+.v1-list .row + .row{border-top:1px solid var(--border)}
+.v1-list .row .l{color:var(--muted);font-weight:500}
+.v1-list .row .v{color:var(--text);font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.v1-list .row .d{font-size:10px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.v1-list .row .d.red{color:var(--red)}
+.v1-list .row .d.green{color:var(--green)}
+.v1-list .row .d.muted{color:var(--muted2)}
+.v1-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:10px}
+.v1-bar > div{height:100%}
+.v1-foot{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-top:12px;padding-top:10px;
+  border-top:1px solid var(--border)}
+.v1-foot b{color:var(--text);font-weight:600}
+.v1-zone{display:flex;height:6px;border-radius:3px;overflow:hidden;margin-top:10px;position:relative}
+.v1-zone .seg{height:100%}
+.v1-zone .mk{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);border-radius:1px}
+.v1-zone-axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:4px}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   V2 — HYBRID (hero + sections)
+   One big chart up top, supporting tiles below
+   ═══════════════════════════════════════════════════════════════════════ */
+.v2-wrap{display:flex;flex-direction:column;gap:16px;height:100%}
+.v2-hero{background:var(--panel);border-radius:6px;padding:18px 24px;display:flex;gap:32px;align-items:center}
+.v2-hero-left{flex:0 0 220px;padding-right:24px;border-right:1px solid var(--border)}
+.v2-hero-band{font-family:var(--sans);font-size:22px;font-weight:800;color:var(--amber);
+  letter-spacing:-.02em;line-height:1.1}
+.v2-hero-score{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px}
+.v2-hero-sub{font-family:var(--mono);font-size:11px;color:var(--text);margin-top:10px;line-height:1.5}
+.v2-hero-sub b{color:var(--amber);font-weight:600}
+.v2-hero-right{flex:1;display:flex;align-items:center;gap:40px}
+.v2-stat{display:flex;flex-direction:column;gap:2px}
+.v2-stat .lab{font-family:var(--mono);font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em}
+.v2-stat .val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.v2-stat .delta{font-family:var(--mono);font-size:10px;font-weight:600}
+.v2-stat .delta.red{color:var(--red)} .v2-stat .delta.green{color:var(--green)} .v2-stat .delta.amber{color:var(--amber)}
+.v2-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px;flex:1;min-height:0}
+.v2-section{background:var(--panel);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.v2-sh{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between}
+.v2-sh .src{color:var(--muted2);font-weight:500}
+.v2-chart-rows{display:flex;flex-direction:column;gap:8px;font-family:var(--mono);font-size:11px}
+.v2-cr{display:grid;grid-template-columns:90px 1fr 48px;align-items:center;gap:10px}
+.v2-cr .nm{color:var(--text)}
+.v2-cr .bw{height:18px;background:var(--border);border-radius:2px;position:relative;overflow:hidden}
+.v2-cr .bw .base{position:absolute;left:0;top:0;bottom:0;background:rgba(140,150,170,.18);border-radius:2px}
+.v2-cr .bw .now{position:absolute;left:0;top:0;bottom:0;border-radius:2px;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;font-size:10px;font-weight:700;color:#07090e;letter-spacing:-.02em}
+.v2-cr .bw .now.red{background:var(--red)} .v2-cr .bw .now.amb{background:var(--amber)}
+.v2-cr .bw .now.gr{background:var(--green)} .v2-cr .bw .now.bl{background:var(--blue)}
+.v2-cr .dl{font-size:10px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.v2-cr .dl.red{color:var(--red)} .v2-cr .dl.green{color:var(--green)} .v2-cr .dl.muted{color:var(--muted2)}
+.v2-list{display:flex;flex-direction:column;font-family:var(--mono);font-size:11px}
+.v2-list .row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:6px 0}
+.v2-list .row + .row{border-top:1px solid var(--border)}
+.v2-list .row .l{color:var(--muted)}
+.v2-list .row .v{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.v2-list .row .b{display:inline-block;padding:2px 6px;border-radius:2px;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.v2-list .row .b.h{background:rgba(255,93,76,.15);color:var(--red)}
+.v2-list .row .b.m{background:rgba(240,160,20,.15);color:var(--amber)}
+.v2-list .row .b.p{background:rgba(34,209,128,.15);color:var(--green)}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   V3 — INDIA-FIRST PERSONALIZED
+   Indian portfolio impact dominates left; context on right
+   ═══════════════════════════════════════════════════════════════════════ */
+.v3-grid{display:grid;grid-template-columns:1.6fr 1fr;grid-template-rows:auto 1fr;gap:16px;height:100%}
+.v3-impact{grid-column:1;grid-row:1 / span 2;background:var(--panel);border-radius:6px;padding:24px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.v3-ih{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between}
+.v3-impact-head{display:flex;align-items:baseline;gap:18px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.v3-impact-big{font-family:var(--sans);font-size:34px;font-weight:800;color:var(--red);letter-spacing:-.02em;line-height:1}
+.v3-impact-lab{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.5;max-width:260px}
+.v3-impact-lab b{color:var(--text)}
+.v3-stocks{flex:1;display:flex;flex-direction:column;font-family:var(--mono);font-size:11px;min-height:0;overflow-y:auto}
+.v3-stk{display:grid;grid-template-columns:62px 1fr 70px 56px 64px;align-items:center;gap:12px;padding:8px 0}
+.v3-stk + .v3-stk{border-top:1px solid var(--border)}
+.v3-stk.head{font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;padding:0 0 8px}
+.v3-stk .sym{color:var(--text);font-weight:700}
+.v3-stk .name{color:var(--muted)}
+.v3-stk .risk{font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;
+  padding:2px 6px;border-radius:2px}
+.v3-stk .risk.high{background:rgba(255,93,76,.15);color:var(--red)}
+.v3-stk .risk.med{background:rgba(240,160,20,.15);color:var(--amber)}
+.v3-stk .risk.pos{background:rgba(34,209,128,.15);color:var(--green)}
+.v3-stk .pct{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.v3-stk .pct.red{color:var(--red)} .v3-stk .pct.green{color:var(--green)}
+.v3-stk .src{color:var(--muted2);font-size:10px;text-align:right}
+.v3-action{margin-top:16px;padding:14px 16px;background:rgba(58,155,255,.06);border-left:2px solid var(--blue);
+  border-radius:0 4px 4px 0;font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.6}
+.v3-action b{color:var(--blue);font-weight:700}
+
+.v3-tile{background:var(--panel);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.v3-tile.ctx{}
+.v3-th{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;
+  font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between}
+.v3-th .src{color:var(--muted2);font-weight:500}
+.v3-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:6px 0;font-family:var(--mono);font-size:11px}
+.v3-row + .v3-row{border-top:1px solid var(--border)}
+.v3-row .l{color:var(--muted)}
+.v3-row .v{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.v3-row .d{font-size:10px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;min-width:50px}
+.v3-row .d.red{color:var(--red)} .v3-row .d.green{color:var(--green)} .v3-row .d.muted{color:var(--muted2)}
+.v3-big{font-family:var(--sans);font-size:22px;font-weight:700;line-height:1;letter-spacing:-.015em}
+.v3-big.amb{color:var(--amber)} .v3-big.red{color:var(--red)}
+.v3-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+/* shared utilities */
+.scroll-hint{font-family:var(--mono);font-size:9px;color:var(--muted2);text-align:right;margin-top:8px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">Hormuz<span>Watch</span> · control room redesign</div>
+  <div class="nav-links">
+    <a href="#v1">V1 · Strict Control Room</a>
+    <a href="#v2">V2 · Hybrid</a>
+    <a href="#v3">V3 · India-First Personalized</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="intro">
+    <h1>The control room redesign — three versions</h1>
+    <p>
+      Built against the <b>"digital control room"</b> framing from your shared document.
+      Sidebar nav (the spine), no scroll on overview, 3-7 tiles max, 24px typography
+      ceiling, strict 4/8pt grid, stacked lists in dense areas, dark-mode elevation via
+      lighter backgrounds (no shadows), semantic colour, and explicit personalisation
+      for the Indian-investor persona we serve. Same single dataset rendered three
+      ways so you can pick the density and persona-bias that fits.
+    </p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       V1 · STRICT CONTROL ROOM
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="ver" id="v1">
+    <div class="ver-head">
+      <div class="ver-tag">Version 1</div>
+      <div class="ver-title">Strict Control Room</div>
+      <div class="ver-sub">
+        Maximum doc adherence. Sidebar spine. Six equal tiles in a 3×2 grid. No
+        decoration, no charts beyond a 3-px progress strip or 6-px zone bar. Every
+        tile fits on one screen. Stacked lists inside tiles instead of nested cards.
+      </div>
+      <div class="ver-rules"><b>Applies:</b> single-screen no-scroll · 6 metric tiles · ≤22px type · 24px gutters · stacked lists · no gauges · no shadows · top-left = answer (Verdict)</div>
+    </div>
+
+    <div class="dash">
+      <!-- Sidebar -->
+      <aside class="sb">
+        <div class="sb-brand">
+          <div class="name">Hormuz<span>Watch</span></div>
+          <div class="role">Aniket K · SEBI RA</div>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-title">Dashboard</div>
+          <div class="sb-item on"><span class="sb-icon">◐</span>Overview</div>
+          <div class="sb-item"><span class="sb-icon">🇮🇳</span>India exposure</div>
+          <div class="sb-item"><span class="sb-icon">$</span>Markets</div>
+          <div class="sb-item"><span class="sb-icon">⛴</span>Supply &amp; routes</div>
+          <div class="sb-item"><span class="sb-icon">⊕</span>Map</div>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-title">Detail</div>
+          <div class="sb-item"><span class="sb-icon">▤</span>Signals</div>
+          <div class="sb-item"><span class="sb-icon">≡</span>Macro</div>
+          <div class="sb-item"><span class="sb-icon">⊟</span>History</div>
+        </div>
+        <div class="sb-spacer"></div>
+        <div class="sb-section">
+          <div class="sb-item"><span class="sb-icon">⌕</span>Search</div>
+          <div class="sb-item"><span class="sb-icon">⚙</span>Settings</div>
+        </div>
+        <div class="sb-foot">All feeds <b>fresh</b><br>Last refresh 2m ago</div>
+      </aside>
+
+      <!-- Main -->
+      <div class="main">
+        <div class="topbar">
+          <div class="crumbs">Dashboard · <b>Overview</b></div>
+          <div class="status-strip">
+            <span class="status-pill elevated">ELEVATED</span>
+            <span class="status-meta">Strait closed · Day 78 · 2026-02-28</span>
+            <span class="status-meta">·</span>
+            <span class="status-meta">Verdict 4m · AIS 12m · Stooq 3m</span>
+          </div>
+        </div>
+        <div class="content">
+          <div class="v1-grid">
+
+            <!-- T1: Verdict (top-left = mission-critical answer) -->
+            <div class="v1-tile">
+              <div class="v1-th"><span>Hormuz Risk Verdict</span><span class="src">composite · 2-stage</span></div>
+              <div class="v1-big amb">ELEVATED</div>
+              <div class="v1-meta">1.7 / 4.0 · structural · <b>0 of 7</b> overrides fired</div>
+              <div class="v1-spacer"></div>
+              <div class="v1-list">
+                <div class="row"><div class="l">Oil price</div><div class="v">0.54</div><div class="d red">3 / 4</div></div>
+                <div class="row"><div class="l">Tanker stocks</div><div class="v">0.39</div><div class="d red">3 / 4</div></div>
+                <div class="row"><div class="l">Sanctions tempo</div><div class="v">0.20</div><div class="d muted">2 / 4</div></div>
+              </div>
+              <div class="v1-foot">Top contributors · <b>9 more</b> see Signals</div>
+            </div>
+
+            <!-- T2: Brent / WTI -->
+            <div class="v1-tile">
+              <div class="v1-th"><span>Crude oil — live</span><span class="src"><b>●</b> Stooq · 3m</span></div>
+              <div class="v1-big">$107.0</div>
+              <div class="v1-meta">Brent · vs <b>$72</b> pre-Feb 26 · <b class="red">+49%</b> · today ▲ 0.5%</div>
+              <div class="v1-spacer"></div>
+              <div class="v1-list">
+                <div class="row"><div class="l">WTI</div><div class="v">$102.5</div><div class="d red">+58%</div></div>
+                <div class="row"><div class="l">B–W spread</div><div class="v">$4.50</div><div class="d green">−36%</div></div>
+                <div class="row"><div class="l">EIA spot ref</div><div class="v">$111.4</div><div class="d muted">2d</div></div>
+              </div>
+              <div class="v1-foot">vs <b>pre-crisis baseline 2026-02-26</b></div>
+            </div>
+
+            <!-- T3: India exposure (the user agency tile) -->
+            <div class="v1-tile">
+              <div class="v1-th"><span>India equity — Hormuz exposed</span><span class="src">5 names · NSE</span></div>
+              <div class="v1-big red">−1.8%</div>
+              <div class="v1-meta">est. portfolio impact · 6 of 7 down · top loss IOC −3.2%</div>
+              <div class="v1-spacer"></div>
+              <div class="v1-list">
+                <div class="row"><div class="l">IOC · refiner</div><div class="v">HIGH</div><div class="d red">−3.2%</div></div>
+                <div class="row"><div class="l">BPCL · refiner</div><div class="v">HIGH</div><div class="d red">−2.8%</div></div>
+                <div class="row"><div class="l">ONGC · upstream</div><div class="v">POS</div><div class="d green">+2.1%</div></div>
+                <div class="row"><div class="l">SCI · tanker</div><div class="v">POS</div><div class="d green">+4.5%</div></div>
+              </div>
+              <div class="v1-foot">Refiners short · <b>upstream long</b></div>
+            </div>
+
+            <!-- T4: Chokepoints (the comparison tile) -->
+            <div class="v1-tile">
+              <div class="v1-th"><span>Global chokepoints · 24h</span><span class="src"><b>●</b> AIS · 12m</span></div>
+              <div class="v1-list">
+                <div class="row"><div class="l">Hormuz</div><div class="v">4</div><div class="d red">▼ 96%</div></div>
+                <div class="row"><div class="l">Suez</div><div class="v">26</div><div class="d red">▼ 35%</div></div>
+                <div class="row"><div class="l">Cape of GH</div><div class="v">60</div><div class="d green">▲ 71%</div></div>
+                <div class="row"><div class="l">Bab el-Mandeb</div><div class="v">31</div><div class="d muted">▼ 9%</div></div>
+                <div class="row"><div class="l">Malacca</div><div class="v">226</div><div class="d muted">▼ 4%</div></div>
+              </div>
+              <div class="v1-foot">vs pre-crisis daily run-rate</div>
+            </div>
+
+            <!-- T5: Supply / pipelines -->
+            <div class="v1-tile">
+              <div class="v1-th"><span>Supply bypass</span><span class="src">vs 20M strait flow</span></div>
+              <div class="v1-big amb">6.85M</div>
+              <div class="v1-meta">bbl/d pipeline capacity · <b class="red">13.15M unrouteable</b></div>
+              <div class="v1-bar" style="display:flex;height:8px">
+                <div style="width:25%;background:var(--green)"></div>
+                <div style="width:7.5%;background:var(--green)"></div>
+                <div style="width:1.75%;background:var(--amber)"></div>
+                <div style="width:0.7%;background:var(--amber)"></div>
+                <div style="width:65.05%;background:var(--red)"></div>
+              </div>
+              <div class="v1-spacer"></div>
+              <div class="v1-list">
+                <div class="row"><div class="l">Petroline</div><div class="v">5.0M</div><div class="d green">95%</div></div>
+                <div class="row"><div class="l">UAE ADCOP</div><div class="v">1.5M</div><div class="d green">100%</div></div>
+                <div class="row"><div class="l">Iraq + Iran</div><div class="v">0.85M</div><div class="d muted">~30%</div></div>
+              </div>
+              <div class="v1-foot">4 bypass pipelines · <b>see Supply</b></div>
+            </div>
+
+            <!-- T6: War-risk premium -->
+            <div class="v1-tile">
+              <div class="v1-th"><span>War-risk premium</span><span class="src">admin · 3d</span></div>
+              <div class="v1-big red">1.0%</div>
+              <div class="v1-meta">of hull · 7d · <b class="red">8×</b> pre-crisis</div>
+              <div class="v1-zone">
+                <div class="seg" style="width:15%;background:rgba(34,209,128,.55)"></div>
+                <div class="seg" style="width:25%;background:rgba(240,160,20,.55)"></div>
+                <div class="seg" style="width:40%;background:rgba(255,93,76,.55)"></div>
+                <div class="seg" style="width:20%;background:rgba(255,62,82,.55)"></div>
+                <div class="mk" style="left:24%"></div>
+              </div>
+              <div class="v1-zone-axis"><span>0%</span><span>0.5</span><span>2</span><span>5%+</span></div>
+              <div class="v1-spacer"></div>
+              <div class="v1-list">
+                <div class="row"><div class="l">VLCC transit</div><div class="v">$2.5M</div><div class="d red">+1,900%</div></div>
+                <div class="row"><div class="l">P&amp;I clubs withdrawn</div><div class="v">6 / 13</div><div class="d muted">amber</div></div>
+              </div>
+              <div class="v1-foot">Howden Re · S&amp;P Global</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       V2 · HYBRID (hero + sections)
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="ver" id="v2">
+    <div class="ver-head">
+      <div class="ver-tag">Version 2</div>
+      <div class="ver-title">Hybrid · hero verdict + supporting sections</div>
+      <div class="ver-sub">
+        Same control-room discipline, but the verdict gets a hero bar across the top
+        so the answer is the first thing read. Three section tiles underneath:
+        <b>routes</b> (cross-chokepoint bullet bars with baseline ghosts) ·
+        <b>markets</b> (Brent + WTI + war-risk compressed) ·
+        <b>India exposure</b> (the stocks the user can trade).
+      </div>
+      <div class="ver-rules"><b>Applies:</b> single hero · 3 contextual sections · bullet bars with baseline tracks (the only chart pattern) · 22px ceiling · 16px section gutters · no decoration</div>
+    </div>
+
+    <div class="dash">
+      <!-- Sidebar (same as V1) -->
+      <aside class="sb">
+        <div class="sb-brand">
+          <div class="name">Hormuz<span>Watch</span></div>
+          <div class="role">Aniket K · SEBI RA</div>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-title">Dashboard</div>
+          <div class="sb-item on"><span class="sb-icon">◐</span>Overview</div>
+          <div class="sb-item"><span class="sb-icon">🇮🇳</span>India exposure</div>
+          <div class="sb-item"><span class="sb-icon">$</span>Markets</div>
+          <div class="sb-item"><span class="sb-icon">⛴</span>Supply &amp; routes</div>
+          <div class="sb-item"><span class="sb-icon">⊕</span>Map</div>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-title">Detail</div>
+          <div class="sb-item"><span class="sb-icon">▤</span>Signals</div>
+          <div class="sb-item"><span class="sb-icon">≡</span>Macro</div>
+          <div class="sb-item"><span class="sb-icon">⊟</span>History</div>
+        </div>
+        <div class="sb-spacer"></div>
+        <div class="sb-section">
+          <div class="sb-item"><span class="sb-icon">⌕</span>Search</div>
+          <div class="sb-item"><span class="sb-icon">⚙</span>Settings</div>
+        </div>
+        <div class="sb-foot">All feeds <b>fresh</b><br>Last refresh 2m ago</div>
+      </aside>
+
+      <!-- Main -->
+      <div class="main">
+        <div class="topbar">
+          <div class="crumbs">Dashboard · <b>Overview</b></div>
+          <div class="status-strip">
+            <span class="status-pill elevated">ELEVATED</span>
+            <span class="status-meta">Day 78 · 2026-02-28</span>
+            <span class="status-meta">·</span>
+            <span class="status-meta">Verdict 4m · AIS 12m · Stooq 3m</span>
+          </div>
+        </div>
+        <div class="content">
+          <div class="v2-wrap">
+
+            <!-- Hero verdict -->
+            <div class="v2-hero">
+              <div class="v2-hero-left">
+                <div class="v2-hero-band">ELEVATED</div>
+                <div class="v2-hero-score">1.7 / 4.0 · structural · 0 overrides</div>
+                <div class="v2-hero-sub">Top driver: <b>oil 0.54</b> · then tanker stocks 0.39 · two notches from CRITICAL.</div>
+              </div>
+              <div class="v2-hero-right">
+                <div class="v2-stat">
+                  <div class="lab">Brent</div>
+                  <div class="val">$107.0</div>
+                  <div class="delta red">+49% vs Feb 26</div>
+                </div>
+                <div class="v2-stat">
+                  <div class="lab">Hormuz transits / d</div>
+                  <div class="val">4</div>
+                  <div class="delta red">−96%</div>
+                </div>
+                <div class="v2-stat">
+                  <div class="lab">War-risk premium</div>
+                  <div class="val">1.0%</div>
+                  <div class="delta red">8× normal</div>
+                </div>
+                <div class="v2-stat">
+                  <div class="lab">India portfolio impact</div>
+                  <div class="val" style="color:var(--red)">−1.8%</div>
+                  <div class="delta red">refiners hit</div>
+                </div>
+                <div class="v2-stat">
+                  <div class="lab">Unrouteable</div>
+                  <div class="val">13.15M</div>
+                  <div class="delta amber">bbl / d</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3 sections -->
+            <div class="v2-grid">
+
+              <!-- Routes (cross-chokepoint with baseline ghosts) -->
+              <div class="v2-section">
+                <div class="v2-sh"><span>Global routes — transits / day</span><span class="src">AIS · 12m · vs pre-crisis baseline</span></div>
+                <div class="v2-chart-rows">
+                  <div class="v2-cr">
+                    <div class="nm">Hormuz</div>
+                    <div class="bw"><div class="base" style="width:100%"></div><div class="now red" style="width:4%">4</div></div>
+                    <div class="dl red">−96%</div>
+                  </div>
+                  <div class="v2-cr">
+                    <div class="nm">Suez</div>
+                    <div class="bw"><div class="base" style="width:100%"></div><div class="now amb" style="width:65%">26</div></div>
+                    <div class="dl red">−35%</div>
+                  </div>
+                  <div class="v2-cr">
+                    <div class="nm">Cape of GH</div>
+                    <div class="bw"><div class="base" style="width:58%"></div><div class="now gr" style="width:100%">60</div></div>
+                    <div class="dl green">+71%</div>
+                  </div>
+                  <div class="v2-cr">
+                    <div class="nm">Bab el-Mandeb</div>
+                    <div class="bw"><div class="base" style="width:100%"></div><div class="now bl" style="width:91%">31</div></div>
+                    <div class="dl muted">−9%</div>
+                  </div>
+                  <div class="v2-cr">
+                    <div class="nm">Malacca</div>
+                    <div class="bw"><div class="base" style="width:100%"></div><div class="now bl" style="width:96%">226</div></div>
+                    <div class="dl muted">−4%</div>
+                  </div>
+                </div>
+                <div class="v1-foot" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">Diverted volume on the Cape route · <b>only chokepoint above its baseline</b></div>
+              </div>
+
+              <!-- Markets (compressed) -->
+              <div class="v2-section">
+                <div class="v2-sh"><span>Markets</span><span class="src">3m–3d</span></div>
+                <div class="v2-list">
+                  <div class="row"><div class="l">Brent</div><div class="v">$107.0</div><div class="b h">+49%</div></div>
+                  <div class="row"><div class="l">WTI</div><div class="v">$102.5</div><div class="b h">+58%</div></div>
+                  <div class="row"><div class="l">B-W spread</div><div class="v">$4.5</div><div class="b m">−36%</div></div>
+                  <div class="row"><div class="l">BDTI</div><div class="v">2429</div><div class="b m">+84% YTD</div></div>
+                  <div class="row"><div class="l">War-risk hull</div><div class="v">1.00%</div><div class="b h">8×</div></div>
+                  <div class="row"><div class="l">VLCC transit</div><div class="v">$2.5M</div><div class="b h">+1,900%</div></div>
+                </div>
+              </div>
+
+              <!-- India exposure -->
+              <div class="v2-section">
+                <div class="v2-sh"><span>India equity · Hormuz-exposed</span><span class="src">NSE · today</span></div>
+                <div class="v2-list">
+                  <div class="row"><div class="l">IOC · refiner</div><div class="v" style="color:var(--red)">−3.2%</div><div class="b h">HIGH</div></div>
+                  <div class="row"><div class="l">BPCL · refiner</div><div class="v" style="color:var(--red)">−2.8%</div><div class="b h">HIGH</div></div>
+                  <div class="row"><div class="l">HPCL · refiner</div><div class="v" style="color:var(--red)">−2.5%</div><div class="b h">HIGH</div></div>
+                  <div class="row"><div class="l">RIL · integrated</div><div class="v" style="color:var(--red)">−1.4%</div><div class="b m">MED</div></div>
+                  <div class="row"><div class="l">ONGC · upstream</div><div class="v" style="color:var(--green)">+2.1%</div><div class="b p">POS</div></div>
+                  <div class="row"><div class="l">SCI · tanker</div><div class="v" style="color:var(--green)">+4.5%</div><div class="b p">POS</div></div>
+                </div>
+                <div class="v1-foot" style="margin-top:auto;padding-top:10px;border-top:1px solid var(--border)">Net portfolio impact: <b>−1.8%</b> · see India page</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       V3 · INDIA-FIRST PERSONALIZED
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="ver" id="v3">
+    <div class="ver-head">
+      <div class="ver-tag">Version 3</div>
+      <div class="ver-title">India-first · personalised for the actual user</div>
+      <div class="ver-sub">
+        The most opinionated. The dashboard knows the user is an Indian investor.
+        <b>India exposure is the top-left answer</b>, the rest is context. Generic-global
+        metrics (chokepoints, war-risk, Brent) live in supporting tiles. Pure
+        personalisation, no role-switcher needed.
+      </div>
+      <div class="ver-rules"><b>Applies:</b> personalisation &gt; customization · top-left = "what to trade" · supporting tiles smaller · explicit action callout (the long/short bias the data implies)</div>
+    </div>
+
+    <div class="dash">
+      <!-- Sidebar -->
+      <aside class="sb">
+        <div class="sb-brand">
+          <div class="name">Hormuz<span>Watch</span></div>
+          <div class="role">India · personal view</div>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-title">My portfolio</div>
+          <div class="sb-item on"><span class="sb-icon">🇮🇳</span>India exposure</div>
+          <div class="sb-item"><span class="sb-icon">↗</span>Watchlist (7)</div>
+          <div class="sb-item"><span class="sb-icon">📈</span>Trade ideas</div>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-title">Context</div>
+          <div class="sb-item"><span class="sb-icon">◐</span>Risk verdict</div>
+          <div class="sb-item"><span class="sb-icon">$</span>Markets</div>
+          <div class="sb-item"><span class="sb-icon">⛴</span>Supply &amp; routes</div>
+          <div class="sb-item"><span class="sb-icon">⊕</span>Map</div>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-title">Detail</div>
+          <div class="sb-item"><span class="sb-icon">▤</span>Signals</div>
+          <div class="sb-item"><span class="sb-icon">≡</span>Macro</div>
+        </div>
+        <div class="sb-spacer"></div>
+        <div class="sb-section">
+          <div class="sb-item"><span class="sb-icon">⚙</span>Settings</div>
+        </div>
+        <div class="sb-foot">All feeds <b>fresh</b><br>Last refresh 2m ago</div>
+      </aside>
+
+      <!-- Main -->
+      <div class="main">
+        <div class="topbar">
+          <div class="crumbs">Personal · <b>India exposure</b></div>
+          <div class="status-strip">
+            <span class="status-pill elevated">ELEVATED</span>
+            <span class="status-meta">Day 78</span>
+            <span class="status-meta">·</span>
+            <span class="status-meta">India watchlist · 7 names · last 2m ago</span>
+          </div>
+        </div>
+        <div class="content">
+          <div class="v3-grid">
+
+            <!-- LEFT · India impact dominates -->
+            <div class="v3-impact">
+              <div class="v3-ih"><span>India equity · my watchlist</span><span>NSE · today</span></div>
+              <div class="v3-impact-head">
+                <div class="v3-impact-big">−1.8%</div>
+                <div class="v3-impact-lab">
+                  Net portfolio impact today · <b>5 of 7</b> down<br>
+                  Worst: <b>IOC −3.2%</b> · Best: <b>SCI +4.5%</b>
+                </div>
+              </div>
+              <div class="v3-stocks">
+                <div class="v3-stk head"><div>SYM</div><div>NAME</div><div style="text-align:center">EXPOSURE</div><div style="text-align:right">TODAY</div><div style="text-align:right">SOURCE</div></div>
+                <div class="v3-stk">
+                  <div class="sym">IOC</div>
+                  <div class="name">Indian Oil Corp · refiner</div>
+                  <div class="risk high">HIGH</div>
+                  <div class="pct red">−3.2%</div>
+                  <div class="src">NSE 2m</div>
+                </div>
+                <div class="v3-stk">
+                  <div class="sym">BPCL</div>
+                  <div class="name">Bharat Petroleum · refiner</div>
+                  <div class="risk high">HIGH</div>
+                  <div class="pct red">−2.8%</div>
+                  <div class="src">NSE 2m</div>
+                </div>
+                <div class="v3-stk">
+                  <div class="sym">HPCL</div>
+                  <div class="name">Hindustan Petroleum · refiner</div>
+                  <div class="risk high">HIGH</div>
+                  <div class="pct red">−2.5%</div>
+                  <div class="src">NSE 2m</div>
+                </div>
+                <div class="v3-stk">
+                  <div class="sym">PETRONET</div>
+                  <div class="name">Petronet LNG · LNG importer</div>
+                  <div class="risk high">HIGH</div>
+                  <div class="pct red">−2.1%</div>
+                  <div class="src">NSE 2m</div>
+                </div>
+                <div class="v3-stk">
+                  <div class="sym">RIL</div>
+                  <div class="name">Reliance Industries · integrated</div>
+                  <div class="risk med">MED</div>
+                  <div class="pct red">−1.4%</div>
+                  <div class="src">NSE 2m</div>
+                </div>
+                <div class="v3-stk">
+                  <div class="sym">ONGC</div>
+                  <div class="name">Oil &amp; Natural Gas Corp · upstream</div>
+                  <div class="risk pos">POS</div>
+                  <div class="pct green">+2.1%</div>
+                  <div class="src">NSE 2m</div>
+                </div>
+                <div class="v3-stk">
+                  <div class="sym">SCI</div>
+                  <div class="name">Shipping Corp of India · tanker</div>
+                  <div class="risk pos">POS</div>
+                  <div class="pct green">+4.5%</div>
+                  <div class="src">NSE 2m</div>
+                </div>
+              </div>
+              <div class="v3-action">
+                <b>Trade-bias from the basket:</b> long upstream (ONGC) + Indian tanker (SCI),
+                short refiners (IOC / BPCL / HPCL). RIL hedge-neutral given downstream offset.
+                Reaffirm if BDTI continues to rise + Hormuz transits stay &lt; 10 / day.
+              </div>
+            </div>
+
+            <!-- RIGHT-TOP · Risk verdict (smaller) -->
+            <div class="v3-tile">
+              <div class="v3-th"><span>Hormuz risk verdict</span><span class="src">composite · 4m</span></div>
+              <div class="v3-big amb">ELEVATED</div>
+              <div class="v3-sub">1.7 / 4.0 · day 78 closed · 0 overrides<br>Top: <b style="color:var(--text)">oil</b> + tanker stocks</div>
+              <div class="v3-row"><div class="l">Brent live</div><div class="v">$107.0</div><div class="d red">+49%</div></div>
+              <div class="v3-row"><div class="l">Hormuz transits</div><div class="v">4 / d</div><div class="d red">−96%</div></div>
+              <div class="v3-row"><div class="l">War-risk hull</div><div class="v">1.00%</div><div class="d red">8×</div></div>
+              <div class="v3-row"><div class="l">Bypass gap</div><div class="v">13.15M</div><div class="d muted">unrouteable</div></div>
+            </div>
+
+            <!-- RIGHT-BOTTOM · What's changed today -->
+            <div class="v3-tile">
+              <div class="v3-th"><span>Watchlist signals · last 24h</span><span class="src">live</span></div>
+              <div class="v3-big red">3</div>
+              <div class="v3-sub">new alerts on my names · <b style="color:var(--text)">1 critical</b></div>
+              <div class="v3-row"><div class="l">⚠ IOC margin guidance cut</div><div class="d red" style="grid-column:span 2">CRITICAL</div></div>
+              <div class="v3-row"><div class="l">OFAC vessel match (IRGC)</div><div class="d red" style="grid-column:span 2">HIGH</div></div>
+              <div class="v3-row"><div class="l">Petronet LNG delivery slip</div><div class="d" style="color:var(--amber);grid-column:span 2">WATCH</div></div>
+              <div class="v3-row"><div class="l">ONGC upgrade · Q1 beat</div><div class="d green" style="grid-column:span 2">POS</div></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <section style="padding:48px 24px;border-top:1px solid var(--border)">
+    <p style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.7;max-width:920px">
+      <b style="color:var(--amber)">How to react:</b> pick one outright ("V2"), mix elements
+      ("V2 layout with V3's stock table"), or veto specifics ("V1's six tiles, but kill the
+      pipeline tile and use that space for India"). Faster than describing taste from a blank
+      page. Nothing in production is touched. Once you call it, I update the plan with the
+      pick + the 12 doc-violations we'll fix as Phase 0.
+    </p>
+  </section>
+
+</div>
+</body>
+</html>

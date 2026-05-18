@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hormuz Watch v3 — Option 3 full layout</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0e1320;--border:#18202e;--border2:#222c3d;
+  --amber:#f09014;--blue:#38aaff;--green:#1dd47e;--red:#ff6b35;--red2:#ff3e52;
+  --violet:#b07cf0;--orange:#ff8c2e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --sans:'Manrope',system-ui,sans-serif;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5}
+
+/* ── Top header (44px) ───────────────────────────────────────── */
+.top-bar{height:44px;background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 18px;gap:14px;position:sticky;top:0;z-index:50}
+.brand{font-family:var(--sans);font-weight:800;font-size:14px;letter-spacing:.01em;color:var(--text)}
+.brand span{color:var(--amber)}
+.top-pill{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;font-weight:700;letter-spacing:.06em}
+.top-pill.elevated{color:var(--amber);background:rgba(240,144,20,.15);border:1px solid rgba(240,144,20,.35)}
+.top-search{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted2)}
+
+/* ── Hero strip (sticky under top bar) ───────────────────────── */
+.hero{background:linear-gradient(180deg,var(--panel) 0,var(--bg) 100%);border-bottom:1px solid var(--border);
+  padding:14px 22px 0;position:sticky;top:44px;z-index:40}
+.hero-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+.hero-band{font-family:var(--sans);font-size:18px;font-weight:800;letter-spacing:.02em;padding:3px 12px;border-radius:4px}
+.hero-band.elevated{color:var(--amber);background:rgba(240,144,20,.14);border:1px solid rgba(240,144,20,.4)}
+.hero-day{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em}
+.hero-day b{color:var(--text)}
+.hero-update{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted2)}
+.hero-brief{font-family:var(--sans);font-size:12px;color:var(--text);line-height:1.55;max-width:920px;margin-bottom:4px}
+.hero-brief-meta{font-family:var(--mono);font-size:9.5px;color:var(--muted2);margin-bottom:8px}
+
+/* ── Tab nav ────────────────────────────────────────────────── */
+.tab-nav{display:flex;gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab-nav button{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);background:transparent;border:0;
+  padding:10px 16px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab-nav button.on{color:var(--amber);border-bottom-color:var(--amber)}
+.tab-nav button:hover{color:var(--text)}
+
+/* ── Tab content sections ──────────────────────────────────── */
+.tab-content{display:none;padding:20px 22px 80px;max-width:1280px;margin:0 auto}
+.tab-content.on{display:block}
+/* Map tab special: full-viewport-minus-header */
+.tab-content.map-view{display:none;padding:0;max-width:none}
+.tab-content.map-view.on{display:block;height:calc(100vh - 44px - 130px)}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:13px 14px;margin-bottom:14px}
+.rhead{display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;margin-bottom:10px;
+  border-bottom:1px solid var(--border);letter-spacing:.025em;font-family:var(--mono);font-size:9px;
+  color:var(--amber);text-transform:uppercase}
+.rhead-src{font-family:var(--mono);font-size:9px;color:var(--muted)}
+.src-live{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.2);padding:1px 5px;border-radius:2px}
+.src-est{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.2);padding:1px 5px;border-radius:2px}
+.src-blue{color:var(--blue)}
+
+/* ── Compact map (Overview embed, 360px) ──────────────────── */
+.map-compact{position:relative;height:360px;background:var(--panel);border:1px solid var(--border);
+  border-radius:7px;overflow:hidden;margin-bottom:14px}
+.map-compact .map-canvas{width:100%;height:100%;background:radial-gradient(circle at 50% 50%,#0f1828 0,#06080e 80%)}
+.map-overlay-top{position:absolute;top:10px;left:10px;display:flex;gap:8px;align-items:center;z-index:5}
+.map-overlay-top .map-stat{font-family:var(--mono);font-size:10px;color:var(--text);
+  background:rgba(11,14,22,.85);border:1px solid var(--border);padding:5px 9px;border-radius:4px}
+.map-overlay-top .map-stat b{color:var(--green);margin-right:4px}
+.map-overlay-top .map-stat.red b{color:var(--red)}
+.map-overlay-top .map-stat.amber b{color:var(--amber)}
+.map-full-link{position:absolute;bottom:10px;right:10px;font-family:var(--mono);font-size:10px;
+  color:var(--blue);background:rgba(11,14,22,.85);border:1px solid var(--border);padding:5px 9px;
+  border-radius:4px;text-decoration:none;cursor:pointer;z-index:5}
+.map-full-link:hover{background:rgba(56,170,255,.15);border-color:rgba(56,170,255,.4)}
+.map-legend{position:absolute;bottom:10px;left:10px;font-family:var(--mono);font-size:9px;
+  color:var(--muted);background:rgba(11,14,22,.85);border:1px solid var(--border);
+  padding:6px 10px;border-radius:4px;display:flex;gap:10px;z-index:5}
+.legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
+/* ── Full map (dedicated tab) ──────────────────────────────── */
+.map-full-wrap{display:flex;height:100%;border-top:1px solid var(--border)}
+.map-full{flex:1;position:relative;background:radial-gradient(circle at 50% 50%,#0f1828 0,#06080e 80%)}
+.map-side{width:280px;background:var(--panel);border-left:1px solid var(--border);padding:16px;
+  overflow-y:auto;font-family:var(--mono);font-size:10px}
+.map-side h3{font-family:var(--sans);font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px}
+.map-side .layer-group{margin-bottom:18px}
+.map-side .layer-group-title{font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.layer-toggle{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--panel2);
+  border:1px solid var(--border);border-radius:4px;margin-bottom:4px;cursor:pointer}
+.layer-toggle.on{border-color:var(--amber);background:rgba(240,144,20,.06)}
+.layer-toggle .label{color:var(--text)}
+.layer-toggle .meta{color:var(--muted)}
+.layer-toggle .check{width:14px;height:14px;border:1px solid var(--border2);border-radius:2px;
+  background:var(--bg);display:inline-block;position:relative}
+.layer-toggle.on .check{background:var(--amber);border-color:var(--amber)}
+.layer-toggle.on .check::after{content:"";position:absolute;left:3px;top:1px;width:4px;height:7px;
+  border:solid #07090e;border-width:0 2px 2px 0;transform:rotate(45deg)}
+
+/* ── Inline cards used in tabs ─────────────────────────────── */
+.row{display:flex;gap:10px;align-items:center;font-family:var(--mono);font-size:11px;
+  padding:6px 0;border-bottom:1px solid var(--border)}
+.row:last-child{border-bottom:0}
+.row .l{color:var(--muted);flex:1}
+.row .v{color:var(--text);font-weight:700;text-align:right}
+
+/* Two-col grid for Overview cards under the map */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.grid-2{grid-template-columns:1fr}}
+
+/* Chokepoint strip */
+.chk-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.chk-tile{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:9px 10px}
+.chk-name{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:3px}
+.chk-val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);line-height:1}
+.chk-vs{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:2px}
+.chk-delta{font-family:var(--mono);font-size:10px;font-weight:700;margin-top:4px}
+.chk-delta.down{color:var(--red)} .chk-delta.up{color:var(--green)} .chk-delta.flat{color:var(--muted)}
+@media (max-width:760px){.chk-strip{grid-template-columns:repeat(2,1fr)}}
+
+/* Verdict v2 (mirror of live) */
+.v2-band{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px}
+.v2-band-name{font-family:var(--sans);font-size:28px;font-weight:800;color:var(--amber)}
+.v2-score{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.v2-summary{font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.55;
+  margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.v2-section-title{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:6px}
+.v2-row{display:grid;grid-template-columns:78px 1fr 44px;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:10px;margin-bottom:5px}
+.v2-row-label{color:var(--text);text-transform:capitalize}
+.v2-row-bar{height:6px;background:var(--panel2);border:1px solid var(--border2);border-radius:2px;overflow:hidden}
+.v2-row-fill{height:100%}
+.v2-row-val{color:var(--text);font-weight:700;text-align:right}
+
+/* Vessel movement */
+.vm-headline{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.vm-big{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--amber);line-height:1}
+.vm-baseline{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.vm-baseline b.up{color:var(--red)} .vm-baseline b.down{color:var(--green)}
+
+/* Market pulse (with baseline) */
+.pulse-row{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+.pulse-big{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);line-height:1}
+.pulse-chg{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green)}
+.pulse-baseline{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px}
+.pulse-baseline b.up{color:var(--red)}
+
+/* Note tagging */
+.section-note{font-family:var(--mono);font-size:10px;color:var(--muted2);
+  background:rgba(56,170,255,.04);border-left:2px solid var(--blue);padding:8px 12px;
+  border-radius:0 4px 4px 0;margin-bottom:14px;line-height:1.6}
+.note-tag{display:inline-block;padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:9px;
+  font-weight:700;background:rgba(240,144,20,.15);color:var(--amber);border:1px solid rgba(240,144,20,.3);
+  margin-right:6px;text-transform:uppercase;letter-spacing:.05em}
+
+.placeholder{padding:24px;text-align:center;background:var(--panel2);border:1px dashed var(--border2);
+  border-radius:5px;color:var(--muted2);font-family:var(--mono);font-size:11px;margin-bottom:14px;line-height:1.7}
+.placeholder b{color:var(--text);display:block;margin-bottom:4px;font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ TOP BAR ════════════════════ -->
+<div class="top-bar">
+  <div class="brand">Hormuz<span>Watch</span></div>
+  <div class="top-pill elevated">ELEVATED · Day 76</div>
+  <div class="top-search">Search · /</div>
+</div>
+
+<!-- ════════════════════ HERO STRIP ════════════════════ -->
+<div class="hero">
+  <div class="hero-row">
+    <div class="hero-band elevated">ELEVATED</div>
+    <div class="hero-day"><b>Day 76</b> since closure · 2026-02-28</div>
+    <div class="hero-update">Verdict 4m · AIS 12m · Brent 3m · BDTI 22h</div>
+  </div>
+  <div class="hero-brief">
+    Vessel transits running ~70% of pre-crisis. Brent <b>$107</b> vs <b>$72</b> pre-Feb-26 (+49%).
+    ~13M bbl/d cannot be rerouted via pipeline — gap drives freight + insurance spikes downstream.
+    OFAC tempo elevated this week; IRR parallel premium 47% (dislocated).
+  </div>
+  <div class="hero-brief-meta">Daily brief · written 9h ago · next update 18:00 IST</div>
+  <nav class="tab-nav">
+    <button data-tab="overview" class="on">Overview</button>
+    <button data-tab="supply">Supply</button>
+    <button data-tab="markets">Markets</button>
+    <button data-tab="macro">Macro</button>
+    <button data-tab="india">India</button>
+    <button data-tab="map">Map</button>
+  </nav>
+</div>
+
+<!-- ════════════════════ TAB: OVERVIEW ════════════════════ -->
+<section class="tab-content on" id="tab-overview">
+
+  <div class="section-note">
+    <span class="note-tag">Tab 1 / 6</span>
+    <b>Overview</b> — the always-loaded landing. Compact map first (visual identity intact),
+    then verdict + cross-chokepoint + live market + vessel movement. One-scroll digest.
+  </div>
+
+  <!-- COMPACT MAP -->
+  <div class="map-compact">
+    <div class="map-overlay-top">
+      <div class="map-stat"><b>12</b> live vessels</div>
+      <div class="map-stat amber"><b>4</b> transiting</div>
+      <div class="map-stat red"><b>0</b> SDN matches</div>
+    </div>
+    <svg class="map-canvas" viewBox="0 0 800 360" preserveAspectRatio="xMidYMid slice">
+      <!-- Iranian coast (top) -->
+      <path d="M 0 70 Q 150 50 300 80 T 600 70 T 800 90 L 800 0 L 0 0 Z" fill="#13202f" stroke="#1a2a3d" stroke-width="1"/>
+      <text x="60" y="40" fill="#627a95" font-family="JetBrains Mono" font-size="10" letter-spacing="0.1em">IRAN</text>
+      <!-- UAE/Oman coast (bottom) -->
+      <path d="M 0 290 Q 200 310 400 280 Q 500 270 600 295 Q 700 310 800 290 L 800 360 L 0 360 Z" fill="#13202f" stroke="#1a2a3d" stroke-width="1"/>
+      <text x="60" y="335" fill="#627a95" font-family="JetBrains Mono" font-size="10" letter-spacing="0.1em">UAE · OMAN</text>
+      <!-- Strait corridor (TSS lanes) -->
+      <path d="M 100 140 L 400 165 L 700 175" stroke="#222c3d" stroke-width="1" stroke-dasharray="4,4" fill="none"/>
+      <path d="M 100 220 L 400 200 L 700 195" stroke="#222c3d" stroke-width="1" stroke-dasharray="4,4" fill="none"/>
+      <!-- Gate longitude (56.45E) marker -->
+      <line x1="420" y1="80" x2="420" y2="280" stroke="#f09014" stroke-width="1" stroke-dasharray="2,3" opacity="0.4"/>
+      <text x="425" y="92" fill="#f09014" font-family="JetBrains Mono" font-size="9" opacity="0.7">56.45°E gate</text>
+      <!-- Ports (5 Gulf ports + Sohar) -->
+      <g font-family="JetBrains Mono" font-size="9" fill="#cdd8e8">
+        <circle cx="180" cy="95" r="4" fill="#38aaff"/><text x="188" y="98">Bandar Abbas</text>
+        <circle cx="120" cy="295" r="4" fill="#38aaff"/><text x="128" y="298">Jebel Ali</text>
+        <circle cx="380" cy="290" r="4" fill="#38aaff"/><text x="388" y="293">Khor Fakkan</text>
+        <circle cx="500" cy="295" r="4" fill="#38aaff"/><text x="508" y="298">Fujairah</text>
+        <circle cx="680" cy="305" r="4" fill="#38aaff"/><text x="688" y="308">Sohar</text>
+      </g>
+      <!-- Active vessels (mix of types) -->
+      <g>
+        <circle cx="160" cy="170" r="3" fill="#f09014"><title>Tanker · transit westbound</title></circle>
+        <circle cx="220" cy="185" r="3" fill="#f09014"/>
+        <circle cx="280" cy="170" r="3" fill="#1dd47e"/>
+        <circle cx="320" cy="195" r="3" fill="#f09014"/>
+        <circle cx="360" cy="180" r="3" fill="#1dd47e"/>
+        <circle cx="450" cy="190" r="3" fill="#f09014"/>
+        <circle cx="500" cy="175" r="3" fill="#1dd47e"/>
+        <circle cx="550" cy="195" r="3" fill="#b07cf0"/>
+        <circle cx="610" cy="185" r="3" fill="#f09014"/>
+        <circle cx="650" cy="175" r="3" fill="#1dd47e"/>
+        <circle cx="700" cy="190" r="3" fill="#f09014"/>
+        <circle cx="240" cy="280" r="3" fill="#627a95"/>
+        <!-- Direction arrows -->
+        <text x="100" y="160" fill="#38aaff" font-family="JetBrains Mono" font-size="11">→</text>
+        <text x="700" y="210" fill="#f09014" font-family="JetBrains Mono" font-size="11">←</text>
+      </g>
+    </svg>
+    <div class="map-legend">
+      <span><span class="legend-dot" style="background:#f09014"></span>Tanker</span>
+      <span><span class="legend-dot" style="background:#1dd47e"></span>Cargo</span>
+      <span><span class="legend-dot" style="background:#b07cf0"></span>Passenger</span>
+      <span><span class="legend-dot" style="background:#627a95"></span>Other</span>
+    </div>
+    <a class="map-full-link" onclick="showTab('map');return false">Open full map →</a>
+  </div>
+
+  <!-- VERDICT (Option C — already shipped) -->
+  <div class="card">
+    <div class="rhead">Hormuz risk verdict <span class="rhead-src">composite · 2-stage</span></div>
+    <div class="v2-band">
+      <div class="v2-band-name">ELEVATED</div>
+      <div class="v2-score">1.7 / 4.0</div>
+    </div>
+    <div class="v2-summary">Structural <b style="color:var(--amber)">ELEVATED</b> · no overrides fired.</div>
+    <div class="v2-section-title">Top contributors</div>
+    <div class="v2-row"><div class="v2-row-label">Oil</div><div class="v2-row-bar"><div class="v2-row-fill" style="width:75%;background:var(--red)"></div></div><div class="v2-row-val">0.54</div></div>
+    <div class="v2-row"><div class="v2-row-label">Stocks</div><div class="v2-row-bar"><div class="v2-row-fill" style="width:75%;background:var(--red)"></div></div><div class="v2-row-val">0.39</div></div>
+    <div class="v2-row"><div class="v2-row-label">Inventory</div><div class="v2-row-bar"><div class="v2-row-fill" style="width:75%;background:var(--red)"></div></div><div class="v2-row-val">0.15</div></div>
+  </div>
+
+  <!-- CROSS-CHOKEPOINT STRIP (NEW) -->
+  <div class="card">
+    <div class="rhead">Global chokepoints — last 24h <span class="rhead-src src-blue">AIS · 28m ago</span></div>
+    <div class="chk-strip">
+      <div class="chk-tile"><div class="chk-name">Hormuz</div><div class="chk-val">4</div><div class="chk-vs">4% pre-crisis</div><div class="chk-delta up">Δ +3</div></div>
+      <div class="chk-tile"><div class="chk-name">Suez</div><div class="chk-val">26</div><div class="chk-vs">65% pre-crisis</div><div class="chk-delta down">Δ -16</div></div>
+      <div class="chk-tile"><div class="chk-name">Cape</div><div class="chk-val">60</div><div class="chk-vs">170% pre-crisis</div><div class="chk-delta up">Δ +63</div></div>
+      <div class="chk-tile"><div class="chk-name">Bab el-Mandeb</div><div class="chk-val">31</div><div class="chk-vs">91% pre-crisis</div><div class="chk-delta up">Δ +4</div></div>
+      <div class="chk-tile"><div class="chk-name">Malacca</div><div class="chk-val">226</div><div class="chk-vs">96% pre-crisis</div><div class="chk-delta flat">Δ +7</div></div>
+    </div>
+  </div>
+
+  <!-- Two-column: Market Pulse + Vessel Movement -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="rhead">Market pulse <span class="rhead-src src-live">LIVE · Stooq</span></div>
+      <div class="pulse-row"><div class="pulse-big">$107.0</div><div class="pulse-chg">▲ +0.5%</div></div>
+      <div class="pulse-baseline">Brent · vs <b>$72</b> pre-Feb-26 · <b class="up">+49%</b></div>
+      <div class="pulse-row"><div class="pulse-big" style="font-size:18px">$102.5</div></div>
+      <div class="pulse-baseline">WTI · vs <b>$65</b> pre-Feb-26 · <b class="up">+58%</b> · B-W spread $4.5</div>
+    </div>
+    <div class="card">
+      <div class="rhead">Vessel movement <span class="rhead-src src-blue">AIS · 12m</span></div>
+      <div class="vm-headline"><div class="vm-big">42</div><div style="font-family:var(--mono);font-size:11px;color:var(--muted)">crossings · last 24h</div></div>
+      <div class="vm-baseline">vs <b>60</b> pre-Feb-26 · <b class="down">-30%</b></div>
+      <div class="row"><div class="l">Stranded vessels</div><div class="v" style="color:var(--red)">147</div></div>
+      <div class="row"><div class="l">Westbound</div><div class="v">21</div></div>
+      <div class="row"><div class="l">Eastbound</div><div class="v">21</div></div>
+    </div>
+  </div>
+
+  <div class="placeholder">
+    <b>+ XV row tile + Headline Pulse tile go here</b>
+    Existing cards, no design changes other than the pre-crisis baseline pattern applied where relevant.
+  </div>
+
+</section>
+
+<!-- ════════════════════ TAB: SUPPLY ════════════════════ -->
+<section class="tab-content" id="tab-supply">
+  <div class="section-note">
+    <span class="note-tag">Tab 2 / 6</span>
+    <b>Supply</b> — Pipelines, carriers, the Cape rerouting, vessel-type mix. Map can show a
+    PIPELINE OVERLAY here (toggleable from the Map tab) but no embedded map in this tab.
+  </div>
+  <div class="placeholder">
+    <b>Pipeline bypass capacity</b>
+    Petroline 5.0M / ADCOP 1.5M / Iraq 0.5M / Iran 0.35M — total 6.85M bpd vs 20M baseline = 13.15M gap
+  </div>
+  <div class="placeholder">
+    <b>Carrier suspension (9 majors)</b>
+    MSC · Maersk · CMA CGM · Hapag-Lloyd · COSCO · ONE · HMM · Evergreen · Yang Ming
+    with stranded TEU + $/TEU surcharges
+  </div>
+  <div class="placeholder">
+    <b>Cape of Good Hope rerouting</b>
+    435 diverted (Tanker 18% · Cargo 69% · Other 13%) + SA port sampling
+  </div>
+  <div class="placeholder">
+    <b>Vessel type mix</b>
+    Tightened to 4 buckets: Tanker · Cargo · Military · Other
+  </div>
+</section>
+
+<!-- ════════════════════ TAB: MARKETS ════════════════════ -->
+<section class="tab-content" id="tab-markets">
+  <div class="section-note">
+    <span class="note-tag">Tab 3 / 6</span>
+    <b>Markets</b> — Tanker equity plays, TD3C freight, war-risk insurance, prediction markets.
+    No map (financial tab).
+  </div>
+  <div class="placeholder">
+    <b>Tanker plays</b>
+    FRO · INSW · DHT · TNK · STNG · EURN · NAT — ticker, name, upside
+  </div>
+  <div class="placeholder">
+    <b>TD3C VLCC freight</b>
+    WS 348.89 · $326k/day TCE · +176% vs week 4
+  </div>
+  <div class="placeholder">
+    <b>War-risk insurance premium</b>
+    1.0% / 7d · 8× pre-crisis · $2.5M VLCC transit · 6 P&I clubs withdrawn
+  </div>
+  <div class="placeholder">
+    <b>Prediction markets</b>
+    Kalshi + Polymarket · strait normal-by-date odds · regime-fall odds
+  </div>
+</section>
+
+<!-- ════════════════════ TAB: MACRO ════════════════════ -->
+<section class="tab-content" id="tab-macro">
+  <div class="section-note">
+    <span class="note-tag">Tab 4 / 6</span>
+    <b>Macro</b> — Slow-moving signals + scenario references. UNCTAD scenarios, LNG, fertilizer,
+    historical comparison.
+  </div>
+  <div class="placeholder">
+    <b>Macro context (existing — demoted from above-fold)</b>
+    OPEC production · SPR · Commercial crude · PG imports
+  </div>
+  <div class="placeholder">
+    <b>UNCTAD scenario panel</b>
+    WTI $98 (closed 1Q) · $115→$76 (closed 2Q) · $68 (reopens) · GDP -2.9pp Q2
+  </div>
+  <div class="placeholder">
+    <b>LNG flow</b>
+    -99% transits · Qatar ~20% global LNG · European exposure
+  </div>
+  <div class="placeholder">
+    <b>Fertilizer flow</b>
+    -87% volume · PG: sulphur 50% · urea 25% · ammonia 18% · phosphate 13% global
+  </div>
+  <div class="placeholder">
+    <b>Vessel traffic trend</b>
+    Historical bars (existing — kept)
+  </div>
+  <div class="placeholder">
+    <b>Historical comparison</b>
+    Replaces Closure Scenario · 1973 / 1990 / 2021 / 2024 / now
+  </div>
+</section>
+
+<!-- ════════════════════ TAB: INDIA ════════════════════ -->
+<section class="tab-content" id="tab-india">
+  <div class="section-note">
+    <span class="note-tag">Tab 5 / 6</span>
+    <b>India</b> — Your audience anchor. Equity exposure + import dependency + sanctioned-vessel match.
+    Could include a small India-focus inset map (refineries + ports) — open question.
+  </div>
+  <div class="placeholder">
+    <b>India equity watch (existing — promoted)</b>
+    IOC · BPCL · HPCL · RIL · ONGC · Petronet · GAIL · Petronet LNG
+  </div>
+  <div class="placeholder">
+    <b>India import dependency</b>
+    ~62% Hormuz exposure · sector-wise · top stocks per sector
+  </div>
+  <div class="placeholder">
+    <b>Sanctioned vessel SDN match</b>
+    OFAC SDN × live AIS — currently-transiting named vessels
+  </div>
+</section>
+
+<!-- ════════════════════ TAB: MAP (full viewport) ════════════════════ -->
+<section class="tab-content map-view" id="tab-map">
+  <div class="map-full-wrap">
+    <div class="map-full">
+      <div class="map-overlay-top">
+        <div class="map-stat"><b>12</b> live vessels</div>
+        <div class="map-stat amber"><b>4</b> transiting</div>
+        <div class="map-stat red"><b>0</b> SDN matches</div>
+        <div class="map-stat"><b>5</b> ports active</div>
+      </div>
+      <svg viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%">
+        <!-- Wider geographic context: Persian Gulf + Strait + Gulf of Oman -->
+        <!-- Sea -->
+        <rect x="0" y="0" width="1200" height="600" fill="#06080e"/>
+        <!-- Iran coast (north) -->
+        <path d="M 0 130 Q 200 100 400 120 Q 600 140 800 130 Q 1000 120 1200 150 L 1200 0 L 0 0 Z" fill="#13202f" stroke="#1a2a3d" stroke-width="1.5"/>
+        <text x="80" y="60" fill="#627a95" font-family="JetBrains Mono" font-size="14" letter-spacing="0.15em" font-weight="700">IRAN</text>
+        <!-- UAE / Oman coast (south) -->
+        <path d="M 0 470 Q 300 510 600 470 Q 800 450 1000 485 Q 1100 500 1200 470 L 1200 600 L 0 600 Z" fill="#13202f" stroke="#1a2a3d" stroke-width="1.5"/>
+        <text x="80" y="555" fill="#627a95" font-family="JetBrains Mono" font-size="14" letter-spacing="0.15em" font-weight="700">UAE</text>
+        <text x="900" y="555" fill="#627a95" font-family="JetBrains Mono" font-size="14" letter-spacing="0.15em" font-weight="700">OMAN</text>
+        <text x="100" y="600" fill="#627a95" font-family="JetBrains Mono" font-size="9" opacity="0.6">SAUDI ARABIA</text>
+        <!-- Strait corridor TSS -->
+        <path d="M 100 250 Q 600 270 1100 285" stroke="#222c3d" stroke-width="1.5" stroke-dasharray="6,4" fill="none"/>
+        <path d="M 100 350 Q 600 340 1100 330" stroke="#222c3d" stroke-width="1.5" stroke-dasharray="6,4" fill="none"/>
+        <!-- Hormuz gate longitude -->
+        <line x1="620" y1="120" x2="620" y2="480" stroke="#f09014" stroke-width="1.5" stroke-dasharray="3,4" opacity="0.5"/>
+        <text x="628" y="140" fill="#f09014" font-family="JetBrains Mono" font-size="11" opacity="0.85">56.45°E gate</text>
+        <!-- PIPELINE OVERLAYS -->
+        <!-- Saudi Petroline -->
+        <path d="M 80 590 L 80 100 Q 80 80 60 80 L 0 80" stroke="#1dd47e" stroke-width="3" fill="none" opacity="0.7"/>
+        <text x="20" y="320" fill="#1dd47e" font-family="JetBrains Mono" font-size="10" font-weight="700">PETROLINE</text>
+        <text x="20" y="332" fill="#1dd47e" font-family="JetBrains Mono" font-size="9" opacity="0.7">5.0M bpd · 95%</text>
+        <!-- ADCOP Habshan-Fujairah -->
+        <path d="M 200 540 Q 350 530 540 510 Q 700 500 770 510" stroke="#1dd47e" stroke-width="3" fill="none" opacity="0.7"/>
+        <text x="350" y="540" fill="#1dd47e" font-family="JetBrains Mono" font-size="10" font-weight="700">ADCOP 1.5M · 100%</text>
+        <!-- Goreh-Jask -->
+        <path d="M 250 150 Q 600 250 900 380 Q 1000 420 1080 470" stroke="#f09014" stroke-width="2" stroke-dasharray="8,4" fill="none" opacity="0.6"/>
+        <text x="950" y="430" fill="#f09014" font-family="JetBrains Mono" font-size="10" font-weight="700">GOREH-JASK 0.35M · 40%</text>
+        <!-- Ports -->
+        <g font-family="JetBrains Mono" font-size="11" fill="#cdd8e8" font-weight="700">
+          <circle cx="280" cy="165" r="6" fill="#38aaff" stroke="#cdd8e8" stroke-width="1"/>
+          <text x="292" y="170">Bandar Abbas</text>
+          <text x="292" y="183" fill="#627a95" font-size="9">25 vessels · IRAN</text>
+          <circle cx="200" cy="475" r="6" fill="#38aaff" stroke="#cdd8e8" stroke-width="1"/>
+          <text x="212" y="480">Jebel Ali</text>
+          <text x="212" y="493" fill="#627a95" font-size="9">30 vessels · UAE</text>
+          <circle cx="540" cy="475" r="6" fill="#38aaff" stroke="#cdd8e8" stroke-width="1"/>
+          <text x="552" y="480">Khor Fakkan</text>
+          <text x="552" y="493" fill="#627a95" font-size="9">32 vessels · UAE</text>
+          <circle cx="700" cy="498" r="6" fill="#38aaff" stroke="#cdd8e8" stroke-width="1"/>
+          <text x="712" y="503">Fujairah</text>
+          <text x="712" y="516" fill="#627a95" font-size="9">28 vessels · UAE</text>
+          <circle cx="950" cy="510" r="6" fill="#38aaff" stroke="#cdd8e8" stroke-width="1"/>
+          <text x="962" y="515">Sohar</text>
+          <text x="962" y="528" fill="#627a95" font-size="9">22 vessels · OMAN</text>
+        </g>
+        <!-- Active vessels in strait -->
+        <g>
+          <circle cx="200" cy="290" r="4" fill="#f09014" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="320" cy="310" r="4" fill="#f09014" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="450" cy="285" r="4" fill="#1dd47e" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="520" cy="320" r="4" fill="#f09014" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="600" cy="295" r="4" fill="#1dd47e" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="700" cy="310" r="4" fill="#f09014" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="780" cy="290" r="4" fill="#1dd47e" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="850" cy="305" r="4" fill="#b07cf0" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="920" cy="295" r="4" fill="#f09014" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="1000" cy="310" r="4" fill="#1dd47e" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="1080" cy="300" r="4" fill="#f09014" stroke="#cdd8e8" stroke-width="0.5"/>
+          <circle cx="380" cy="190" r="4" fill="#ef4444" stroke="#cdd8e8" stroke-width="0.5"><title>SDN MATCH · ELEGANCE</title></circle>
+          <text x="385" y="184" fill="#ef4444" font-family="JetBrains Mono" font-size="9" font-weight="700">ELEGANCE · SDN</text>
+        </g>
+        <!-- Direction indicators -->
+        <text x="120" y="270" fill="#38aaff" font-family="JetBrains Mono" font-size="18" font-weight="700">→</text>
+        <text x="1080" y="340" fill="#f09014" font-family="JetBrains Mono" font-size="18" font-weight="700">←</text>
+        <text x="120" y="258" fill="#38aaff" font-family="JetBrains Mono" font-size="9" opacity="0.8">into Gulf</text>
+        <text x="1050" y="358" fill="#f09014" font-family="JetBrains Mono" font-size="9" opacity="0.8">to Indian Ocean</text>
+      </svg>
+      <div class="map-legend" style="bottom:14px;left:14px">
+        <span><span class="legend-dot" style="background:#f09014"></span>Tanker</span>
+        <span><span class="legend-dot" style="background:#1dd47e"></span>Cargo</span>
+        <span><span class="legend-dot" style="background:#b07cf0"></span>Passenger</span>
+        <span><span class="legend-dot" style="background:#ef4444"></span>SDN match</span>
+        <span><span class="legend-dot" style="background:#1dd47e;border-radius:0;width:14px;height:3px"></span>Pipeline active</span>
+        <span><span class="legend-dot" style="background:#f09014;border-radius:0;width:14px;height:3px"></span>Pipeline partial</span>
+      </div>
+    </div>
+    <div class="map-side">
+      <h3>Layers</h3>
+      <div class="layer-group">
+        <div class="layer-group-title">Vessels</div>
+        <div class="layer-toggle on"><span class="label">Live AIS dots</span><span class="check"></span></div>
+        <div class="layer-toggle on"><span class="label">Vessel types</span><span class="check"></span></div>
+        <div class="layer-toggle on"><span class="label">SDN matches</span><span class="check"></span></div>
+        <div class="layer-toggle"><span class="label">Anchored only</span><span class="check"></span></div>
+      </div>
+      <div class="layer-group">
+        <div class="layer-group-title">Infrastructure</div>
+        <div class="layer-toggle on"><span class="label">Ports</span><span class="check"></span></div>
+        <div class="layer-toggle on"><span class="label">Pipelines</span><span class="check"></span></div>
+        <div class="layer-toggle"><span class="label">TSS lanes</span><span class="check"></span></div>
+        <div class="layer-toggle"><span class="label">Gate longitude</span><span class="check"></span></div>
+      </div>
+      <div class="layer-group">
+        <div class="layer-group-title">Environment</div>
+        <div class="layer-toggle"><span class="label">Seismic markers</span><span class="meta">3 events</span><span class="check"></span></div>
+        <div class="layer-toggle"><span class="label">Aircraft (ADS-B)</span><span class="meta">10 a/c</span><span class="check"></span></div>
+        <div class="layer-toggle"><span class="label">Weather rough</span><span class="check"></span></div>
+      </div>
+      <div class="layer-group">
+        <div class="layer-group-title">Diversion</div>
+        <div class="layer-toggle"><span class="label">Cape reroute arrows</span><span class="check"></span></div>
+        <div class="layer-toggle"><span class="label">Bab el-Mandeb inset</span><span class="check"></span></div>
+      </div>
+      <div class="layer-group">
+        <div class="layer-group-title">Time</div>
+        <div style="padding:6px 0;color:var(--muted)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span>Live</span>
+            <span style="color:var(--green)">●</span>
+          </div>
+          <input type="range" min="0" max="100" value="100" style="width:100%;accent-color:var(--amber)">
+          <div style="font-size:9px;color:var(--muted2);margin-top:4px">Drag to scrub historical state (last 7 days)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+function showTab(name){
+  document.querySelectorAll('.tab-content').forEach(function(s){s.classList.remove('on')});
+  document.querySelectorAll('.tab-nav button').forEach(function(b){b.classList.remove('on')});
+  document.getElementById('tab-' + name).classList.add('on');
+  var btn = document.querySelector('.tab-nav button[data-tab="'+name+'"]');
+  if(btn) btn.classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(history.replaceState) history.replaceState(null,'','#'+name);
+}
+document.querySelectorAll('.tab-nav button').forEach(function(b){
+  b.addEventListener('click', function(){ showTab(b.dataset.tab); });
+});
+// Initial from hash
+if(location.hash){var h=location.hash.slice(1); if(document.getElementById('tab-'+h)) showTab(h);}
+</script>
+
+</body>
+</html>
