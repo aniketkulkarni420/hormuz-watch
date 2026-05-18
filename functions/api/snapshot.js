@@ -198,7 +198,10 @@ export async function onRequestGet({ request, env }) {
     westbound_24h: aisLive?.westbound ?? null,
     unique_imos_24h: aisLive?.uniqueImos ?? null,
     vessel_count_in_bbox: aisLive?.vesselCount ?? null,
-    type_breakdown: aisLive?.typeBreakdown ?? null,
+    // type_breakdown: AIS payload first, else fall back to vesselScrape.byType
+    // (2026-05-18 — same shape {tanker: N, cargo: N, ...}; AIS-dormant safe).
+    type_breakdown: aisLive?.typeBreakdown
+      ?? (vesselScrape?.byType && Object.keys(vesselScrape.byType).length ? vesselScrape.byType : null),
     // ── Composite signals (Path D) ─────────────────────────────────────────
     // Scraped vessel data — web fallback when AIS is unavailable
     scraped_vessel_total:    vesselScrape?.totals?.all ?? null,
