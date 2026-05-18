@@ -23,6 +23,13 @@ QUERY = ('(Hormuz OR Iran OR "Strait of Hormuz" OR IRGCN) '
 URL = ("https://api.gdeltproject.org/api/v2/doc/doc"
        f"?query={requests.utils.quote(QUERY)}"
        "&mode=ArtList&format=json&maxrecords=50&timespan=24h&sort=DateDesc")
+# Tone histogram — bins articles by sentiment score [-100, +100]. Used to
+# compute neg_tone_pct (share of articles with bin < 0) and avg_tone
+# (count-weighted mean). ArtList alone doesn't return per-article tone in
+# GDELT 2.0, hence the dedicated ToneChart call. (2026-05-18 — Batch G fix)
+TONE_URL = ("https://api.gdeltproject.org/api/v2/doc/doc"
+            f"?query={requests.utils.quote(QUERY)}"
+            "&mode=ToneChart&format=json&timespan=24h")
 
 
 def put_kv(key, value):
@@ -94,21 +101,40 @@ def main():
     top_sources = [{"domain": d, "count": c} for d, c in Counter(sources).most_common(5)]
     top_locations = [{"name": d, "count": c} for d, c in Counter(locations).most_common(5)]
 
-    # GDELT 2.0 doc API in ArtList mode does NOT return per-article tone — the
-    # old avg_tone / neg_tone_pct were therefore ~always null / 0. Emit them as
-    # explicitly null and treat GDELT as a coverage-VOLUME signal
-    # (article_count_24h is real and reliable), not a tone signal. A genuine
-    # tone read needs the TimelineTone API — deferred to Batch G.
-    # (Batch D · 2026-05-14)
+    # ── Tone via ToneChart (2026-05-18 — Batch G shipped) ──────────────────
+    # Separate call to the histogram endpoint. Soft-fail: if ToneChart is
+    # unreachable, fall back to count-only mode (the prior behaviour).
+    tone_avg = None
+    tone_neg_pct = None
+    tone_total = 0
+    try:
+        tr = requests.get(TONE_URL, timeout=20,
+                          headers={"User-Agent": "HormuzWatch-GDELT/1.0"})
+        if tr.status_code == 200:
+            tdata = tr.json()
+            bins = tdata.get("tonechart") or []
+            total = sum(int(b.get("count", 0)) for b in bins)
+            neg = sum(int(b.get("count", 0)) for b in bins if int(b.get("bin", 0)) < 0)
+            weighted = sum(int(b.get("bin", 0)) * int(b.get("count", 0)) for b in bins)
+            tone_total = total
+            if total > 0:
+                tone_avg = round(weighted / total, 2)
+                tone_neg_pct = round(neg / total * 100, 1)
+        else:
+            print(f"  ToneChart HTTP {tr.status_code} — falling back to count-only")
+    except Exception as e:
+        print(f"  ToneChart fetch failed: {str(e)[:120]} — falling back to count-only")
+
     payload = {
         "fetchedAt": int(time.time()),
         "article_count_24h": count,
-        "avg_tone": None,
-        "neg_tone_pct": None,
-        "tone_available": False,
+        "avg_tone": tone_avg,
+        "neg_tone_pct": tone_neg_pct,
+        "tone_available": tone_avg is not None,
+        "tone_sample_size": tone_total,
         "top_sources": top_sources,
         "top_locations": top_locations,
-        "source": "GDELT 2.0 Doc API (24h window) — coverage volume only, no tone",
+        "source": "GDELT 2.0 Doc API (24h window) · ArtList + ToneChart",
         "query": QUERY,
     }
     body = json.dumps(payload, separators=(",", ":"))
@@ -120,7 +146,7 @@ def main():
         "job": "gdelt-scraper",
     }, separators=(",", ":"))
     put_kv("scrape_status_gdelt", status_body)
-    print(f"  ✓ KV write OK · {count} articles, neg_pct={neg_pct}, avg_tone={avg_tone}")
+    print(f"  ✓ KV write OK · {count} articles · ToneChart: avg_tone={tone_avg} neg_tone_pct={tone_neg_pct} (sample {tone_total})")
     if not ok:
         sys.exit(1)
 
