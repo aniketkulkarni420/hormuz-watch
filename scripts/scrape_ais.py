@@ -234,13 +234,42 @@ async def listen_and_capture(state, transits, crossing_imos):
         if len(error_samples) < 3:
             error_samples.append(f"ws-close: {type(e).__name__}: {str(e)[:150]}")
 
-    # Diagnostics
+    # ── Diagnostics + structured health record ─────────────────────────────
+    # Write `ais_health` KV so the dashboard can surface a precise reason
+    # instead of just "AIS dormant". User-actionable when key is the cause.
+    # (2026-05-18 — surfaced to operator)
+    health_reason = None
+    health_detail = None
     if msg_count == 0 and other_msgs == 0:
         if connection_closed_early:
+            health_reason = "ws_closed_mid_subscription"
+            health_detail = "AISStream closed the connection right after we subscribed. Most common cause: AIS_KEY revoked, expired, or trailing whitespace. Re-paste raw 40-char key from aisstream.io/login."
             print(f"  ⚠ ZERO messages because WebSocket closed mid-subscription · see error above")
         else:
+            health_reason = "silent_no_messages"
+            health_detail = "WebSocket stayed open but AISStream sent 0 messages in 90s. Most likely: monthly bandwidth quota exhausted on free tier. Log in to aisstream.io and check quota / refresh key."
             print(f"  ⚠ ZERO messages received in {LISTEN_DURATION}s. Likely: (1) AIS_KEY rejected silently, "
-                  f"(2) AISStream rate-limited, (3) no broadcasts in bbox (unlikely for Persian Gulf).")
+                  f"(2) AISStream rate-limited, (3) bandwidth quota exhausted.")
+    elif msg_count > 0:
+        health_reason = "ok"
+        health_detail = f"{msg_count} messages received in {LISTEN_DURATION}s"
+    else:
+        health_reason = "non_position_only"
+        health_detail = f"Got {other_msgs} non-position frames (auth errors likely)"
+
+    # Write the health record. Soft-fail (don't block main flow if this errors).
+    try:
+        kv_put("ais_health", json.dumps({
+            "fetchedAt": int(time.time()),
+            "reason": health_reason,
+            "detail": health_detail,
+            "msg_count": msg_count,
+            "other_msgs": other_msgs,
+            "error_samples": error_samples[:3],
+            "actionable": health_reason in ("ws_closed_mid_subscription", "silent_no_messages"),
+        }, separators=(",", ":")))
+    except Exception as e:
+        print(f"  ⚠ ais_health KV write failed: {e}")
     if other_msgs > 0:
         print(f"  ⚠ Received {other_msgs} non-position frames (possible errors). Samples:")
         for s in error_samples:

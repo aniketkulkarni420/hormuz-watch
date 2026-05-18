@@ -57,13 +57,13 @@ export async function onRequestGet({ request, env }) {
 
   // ─── Composite signals · Path D (May 2026) ────────────────────────────────
   // Read 5 KV keys; surface counts in snapshot for downstream consumers.
-  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null;
+  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null, aisHealth = null;
   if (env.OIL_KV) {
     const safeGet = async (k) => {
       try { const r = await env.OIL_KV.get(k); return r ? JSON.parse(r) : null; }
       catch { return null; }
     };
-    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest] = await Promise.all([
+    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest, aisHealth] = await Promise.all([
       safeGet("aircraft_state"),
       safeGet("seismic_state"),
       safeGet("gdelt_state"),
@@ -73,6 +73,7 @@ export async function onRequestGet({ request, env }) {
       safeGet("currency_irr"),
       safeGet("ofac_state"),
       safeGet("latest"),
+      safeGet("ais_health"),
     ]);
   }
 
@@ -190,6 +191,16 @@ export async function onRequestGet({ request, env }) {
       + (aircraft?.fetchedAt && (Date.now()/1000 - aircraft.fetchedAt) < 24*3600 ? 1 : 0)
       + (seismic?.fetchedAt && (Date.now()/1000 - seismic.fetchedAt) < 24*3600 ? 1 : 0),
     ais_state_age_sec: aisLive?.ageSec ?? null,
+    // ais_health: structured root-cause of dormancy (2026-05-18).
+    // reason: one of "ok" | "ws_closed_mid_subscription" | "silent_no_messages"
+    //       | "non_position_only". `actionable: true` means the operator needs
+    // to refresh the key at aisstream.io/login.
+    ais_health: aisHealth ? {
+      reason: aisHealth.reason || null,
+      detail: aisHealth.detail || null,
+      actionable: !!aisHealth.actionable,
+      ageSec: aisHealth.fetchedAt ? Math.floor(Date.now()/1000 - aisHealth.fetchedAt) : null,
+    } : null,
     source: aisLive
       ? aisLive.source
       : "hormuz-watch · live composite (oil/vessel/bdti/ofac/news/currency) · AIS feed dormant",
