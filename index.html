@@ -1043,30 +1043,15 @@ header{
       </div>
     </div>
 
-    <!-- ═══════════ SECTION 4: HISTORY ═══════════ -->
-    <div class="rsection">History</div>
-
-    <!-- VESSEL TRAFFIC TREND (moved into History) -->
-    <div class="rblock">
-      <div class="rhead">
-        Vessel traffic trend
-        <span class="rhead-src src-amber" style="color:var(--amber)" title="Historical: yesterday + today from browser session and historical store">HISTORICAL</span>
-      </div>
-      <div id="trendBars" class="trend-bars"></div>
-      <div class="trend-legend" id="trendLegend"></div>
-      <div class="conclusion" id="concTrend" style="display:none"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        Yesterday and today from this browser session and the historical store. Baselines derived from official statistics and public reports.
-      </div>
-    </div>
-
-    <!-- FLAG STATE FLOW — removed 2026-05-14. This card is 100% AIS-derived
-         (per-flag vessel registry counts); with AISStream down it had no real
-         data to show. Rather than display a permanent "resumes when AIS
-         recovers" placeholder, the card is pulled entirely. Restore this block
-         when the AIS feed stabilises — the JS (updateFlagDisplay / trackFlag)
-         is still present and null-guarded, so it will repopulate automatically
-         once #flagRows exists in the DOM again. -->
+    <!-- ═══════════ SECTION 4: HISTORY — removed entirely 2026-05-17 ═══════════
+         The "History" section (Vessel traffic trend + Flag state flow) sat at
+         the bottom of the right sidebar. Per Aniket: it added scroll weight
+         without informing the decision the dashboard supports right now.
+         JS for both cards remains in the file, null-guarded — if either card
+         is restored later, just re-introduce the rblock HTML and the writers
+         will repopulate automatically.
+         renderTrend() is null-guarded at its DOM access.
+         updateFlagDisplay() was already null-guarded on 2026-05-14. -->
 
 
     <!-- ───── HIDDEN LEGACY TILES (data flows preserved; DOM kept for getElementById writers) ───── -->
@@ -1667,6 +1652,7 @@ function renderTrend(liveCount){
   data[3].val = liveCount || 0;
   var max = 42;
   var wrap = document.getElementById("trendBars");
+  if(!wrap) return;   // History/Vessel-traffic-trend card removed 2026-05-17 — no-op until restored
   wrap.innerHTML = "";
 
   var barsRow = document.createElement("div");
@@ -2621,10 +2607,22 @@ dataAge.bdti.status = "loading";
       }
       if(asOfEl){
         if(d.asOf){
+          // BDTI publishes only on business days (Baltic Exchange, ~1pm London).
+          // Label must communicate "this is the last publish" rather than read
+          // as a generic stale-data warning — the absence of new data on a
+          // weekend is source cadence, not our staleness.
           var dt = new Date(d.asOf + "T00:00:00Z");
           var mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getUTCMonth()];
-          asOfEl.textContent = "· as of " + mon + " " + dt.getUTCDate();
-          dataAge.bdti.lastFetch = dt.getTime();
+          var wdy = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getUTCDay()];
+          var todayMs = Date.now();
+          var asOfMs  = dt.getTime();
+          var ageD    = Math.floor((todayMs - asOfMs) / 86400000);
+          var label;
+          if (ageD <= 0)        label = "today's close";
+          else if (ageD === 1)  label = "yesterday's close · " + wdy;
+          else                  label = "last publish " + wdy + " " + dt.getUTCDate() + " " + mon;
+          asOfEl.textContent = "· " + label;
+          dataAge.bdti.lastFetch = asOfMs;
         } else {
           asOfEl.textContent = "· as of —";
         }
@@ -3393,7 +3391,24 @@ function renderEIA() {
       var offPrEl = document.getElementById("brentOfficialPrice");
       var offAsOf = document.getElementById("brentOfficialAsOf");
       if(offPrEl) offPrEl.textContent = "$" + officialBrent.level.toFixed(2);
-      if(offAsOf) offAsOf.textContent = officialBrent.asOf ? "· as of " + officialBrent.asOf : "";
+      // EIA publishes daily spot with a 1-2 business-day lag (no weekend prints).
+      // Same labelling pattern as BDTI — communicate "last publish" so the
+      // date doesn't read as our staleness.
+      if(offAsOf){
+        if(officialBrent.asOf){
+          var oDt = new Date(officialBrent.asOf + "T00:00:00Z");
+          var oMon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][oDt.getUTCMonth()];
+          var oWdy = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][oDt.getUTCDay()];
+          var oAge = Math.floor((Date.now() - oDt.getTime()) / 86400000);
+          var oLabel;
+          if (oAge <= 0)       oLabel = "today";
+          else if (oAge === 1) oLabel = "yesterday · " + oWdy;
+          else                 oLabel = "last publish " + oWdy + " " + oDt.getUTCDate() + " " + oMon;
+          offAsOf.textContent = "· " + oLabel;
+        } else {
+          offAsOf.textContent = "";
+        }
+      }
     }
   }
 
