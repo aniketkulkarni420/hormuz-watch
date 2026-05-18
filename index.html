@@ -603,8 +603,9 @@ header{
 .ip-tag.data{background:rgba(56,170,255,.12);color:var(--blue);border:1px solid rgba(56,170,255,.3)}
 .ip-tag.interp{background:rgba(240,144,20,.12);color:var(--amber);border:1px solid rgba(240,144,20,.3)}
 .ip-tag.notice{background:rgba(98,122,149,.12);color:var(--muted);border:1px solid rgba(98,122,149,.3)}
-.ip-row{display:grid;grid-template-columns:90px 70px 1fr 60px;gap:8px;align-items:center;
+.ip-row{display:grid;grid-template-columns:82px 64px 1fr 54px;gap:8px;align-items:center;
   font-family:var(--mono);font-size:10px;padding:4px 0;font-variant-numeric:tabular-nums}
+.ip-row > *{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .ip-name{color:var(--text);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ip-tkr{color:var(--muted2)}
 .ip-sector{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.04em}
@@ -618,8 +619,9 @@ header{
 .ip-notice a{color:var(--blue);text-decoration:none;border-bottom:1px dotted var(--blue)}
 
 /* ─── 4.9 UNCTAD scenarios (2026-05-17 Phase-1 #2) ─── */
-.un-row{display:grid;grid-template-columns:1fr 80px 110px;gap:10px;align-items:center;
+.un-row{display:grid;grid-template-columns:1fr 72px 96px;gap:10px;align-items:center;
   padding:6px 0;font-family:var(--mono);font-size:10px;border-bottom:1px solid var(--border)}
+.un-row > *{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .un-row:last-child{border-bottom:0}
 .un-row.head{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.05em;
   font-weight:700;border-bottom-color:var(--border2)}
@@ -629,9 +631,10 @@ header{
   font-variant-numeric:tabular-nums}
 
 /* ─── 4.13 Historical comparison · replaces Closure Scenario (2026-05-17) ─── */
-.hc-row{display:grid;grid-template-columns:1.4fr 50px 80px 70px 1.3fr;gap:8px;
+.hc-row{display:grid;grid-template-columns:1.3fr 44px 64px 56px 1fr;gap:8px;
   align-items:center;padding:6px 0;font-family:var(--mono);font-size:10px;
   border-bottom:1px solid var(--border)}
+.hc-row > *{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .hc-row:last-child{border-bottom:0}
 .hc-row.head{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.05em;
   font-weight:700;border-bottom-color:var(--border2)}
