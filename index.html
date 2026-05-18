@@ -2128,21 +2128,11 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
   }
   rows.push(flowRow);
 
-  // Row 2 — Dark traffic share: dark_vessels from /api/snapshot vs live AIS count
-  var dark = (snapshot && isFinite(snapshot.dark_vessels)) ? snapshot.dark_vessels : null;
-  if(dark == null){
-    rows.push({ label:"Dark traffic share", id:"xv-dark", status:"--", statusColor:"var(--muted)",
-                body:"Dark vessel estimate unavailable from /api/snapshot." });
-  } else {
-    var total = aisCount + dark;
-    var pct = total > 0 ? Math.round(dark/total*100) : 0;
-    var color, status;
-    if(pct > 15){ color = "var(--red)"; status = pct+"% · HIGH"; bump(3, "HIGH", "var(--red)"); }
-    else if(pct >= 8){ color = "var(--amber)"; status = pct+"% · ELEVATED"; bump(2, "ELEVATED", "var(--amber)"); }
-    else { color = "var(--green)"; status = pct+"% · NORMAL"; }
-    rows.push({ label:"Dark traffic share", id:"xv-dark", status:status, statusColor:color,
-                body:"Est. "+dark+" dark vessels vs "+aisCount+" live AIS = "+pct+"% running without AIS near Hormuz. >15% = elevated sanctions/evasion risk." });
-  }
+  // Row 2 — "Dark traffic share" REMOVED 2026-05-18.
+  // We have no genuine dark-vessel feed (AIS-off vessel detection requires
+  // satellite SAR overlays, not in scope). The prior version computed share
+  // from a frozen constant (947) divided by live AIS, which moved inversely
+  // to traffic — wrong signal. Field stays null in snapshot; no UI row here.
 
   // Row 3 — Rate-volume divergence: BDTI WoW vs AIS trend
   if(!bdti || !isFinite(bdti.value)){
