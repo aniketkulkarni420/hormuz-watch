@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""OpenSky Network ADS-B scraper for Persian Gulf airspace.
+"""ADS-B scraper for Persian Gulf airspace.
 
-Path D composite signal coverage — replaces missing AIS data.
+2026-05-18 — Switched primary feed from OpenSky to adsb.lol after discovering
+GHA's shared IP range gets aggressively throttled by OpenSky's anonymous tier
+(local tests returned 17 aircraft; GHA runs were seeing 4). adsb.lol is a
+free public ADS-B aggregator with no auth and no rate limits, returning a
+richer payload (~50 fields including type code, category, squawk).
 
-Anonymous tier: 100 req/day. Schedule every 15 min = 96/day (under limit).
-Bbox: 23..29 lat, 51..60 lng (covers Persian Gulf + Strait of Hormuz airspace).
-
+Order: adsb.lol primary → OpenSky fallback if adsb.lol fails.
 KV key: aircraft_state
 """
 import os
@@ -14,7 +16,7 @@ import time
 import sys
 import requests
 
-UA = "Mozilla/5.0 (HormuzWatch-Aircraft-Scraper/1.0)"
+UA = "Mozilla/5.0 (HormuzWatch-Aircraft-Scraper/2.0)"
 
 CF_ACCOUNT_ID = os.environ.get("CF_ACCOUNT_ID")
 CF_API_TOKEN  = os.environ.get("CF_API_TOKEN")
@@ -23,6 +25,10 @@ KV_NS         = os.environ.get("CF_KV_NAMESPACE_ID")
 if not all([CF_ACCOUNT_ID, CF_API_TOKEN, KV_NS]):
     print("ERROR: Missing CF env vars"); sys.exit(1)
 
+# adsb.lol — bbox-by-radius: lat, lon, dist (nm). 250nm covers Persian Gulf
+# from Hormuz centre out to Kuwait / Salalah.
+ADSB_LOL_URL = "https://api.adsb.lol/v2/lat/25.5/lon/56.5/dist/250"
+# OpenSky fallback — same bbox, anonymous tier (heavily throttled on GHA IPs).
 OPENSKY_URL = "https://opensky-network.org/api/states/all?lamin=23&lomin=51&lamax=29&lomax=60"
 
 # NATO / coalition military callsign prefixes.
@@ -32,7 +38,26 @@ OPENSKY_URL = "https://opensky-network.org/api/states/all?lamin=23&lomin=51&lama
 # allied build-up, NOT Iranian or regional military activity. Read it that way.
 MIL_PREFIXES = ("CNV", "RCH", "KING", "HOG", "BTR", "SHELL", "EYE", "TIGER",
                 "GLEX", "PAT", "BLUE", "REACH", "JAKE", "BOXER", "MAGMA",
-                "SNAKE", "TRAIN", "VENUS", "HAVOC", "RANGER", "PYTHON")
+                "SNAKE", "TRAIN", "VENUS", "HAVOC", "RANGER", "PYTHON",
+                # 2026-05-18 — expanded after adsb.lol revealed more callsign
+                # patterns in the Gulf: US Navy, RAF, French AdlA tactical
+                "NAVY", "RAFAIR", "ASCOT", "DUKE", "AWACS", "FORCE",
+                "GAUNT", "HKY", "TACOMA")
+
+# Specific military aircraft ICAO type codes (transponder-broadcast "t" field
+# on adsb.lol). Used as a second classifier — callsign + type union.
+MIL_TYPES = {
+    # US tactical
+    "E3CF", "E3TF", "E737", "E767",       # AWACS variants
+    "P8",   "P3",                          # Maritime patrol
+    "C17",  "C5",   "C130", "C40", "KC135", "KC46", "KC30", "KC10",  # Heavy lift / tanker
+    "F15",  "F16",  "F18",  "F35", "F22", # Fighters
+    "B1",   "B52",  "B2",                  # Bombers
+    "MQ9",  "MQ4",  "RQ4",                 # UAVs (Reaper, Triton, Global Hawk)
+    "E2",   "EA18",                        # Carrier-deck early warning / EW
+    # NATO / European
+    "TYPH", "RFAL", "A400",                # Eurofighter, Rafale, A400M
+}
 
 
 def put_kv(key, value):
@@ -64,62 +89,134 @@ def classify_callsign(cs):
     return any(cs.startswith(p) for p in MIL_PREFIXES)
 
 
-def main():
-    print(f"=== aircraft scrape {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
+def classify_type(t):
+    """ICAO type code → military? Used as a second classifier."""
+    if not t:
+        return False
+    return t.strip().upper() in MIL_TYPES
 
+
+def fetch_adsb_lol():
+    """adsb.lol — free, no auth, no rate limit. Returns list of normalised
+    state dicts: {icao, cs, country, lat, lng, alt_ft, on_ground, velocity,
+    type_code}. Or None on hard failure."""
     try:
-        r = requests.get(OPENSKY_URL, headers={"User-Agent": UA}, timeout=25)
+        r = requests.get(ADSB_LOL_URL, headers={"User-Agent": UA}, timeout=25)
     except Exception as e:
-        print(f"OpenSky request failed: {e}")
-        sys.exit(0)
-
+        print(f"  adsb.lol exception: {e}")
+        return None
     if r.status_code != 200:
-        print(f"OpenSky HTTP {r.status_code}: {r.text[:200]}")
-        # write status with empty payload so dashboard shows "feed degraded"
-        status_body = json.dumps({"fetchedAt": int(time.time()), "ok": False,
-                                  "job": "aircraft-scraper",
-                                  "httpStatus": r.status_code}, separators=(",", ":"))
-        put_kv("scrape_status_aircraft", status_body)
-        sys.exit(0)
-
+        print(f"  adsb.lol HTTP {r.status_code}")
+        return None
     try:
         data = r.json()
     except Exception as e:
-        print(f"OpenSky JSON parse failed: {e}")
+        print(f"  adsb.lol JSON parse failed: {e}")
+        return None
+    ac = data.get("ac") or []
+    out = []
+    for a in ac:
+        try:
+            lat = a.get("lat")
+            lon = a.get("lon")
+            if lat is None or lon is None:
+                continue
+            alt = a.get("alt_baro")
+            on_ground = (alt == "ground") or (a.get("category") in ("C1", "C2", "C3"))
+            alt_ft = 0 if on_ground else (int(alt) if isinstance(alt, (int, float)) else 0)
+            out.append({
+                "icao": a.get("hex") or "",
+                "cs":   (a.get("flight") or "").strip(),
+                "country": "",   # adsb.lol doesn't expose origin country; left blank
+                "lat": lat,
+                "lng": lon,
+                "alt_ft": alt_ft,
+                "on_ground": on_ground,
+                "velocity": a.get("gs"),  # ground speed kt
+                "type_code": (a.get("t") or "").strip().upper(),
+            })
+        except Exception:
+            continue
+    return out
+
+
+def fetch_opensky():
+    """OpenSky fallback. State vector layout per their docs."""
+    try:
+        r = requests.get(OPENSKY_URL, headers={"User-Agent": UA}, timeout=25)
+    except Exception as e:
+        print(f"  OpenSky exception: {e}")
+        return None
+    if r.status_code != 200:
+        print(f"  OpenSky HTTP {r.status_code}")
+        return None
+    try:
+        data = r.json()
+    except Exception as e:
+        print(f"  OpenSky JSON parse failed: {e}")
+        return None
+    states = data.get("states") or []
+    out = []
+    for s in states:
+        try:
+            lat, lng = s[6], s[5]
+            if lat is None or lng is None:
+                continue
+            alt_m = s[7] or 0
+            out.append({
+                "icao": s[0] or "",
+                "cs":   (s[1] or "").strip(),
+                "country": s[2] or "",
+                "lat": lat,
+                "lng": lng,
+                "alt_ft": alt_m * 3.281,
+                "on_ground": bool(s[8]),
+                "velocity": s[9],
+                "type_code": "",
+            })
+        except Exception:
+            continue
+    return out
+
+
+def main():
+    print(f"=== aircraft scrape {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
+
+    # Try adsb.lol first (no auth, no rate limit) → fall back to OpenSky.
+    states = fetch_adsb_lol()
+    source = "adsb.lol"
+    if not states:
+        print("  adsb.lol returned no data — falling back to OpenSky")
+        states = fetch_opensky()
+        source = "opensky"
+    if not states:
+        print("  Both ADS-B sources failed — flagging degraded")
+        status_body = json.dumps({"fetchedAt": int(time.time()), "ok": False,
+                                  "job": "aircraft-scraper",
+                                  "reason": "both_sources_failed"}, separators=(",", ":"))
+        put_kv("scrape_status_aircraft", status_body)
         sys.exit(0)
 
-    states = data.get("states") or []
-    print(f"  fetched {len(states)} aircraft states")
+    print(f"  fetched {len(states)} aircraft states via {source}")
 
     count = 0
     mil = 0
     com = 0
     bands = {"low": 0, "mid": 0, "high": 0}
-    callsigns = []
     mil_callsigns = []
-    positions = []  # per-aircraft lat/lng for the map's Aircraft layer
+    positions = []
 
-    # OpenSky state vector indexes:
-    # 0 icao24, 1 callsign, 2 origin_country, 5 lng, 6 lat, 7 baro_alt,
-    # 8 on_ground, 9 velocity, ...
-    for s in states:
+    for st in states:
         try:
-            icao = s[0]
-            cs   = (s[1] or "").strip()
-            country = s[2] or ""
-            lng = s[5]
-            lat = s[6]
-            alt_m = s[7]  # meters
-            on_ground = bool(s[8])
-            velocity = s[9]
-
-            if lat is None or lng is None:
-                continue
+            cs = st["cs"]
+            lat = st["lat"]
+            lng = st["lng"]
+            alt_ft = st["alt_ft"]
+            on_ground = st["on_ground"]
+            type_code = st["type_code"]
 
             count += 1
-            callsigns.append(cs)
 
-            alt_ft = (alt_m or 0) * 3.281
             if on_ground or alt_ft < 1000:
                 bands["low"] += 1
             elif alt_ft < 30000:
@@ -127,15 +224,15 @@ def main():
             else:
                 bands["high"] += 1
 
-            is_mil = classify_callsign(cs)
+            # Military classifier: callsign OR ICAO type code matches.
+            is_mil = classify_callsign(cs) or classify_type(type_code)
             if is_mil:
                 mil += 1
-                if cs not in mil_callsigns:
+                if cs and cs not in mil_callsigns:
                     mil_callsigns.append(cs)
             else:
                 com += 1
 
-            # Position for the map layer — skip on-ground noise, cap list size
             if not on_ground and len(positions) < 80:
                 positions.append({
                     "lat": round(lat, 3),
@@ -164,8 +261,12 @@ def main():
         "movement24h": movement_24h,
         "positions": positions,
         "callsigns": mil_callsigns[:40],
-        "source": "OpenSky Network ADS-B (anonymous tier)",
-        "bbox": {"lamin": 23, "lomin": 51, "lamax": 29, "lomax": 60},
+        "source": ("adsb.lol public aggregator (250nm centred 25.5N 56.5E)"
+                   if source == "adsb.lol"
+                   else "OpenSky Network ADS-B (anonymous tier — GHA IP throttled)"),
+        "bbox": ({"centre_lat": 25.5, "centre_lon": 56.5, "radius_nm": 250}
+                 if source == "adsb.lol"
+                 else {"lamin": 23, "lomin": 51, "lamax": 29, "lomax": 60}),
     }
 
     body = json.dumps(payload, separators=(",", ":"))
