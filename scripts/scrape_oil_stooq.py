@@ -97,6 +97,32 @@ def fetch_stooq(symbol, label):
         return None
 
 
+def fetch_opa_demo():
+    """OilPriceAPI demo endpoint — free, public, live. Returns {brent, wti} floats or None.
+    Used as cross-verify alongside Stooq. Different infrastructure failure mode than
+    Stooq's CSV — genuine source diversity in a single scraper run.
+    """
+    out = {"brent": None, "wti": None}
+    url = "https://api.oilpriceapi.com/v1/demo/prices"
+    try:
+        r = requests.get(url, headers={"User-Agent": UA}, timeout=15)
+        if not r.ok:
+            print(f"  OPA: HTTP {r.status_code}")
+            return out
+        data = r.json()
+        prices = data.get("data", {}).get("prices", [])
+        b_raw = next((p for p in prices if p.get("code") == "BRENT_CRUDE_USD"), None)
+        w_raw = next((p for p in prices if p.get("code") == "WTI_USD"), None)
+        if b_raw and sanity_ok(b_raw.get("price")):
+            out["brent"] = float(b_raw["price"])
+        if w_raw and sanity_ok(w_raw.get("price")):
+            out["wti"] = float(w_raw["price"])
+        print(f"  OPA: brent={out['brent']}  wti={out['wti']}")
+    except Exception as e:
+        print(f"  OPA: error {str(e)[:160]}")
+    return out
+
+
 def kv_put(key, value):
     if not (CF_ACCOUNT_ID and CF_API_TOKEN and KV_NS):
         print("  CF env vars missing — cannot write KV")
@@ -118,32 +144,70 @@ def main():
 
     brent = fetch_stooq("cb.f", "Brent CB.F")
     wti   = fetch_stooq("cl.f", "WTI   CL.F")
+    opa   = fetch_opa_demo()
 
     if not (brent and wti):
         print("\n✗ Stooq did not return usable Brent + WTI — keeping existing KV (no write).")
         return 1
 
+    # ── Cross-verify Stooq vs OPA demo ──────────────────────────────────────
+    # Confidence ladder:
+    #   high   = both sources alive AND brent within ~1%
+    #   medium = both alive but disagreement > 1% (still write — Stooq leads)
+    #   low    = only one of the two alive (still write — Stooq leads)
+    def _pct_diff(a, b):
+        if not (a and b): return None
+        return abs(a - b) / ((a + b) / 2.0) * 100.0
+
+    brent_pct_diff = _pct_diff(brent["close"], opa.get("brent"))
+    wti_pct_diff   = _pct_diff(wti["close"],   opa.get("wti"))
+    sources_alive  = 1 + (1 if (opa.get("brent") or opa.get("wti")) else 0)
+
+    if sources_alive == 1:
+        confidence = "low"
+        agree_note = "opa-dead"
+    elif brent_pct_diff is not None and brent_pct_diff <= 1.0:
+        confidence = "high"
+        agree_note = f"agree(brent d={brent_pct_diff:.2f}%)"
+    else:
+        confidence = "medium"
+        agree_note = f"disagree(brent d={brent_pct_diff:.2f}%)" if brent_pct_diff is not None else "no-brent-cross"
+
+    print(f"\n  cross-verify: confidence={confidence} · {agree_note} · sources_alive={sources_alive}")
+
     # Build the oil_scraped payload in the shape /api/oil's Tier 0 expects
-    # (matches scripts/scrape_oil_web.py:result_syms).
-    def sym(v):
+    # (matches scripts/scrape_oil_web.py:result_syms). Stooq remains the
+    # authoritative value; OPA is recorded in `sources` + `cross_verify` for
+    # transparency.
+    def sym(v, opa_val, key):
+        srcs = ["stooq"]
+        if opa_val: srcs.append("oilpriceapi-demo")
+        mn = min([x for x in [v["close"], opa_val] if x is not None])
+        mx = max([x for x in [v["close"], opa_val] if x is not None])
         return {
             "value": round(v["close"], 2),
             "median": round(v["close"], 2),
-            "min": round(v["close"], 2),
-            "max": round(v["close"], 2),
-            "sources": ["stooq"],
-            "confidence": "high",  # see module docstring — defensible for Stooq specifically
+            "min": round(mn, 2),
+            "max": round(mx, 2),
+            "sources": srcs,
+            "confidence": confidence,
             "change": round(v["change"], 3) if v.get("change") is not None else None,
             "changePct": round(v["changePct"], 4) if v.get("changePct") is not None else None,
             "open": v.get("open"), "high": v.get("high"), "low": v.get("low"),
             "stamp": v.get("stampStr"),
+            "opa_value": round(opa_val, 2) if opa_val else None,
         }
 
     payload = {
         "fetchedAt": int(time.time()),
-        "brent": sym(brent),
-        "wti":   sym(wti),
-        "sources_succeeded": 1,
+        "brent": sym(brent, opa.get("brent"), "brent"),
+        "wti":   sym(wti,   opa.get("wti"),   "wti"),
+        "sources_succeeded": sources_alive,
+        "cross_verify": {
+            "brent_pct_diff": round(brent_pct_diff, 3) if brent_pct_diff is not None else None,
+            "wti_pct_diff":   round(wti_pct_diff,   3) if wti_pct_diff   is not None else None,
+            "note": agree_note,
+        },
         "scraper": "scrape_oil_stooq",
     }
 
