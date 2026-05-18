@@ -209,9 +209,17 @@ export async function onRequestGet({ request, env }) {
                               ? Object.fromEntries(Object.entries(vesselScrape.perSite.vesselfinder.perPort).map(([k,v]) => [k, v?.data?.total ?? null]))
                               : null,
     scraped_vessel_types:    vesselScrape?.byType && Object.keys(vesselScrape.byType).length ? vesselScrape.byType : null,
-    scraped_vessel_arrivals: vesselScrape?.totals?.arrivals ?? null,
-    scraped_vessel_departures: vesselScrape?.totals?.departures ?? null,
-    scraped_vessel_expected_24h: vesselScrape?.totals?.expected_24h ?? null,
+    // 2026-05-18: arrivals/departures/expected_24h are NOT extractable from
+    // VesselFinder static HTML — those tabs are JS-loaded. Static scrape only
+    // sees the "In Port" tab. We surface 0 as null to avoid the false-zero
+    // tile state ("0 arrivals, 0 departures") implying activity is dead when
+    // it's actually just unavailable.
+    scraped_vessel_arrivals: (vesselScrape?.totals?.arrivals ?? 0) > 0
+                                ? vesselScrape.totals.arrivals : null,
+    scraped_vessel_departures: (vesselScrape?.totals?.departures ?? 0) > 0
+                                ? vesselScrape.totals.departures : null,
+    scraped_vessel_expected_24h: (vesselScrape?.totals?.expected_24h ?? 0) > 0
+                                ? vesselScrape.totals.expected_24h : null,
     scraped_age_sec:         vesselScrape?.fetchedAt ? Math.floor(Date.now()/1000 - vesselScrape.fetchedAt) : null,
     scraped_confidence:      vesselScrape?.confidence ?? null,
     data_source:             aisLive?.dataSource ?? (aisLive ? "ais" : "static"),

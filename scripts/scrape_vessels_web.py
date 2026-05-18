@@ -186,8 +186,21 @@ def parse_vf_port(html):
     # VesselFinder labels sections with h2/h3 (and sometimes a div header). Split
     # the document into named segments so we can attribute rows to arrivals vs
     # departures vs expected.
+    # Section detection (2026-05-18 — VesselFinder restructured tabs).
+    # Modern VF uses tab labels like `>Arrivals` / `>Departures` / `>Expected`
+    # / `>In Port` plus legacy "arrivals (last 24h)" / "recent arrivals".
+    # Match either form so we don't miss segments and silently fall back to
+    # the no-section path (which fills `types` but leaves arrivals/dep at 0).
     section_pat = re.compile(
-        r"(arrivals?\s*\(?\s*last\s*24h?\s*\)?|recent\s*arrivals?|departures?\s*\(?\s*last\s*24h?\s*\)?|recent\s*departures?|expected\s*arrivals?|in\s*port)",
+        r"(?:"
+        r"arrivals?\s*\(?\s*last\s*24h?\s*\)?"          # "arrivals (last 24h)"
+        r"|recent\s*arrivals?"                            # "recent arrivals"
+        r"|departures?\s*\(?\s*last\s*24h?\s*\)?"        # "departures (last 24h)"
+        r"|recent\s*departures?"                          # "recent departures"
+        r"|expected\s*arrivals?"                          # "expected arrivals"
+        r"|in\s*port"                                     # "in port"
+        r"|>\s*(?P<tab>Arrivals|Departures|Expected|In\s*Port)\s*<"  # modern tab labels
+        r")",
         re.I,
     )
     cursor = 0
@@ -195,7 +208,7 @@ def parse_vf_port(html):
     for m in section_pat.finditer(html):
         if segments:
             segments[-1] = (segments[-1][0], html[segments[-1][1]:m.start()])
-        label = m.group(1).lower()
+        label = m.group(0).lower()  # full match — covers both legacy + tab forms
         if "departure" in label:
             tag = "departures"
         elif "expected" in label:
@@ -211,12 +224,21 @@ def parse_vf_port(html):
 
     counts = {"arrivals": 0, "departures": 0, "expected": 0, "inport": 0}
 
-    # ---- Row extractor: a <tr> with a vessel link is one vessel. We also pull
-    # a vessel-type hint from common VF column classes / nearby spans. ----
-    row_pat = re.compile(
-        r'<tr[^>]*>(?P<row>.*?)</tr>',
-        re.S | re.I,
-    )
+    # ---- Row extractor: split on <tr opens. ----
+    # 2026-05-18: VF's table HTML has open <tr> tags without explicit </tr>
+    # closes (implicit-close, valid HTML5). Old `<tr>...</tr>` greedy match
+    # found only 4 rows out of 24 on Bandar Abbas. Strategy: split on `<tr`
+    # opens, each chunk up to the next `<tr` is the row body.
+    def _iter_rows(text):
+        opens = [m.start() for m in re.finditer(r'<tr\b', text, re.I)]
+        for i, start in enumerate(opens):
+            end = opens[i+1] if i+1 < len(opens) else len(text)
+            yield text[start:end]
+    # Shim so the rest of this function can keep using rm.group("row") API.
+    class _RowMatch:
+        def __init__(self, s): self._s = s
+        def group(self, k): return self._s
+    row_pat = type("P", (), {"finditer": staticmethod(lambda body: (_RowMatch(s) for s in _iter_rows(body)))})()
     # Common VF type cell patterns (class names have changed over time)
     type_cell_pats = [
         re.compile(r'<td[^>]*class="[^"]*(?:aiv-vty|vty|vessel-type|type-col)[^"]*"[^>]*>\s*([^<]+?)\s*<', re.I),
@@ -309,6 +331,10 @@ def parse_vf_port(html):
         "arrivals":       counts["arrivals"],
         "departures":     counts["departures"],
         "expected_24h":   counts["expected"],
+        # In-port count = unique vessels visible on the static page. The
+        # arrivals/departures/expected tabs are JS-loaded by VF and not in
+        # the static HTML, so they typically return 0 here. (2026-05-18)
+        "inport":         counts["inport"],
         "unique_vessels": len(unique_vessels),
         "total":          total,
         "types":          types,
