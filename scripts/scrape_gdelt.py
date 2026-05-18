@@ -111,6 +111,12 @@ def main():
     # to build the histogram. Up to 3 tries, 60s each. 2026-05-18 fix after
     # first run timed out at 20s.
     for attempt in range(3):
+        # Backoff between attempts — GDELT rate-limits aggressive callers
+        # (saw HTTP 429 with 0-sleep retry). 0s, 8s, 25s.
+        if attempt > 0:
+            sleep_s = 8 * attempt + (attempt - 1) * 9
+            print(f"  ToneChart: sleeping {sleep_s}s before retry…")
+            time.sleep(sleep_s)
         try:
             tr = requests.get(TONE_URL, timeout=60,
                               headers={"User-Agent": "HormuzWatch-GDELT/1.0"})

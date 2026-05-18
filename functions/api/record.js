@@ -425,6 +425,9 @@ async function _handleRecord({ request, env }) {
   // Build verdict input bundle — includes NEW signals
   const verdictInput = {
     transits_24h:               vTransit24h,
+    // 2026-05-18: pass scraped_vessel_total so computeVerdict can fall back
+    // to it when AIS is dormant (vTransit24h is null in that case).
+    scraped_vessel_total:       snapshotD?.scraped_vessel_total ?? null,
     brent_price:                brent,
     brent_dp_24h:               brentDp,
     tanker_index:               tankerIdx,
