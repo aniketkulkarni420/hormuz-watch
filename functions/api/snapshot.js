@@ -206,9 +206,14 @@ export async function onRequestGet({ request, env }) {
     aed_usd:                 currency?.aed_usd ?? null,
     currency_age_sec:        currency?.fetchedAt ? Math.floor(Date.now()/1000 - currency.fetchedAt) : null,
     currency_interpretation: currency?.interpretation ?? null,
-    // OFAC Iran-related sanctions activity (every 6h via scrape_ofac.py)
+    // OFAC Iran-related sanctions activity (every 6h via scrape_ofac.py).
+    // ofac_recent_actions: titles + dates + urls for the 5 latest Iran-related
+    // press releases — drives the "Sanctions enforcement" timeline card.
+    // (Phase 2 #2, 2026-05-17 — full vessel-level SDN match deferred to a
+    // later phase pending OFAC SDN.csv scraper + AIS recovery.)
     ofac_iran_actions_30d:   ofac?.iran_related_actions_30d ?? null,
     ofac_latest_action_date: ofac?.latest_action_date ?? null,
+    ofac_recent_actions:     Array.isArray(ofac?.recent_actions) ? ofac.recent_actions.slice(0, 5) : [],
     ofac_age_sec:            ofac?.fetchedAt ? Math.floor(Date.now()/1000 - ofac.fetchedAt) : null,
     // EIA weekly inventory + SPR (written by scrape_oil.py weekly_stocks block)
     spr_level_kbbl:          oilLatest?.symbols?.weekly_stocks?.spr_kbbl ?? null,
