@@ -400,12 +400,24 @@ def main():
                 by_type[k] = by_type.get(k, 0) + int(v or 0)
             expected_24h_total += int(data.get("expected_24h") or 0)
 
+    # Reconcile headline total with sum(byType) — both must agree, otherwise the
+    # dashboard shows "148 vessels · types sum 185" and readers lose trust.
+    # Per-port dedup is in place (one vessel = one type), but `total_all` uses
+    # max(unique_vessels per port) while `by_type` sums per-port types. They
+    # diverge by rows where the vessel-link parse failed (no vkey → not added
+    # to unique_vessels but type still bumped). Anchor public total to sum(types)
+    # whenever type data is available; fall back to total_all otherwise.
+    # (Phase-2 fix, 2026-05-17 — see /audit "types sum vs total" row.)
+    types_sum = sum(by_type.values()) if by_type else 0
+    reconciled_total = types_sum if types_sum > 0 else total_all
+
     result = {
         "fetchedAt": int(time.time()),
         "totals": {
             "arrivals": total_arrivals,
             "departures": total_departures,
-            "all": total_all,
+            "all": reconciled_total,
+            "all_legacy_max": total_all,    # kept for audit; not used by UI
             "expected_24h": expected_24h_total,
         },
         "byType": by_type,
@@ -417,7 +429,7 @@ def main():
 
     ok = kv_put("vessel_count_scraped", json.dumps(result, separators=(",", ":")))
     print(f"\n{'✓' if ok else '✗'} KV write {'OK' if ok else 'FAILED'}")
-    print(f"  Aggregate: arrivals={total_arrivals} departures={total_departures} total={total_all} confidence={confidence}")
+    print(f"  Aggregate: arrivals={total_arrivals} departures={total_departures} total={reconciled_total} (types_sum={types_sum} legacy_max={total_all}) confidence={confidence}")
 
     if not ok:
         sys.exit(1)
