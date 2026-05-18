@@ -107,10 +107,16 @@ def main():
     tone_avg = None
     tone_neg_pct = None
     tone_total = 0
-    try:
-        tr = requests.get(TONE_URL, timeout=20,
-                          headers={"User-Agent": "HormuzWatch-GDELT/1.0"})
-        if tr.status_code == 200:
+    # ToneChart is slow — server-side it scans tens of thousands of articles
+    # to build the histogram. Up to 3 tries, 60s each. 2026-05-18 fix after
+    # first run timed out at 20s.
+    for attempt in range(3):
+        try:
+            tr = requests.get(TONE_URL, timeout=60,
+                              headers={"User-Agent": "HormuzWatch-GDELT/1.0"})
+            if tr.status_code != 200:
+                print(f"  ToneChart attempt {attempt+1}: HTTP {tr.status_code}")
+                continue
             tdata = tr.json()
             bins = tdata.get("tonechart") or []
             total = sum(int(b.get("count", 0)) for b in bins)
@@ -120,10 +126,14 @@ def main():
             if total > 0:
                 tone_avg = round(weighted / total, 2)
                 tone_neg_pct = round(neg / total * 100, 1)
-        else:
-            print(f"  ToneChart HTTP {tr.status_code} — falling back to count-only")
-    except Exception as e:
-        print(f"  ToneChart fetch failed: {str(e)[:120]} — falling back to count-only")
+                print(f"  ToneChart OK on attempt {attempt+1}: {total} articles binned")
+                break
+            else:
+                print(f"  ToneChart attempt {attempt+1}: empty histogram")
+        except Exception as e:
+            print(f"  ToneChart attempt {attempt+1} failed: {str(e)[:120]}")
+    if tone_avg is None:
+        print("  ToneChart unavailable after 3 attempts — falling back to count-only")
 
     payload = {
         "fetchedAt": int(time.time()),
