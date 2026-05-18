@@ -20,9 +20,15 @@ export async function onRequestGet({ env }) {
       if (rawScraped) {
         const dataS = JSON.parse(rawScraped);
         const ageMinS = (Date.now() / 1000 - dataS.fetchedAt) / 60;
-        const isFresh = ageMinS <= 30;
-        const isHighConf = dataS.brent?.confidence === "high" && dataS.wti?.confidence === "high";
-        if (isFresh && isHighConf && dataS.brent && dataS.wti) {
+        // 2026-05-18: widened 30→360 min. Stooq is daily-settlement data and GHA cron is
+        // throttled ~10× nominal; a 30-min window kept tripping us into Tier 2 ETF garbage
+        // (Brent $58 / WTI $148) instead of fresh-enough Stooq settlement.
+        const isFresh = ageMinS <= 360;
+        // Accept "high" OR "medium" confidence. After bundle C1, "medium" means Stooq+OPA
+        // disagreed by >1% — still vastly more accurate than ETF proxy.
+        const conf = (c) => c === "high" || c === "medium";
+        const isOkConf = conf(dataS.brent?.confidence) && conf(dataS.wti?.confidence);
+        if (isFresh && isOkConf && dataS.brent && dataS.wti) {
           const b = dataS.brent, w = dataS.wti;
           // Also try to pull official EIA reference from `latest` for the dual-display
           let bo = null, wo = null;
@@ -188,7 +194,8 @@ export async function onRequestGet({ env }) {
       if (raw) {
         const data = JSON.parse(raw);
         const ageMin = (Date.now() / 1000 - data.fetchedAt) / 60;
-        if (ageMin <= 45 && data.brent && data.wti) {
+        // 2026-05-18: widened 45→360 min — same throttle rationale as Tier 0.
+        if (ageMin <= 360 && data.brent && data.wti) {
           const b = data.brent, w = data.wti;
           const confSuffix = (b.confidence === "high" && w.confidence === "high")
             ? "cross-verified"
@@ -234,12 +241,16 @@ export async function onRequestGet({ env }) {
       ]);
       const [bno, uso] = await Promise.all([bnoRes.json(), usoRes.json()]);
       if (isFinite(bno.c) && bno.c > 0 && isFinite(uso.c) && uso.c > 0) {
+        // 2026-05-18: STRIPPED `proxyPrice` from the response. The BNO/USO ETF SHARE
+        // price (~$57 / ~$148) was being read as oil $/bbl by downstream consumers,
+        // shipping Brent=$57.69 and WTI=$148.23 to the dashboard. The dp% sentiment
+        // signal is the only valid output of this tier; emit that alone.
         return json({
-          source: "FinnHub ETF proxy (BNO/USO)",
+          source: "FinnHub ETF proxy (BNO/USO) — sentiment only",
           tier: "secondary",
-          note: "ETF dp% only; apply to EIA daily level. NYSE hours only.",
-          brent: { proxyDp: bno.dp, proxyPrice: bno.c, t: bno.t },
-          wti:   { proxyDp: uso.dp, proxyPrice: uso.c, t: uso.t },
+          note: "ETF dp% sentiment only. NO price level — use /api/stooq for EIA daily $/bbl.",
+          brent: { proxyDp: bno.dp, t: bno.t },
+          wti:   { proxyDp: uso.dp, t: uso.t },
           fetchedAt: Date.now()
         });
       }

@@ -78,11 +78,13 @@ export async function onRequestGet({ request, env }) {
 
   // Web-scraped vessel count fallback when AIS is unavailable.
   // 137 vessels across 5 Gulf ports ≈ Persian Gulf traffic proxy.
-  // Used only when (1) AIS not flowing AND (2) scraped data is fresh (< 6h) AND (3) not blocked.
+  // Used only when (1) AIS not flowing AND (2) scraped data is fresh (< 24h) AND (3) not blocked.
+  // Window widened 6h→24h (2026-05-18): GHA cron is throttled to ~10h actual cadence;
+  // 6h window kept tripping us into full-static fallback even when vessel scrape was valid.
   if (!aisLive && vesselScrape && !vesselScrape.blocked) {
     const scrapeAgeSec = vesselScrape.fetchedAt ? Math.floor(Date.now() / 1000 - vesselScrape.fetchedAt) : null;
     const scrapeTotal = vesselScrape?.totals?.all ?? null;
-    if (scrapeAgeSec != null && scrapeAgeSec < 6 * 3600 && Number.isFinite(scrapeTotal) && scrapeTotal > 0) {
+    if (scrapeAgeSec != null && scrapeAgeSec < 24 * 3600 && Number.isFinite(scrapeTotal) && scrapeTotal > 0) {
       aisLive = {
         transits24h: scrapeTotal,
         inbound: 0, outbound: 0,
@@ -161,12 +163,36 @@ export async function onRequestGet({ request, env }) {
       "incidents_30d",
       "india_import_dependency_pct",
     ],
-    is_static: !aisLive,
-    live_source_count: aisLive ? 1 : 0,
+    // is_static / live_source_count (rewritten 2026-05-18):
+    //   AIS-only gating was wrong — many other streams (oil, vessel scrape, bdti, ofac,
+    //   news, currency, aircraft, seismic) are independently alive and should count as
+    //   "live" even when AIS is down. We count any KV stream with a non-null payload
+    //   AND a fetchedAt within its expected freshness window.
+    is_static: ((() => {
+      const liveCount = (aisLive ? 1 : 0)
+        + (oilLatest?.fetchedAt && (Date.now()/1000 - oilLatest.fetchedAt) < 6*3600 ? 1 : 0)
+        + (vesselScrape?.fetchedAt && (Date.now()/1000 - vesselScrape.fetchedAt) < 24*3600 ? 1 : 0)
+        + (bdti != null && !bdti_stale ? 1 : 0)
+        + (news?.fetchedAt && (Date.now()/1000 - news.fetchedAt) < 24*3600 ? 1 : 0)
+        + (currency?.fetchedAt && (Date.now()/1000 - currency.fetchedAt) < 24*3600 ? 1 : 0)
+        + (ofac?.fetchedAt && (Date.now()/1000 - ofac.fetchedAt) < 48*3600 ? 1 : 0)
+        + (aircraft?.fetchedAt && (Date.now()/1000 - aircraft.fetchedAt) < 24*3600 ? 1 : 0)
+        + (seismic?.fetchedAt && (Date.now()/1000 - seismic.fetchedAt) < 24*3600 ? 1 : 0);
+      return liveCount === 0;
+    })()),
+    live_source_count: (aisLive ? 1 : 0)
+      + (oilLatest?.fetchedAt && (Date.now()/1000 - oilLatest.fetchedAt) < 6*3600 ? 1 : 0)
+      + (vesselScrape?.fetchedAt && (Date.now()/1000 - vesselScrape.fetchedAt) < 24*3600 ? 1 : 0)
+      + (bdti != null && !bdti_stale ? 1 : 0)
+      + (news?.fetchedAt && (Date.now()/1000 - news.fetchedAt) < 24*3600 ? 1 : 0)
+      + (currency?.fetchedAt && (Date.now()/1000 - currency.fetchedAt) < 24*3600 ? 1 : 0)
+      + (ofac?.fetchedAt && (Date.now()/1000 - ofac.fetchedAt) < 48*3600 ? 1 : 0)
+      + (aircraft?.fetchedAt && (Date.now()/1000 - aircraft.fetchedAt) < 24*3600 ? 1 : 0)
+      + (seismic?.fetchedAt && (Date.now()/1000 - seismic.fetchedAt) < 24*3600 ? 1 : 0),
     ais_state_age_sec: aisLive?.ageSec ?? null,
     source: aisLive
       ? aisLive.source
-      : "hormuz-watch · static fallback · env-var defaults (AIS scraper stale or no data)",
+      : "hormuz-watch · live composite (oil/vessel/bdti/ofac/news/currency) · AIS feed dormant",
     // Expose richer AIS payload when live
     eastbound_24h: aisLive?.eastbound ?? null,
     westbound_24h: aisLive?.westbound ?? null,
