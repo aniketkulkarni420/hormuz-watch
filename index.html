@@ -579,6 +579,35 @@ header{
   .live-badge{font-size:8px}
 }
 
+/* ─── 4.14 India panel · OS Mode 2 3-layer treatment (2026-05-17 Phase-1 #3) ─── */
+.disclaimer{background:var(--panel2);border:1px solid var(--border);
+  border-left:3px solid var(--muted2);border-radius:4px;padding:9px 12px;
+  font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.6;
+  margin-bottom:8px}
+.disclaimer b{color:var(--text)}
+.disclaimer a{color:var(--blue);text-decoration:none;border-bottom:1px dotted var(--blue)}
+.ip-layer{padding:9px 0;border-bottom:1px solid var(--border)}
+.ip-layer:last-child{border-bottom:0}
+.ip-tag{display:inline-block;font-family:var(--mono);font-size:8.5px;font-weight:700;
+  padding:1.5px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.06em;
+  margin-bottom:5px}
+.ip-tag.data{background:rgba(56,170,255,.12);color:var(--blue);border:1px solid rgba(56,170,255,.3)}
+.ip-tag.interp{background:rgba(240,144,20,.12);color:var(--amber);border:1px solid rgba(240,144,20,.3)}
+.ip-tag.notice{background:rgba(98,122,149,.12);color:var(--muted);border:1px solid rgba(98,122,149,.3)}
+.ip-row{display:grid;grid-template-columns:90px 70px 1fr 60px;gap:8px;align-items:center;
+  font-family:var(--mono);font-size:10px;padding:4px 0;font-variant-numeric:tabular-nums}
+.ip-name{color:var(--text);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ip-tkr{color:var(--muted2)}
+.ip-sector{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.04em}
+.ip-exp{text-align:right;font-size:9px;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.ip-exp.high{color:var(--red)}
+.ip-exp.med{color:var(--amber)}
+.ip-interp{font-family:var(--mono);font-size:10px;color:var(--text);line-height:1.6}
+.ip-interp b{color:var(--amber);font-weight:700}
+.ip-notice{font-family:var(--mono);font-size:9.5px;color:var(--muted2);line-height:1.55}
+.ip-notice b{color:var(--text)}
+.ip-notice a{color:var(--blue);text-decoration:none;border-bottom:1px dotted var(--blue)}
+
 /* ─── 4.9 UNCTAD scenarios (2026-05-17 Phase-1 #2) ─── */
 .un-row{display:grid;grid-template-columns:1fr 80px 110px;gap:10px;align-items:center;
   padding:6px 0;font-family:var(--mono);font-size:10px;border-bottom:1px solid var(--border)}
@@ -1077,12 +1106,54 @@ header{
       </div>
     </div>
 
-    <!-- INDIA WATCH -->
-    <div class="rblock">
-      <div class="rhead">India equity watch &#127470;&#127475; <span class="rhead-src src-blue" style="color:var(--blue)">EQUITY DATA</span></div>
-      <div class="india-rows" id="indiaRows"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        ~62% of India's crude imports flow through Hormuz. Each $10/bbl crude rise = ~&#8377;85K Cr import bill increase. Petronet LNG nearly entirely Hormuz-dependent.
+    <!-- INDIA · Hormuz exposure · OS Mode 2 3-layer compliance treatment
+         (2026-05-17 Phase-1 build #3, 4.14)
+         Replaces "India equity watch" with explicit Data · Interpretation ·
+         Not-investment-advice layering. The trade-bias callout from the V3
+         mockup has been dropped (recommendation-grade language without a
+         suitability gate, per OS Mode 2 audit). -->
+    <div class="disclaimer">
+      <b>Educational analysis only.</b> The information below is general market
+      commentary, not personalized investment advice. Past stock-price behaviour
+      does not predict future returns. Holding period, position sizing,
+      leverage, and personal risk tolerance are not considered. SEBI Research
+      Analyst registration: INH000009843 ·
+      <a href="https://kamayakya.com/disclosures" target="_blank" rel="noopener noreferrer">Full disclosure</a>.
+    </div>
+
+    <div class="rblock" id="indiaBlock">
+      <div class="rhead">India &middot; Hormuz exposure &#127470;&#127475; <span class="rhead-src src-blue" style="color:var(--blue)">NSE &middot; educational</span></div>
+
+      <!-- Layer 1 · DATA -->
+      <div class="ip-layer">
+        <span class="ip-tag data">Data &middot; companies + sector exposure</span>
+        <div id="indiaRows"></div>
+        <div style="margin-top:6px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.55">
+          ~62% of India's crude imports flow through Hormuz. Each $10/bbl crude rise &asymp; &#8377;85K Cr import bill increase.
+        </div>
+      </div>
+
+      <!-- Layer 2 · INTERPRETATION -->
+      <div class="ip-layer">
+        <span class="ip-tag interp">Interpretation &middot; historical pattern</span>
+        <div class="ip-interp">
+          Crude-importing <b>refiners</b> have historically underperformed during Hormuz
+          stress episodes due to feedstock-cost compression &mdash; input crude rises while
+          retail price is policy-anchored. <b>Upstream producers</b> and <b>Indian-flag
+          tankers</b> have historically benefited from elevated crude and freight rates.
+          Integrated names (RIL) typically hedge-neutral via downstream offset.
+        </div>
+      </div>
+
+      <!-- Layer 3 · NOT INVESTMENT ADVICE -->
+      <div class="ip-layer">
+        <span class="ip-tag notice">Not investment advice</span>
+        <div class="ip-notice">
+          Past behaviour does not predict future returns. Position sizing, holding
+          period, and personal risk tolerance not considered. This dashboard does not
+          capture your suitability profile. <b>Discuss with a qualified advisor before
+          acting.</b> See <a href="https://kamayakya.com/disclosures" target="_blank" rel="noopener noreferrer">full RA disclosure</a>.
+        </div>
       </div>
     </div>
 
@@ -1396,15 +1467,20 @@ var HISTORICAL_EVENTS = [
   {event:"OPEC oil embargo",  year:1973, duration:"5 mo",   oilSpike:"+300%",        tradeImpact:"7.5% global supply cut"}
 ];
 
-// INDIA equity exposures — refined per FY24-25 company filings + PPAC trade flow data
-// (Reliance diversified to Russia/US post-2022; IOC moderated Persian Gulf share)
+// INDIA equity exposures — refined per FY24-25 company filings + PPAC trade
+// flow data. Now carries explicit sector classification for the OS Mode 2
+// compliance treatment (4.14): refiner / upstream / LNG / integrated / tanker.
+// The qualitative "exposure" string is shown on hover (title attribute);
+// risk band drives the visible HIGH/MED tag.
 var INDIA = [
-  {name:"BPCL",     ticker:"BPCL",       exposure:"~60% crude via Hormuz", risk:"high"},
-  {name:"IOC",      ticker:"IOC",        exposure:"~52% crude via Hormuz", risk:"high"},
-  {name:"HPCL",     ticker:"HINDPETRO",  exposure:"~50% crude via Hormuz", risk:"high"},
-  {name:"Petronet", ticker:"PETRONET",   exposure:"~95% LNG via Hormuz",   risk:"high"},
-  {name:"Reliance", ticker:"RELIANCE",   exposure:"~35% (Russia/US hedge)",risk:"med"},
-  {name:"GAIL",     ticker:"GAIL",       exposure:"LNG mostly non-Hormuz", risk:"med"}
+  {name:"BPCL",     ticker:"BPCL",       sector:"refiner",    exposure:"~60% crude via Hormuz", risk:"high"},
+  {name:"IOC",      ticker:"IOC",        sector:"refiner",    exposure:"~52% crude via Hormuz", risk:"high"},
+  {name:"HPCL",     ticker:"HINDPETRO",  sector:"refiner",    exposure:"~50% crude via Hormuz", risk:"high"},
+  {name:"ONGC",     ticker:"ONGC",       sector:"upstream",   exposure:"upstream beneficiary on crude spike", risk:"med"},
+  {name:"Petronet", ticker:"PETRONET",   sector:"LNG",        exposure:"~95% LNG via Hormuz",   risk:"high"},
+  {name:"GAIL",     ticker:"GAIL",       sector:"gas / LNG",  exposure:"LNG mostly non-Hormuz", risk:"med"},
+  {name:"Reliance", ticker:"RELIANCE",   sector:"integrated", exposure:"~35% Hormuz (Russia/US hedge)", risk:"med"},
+  {name:"SCI",      ticker:"SCI",        sector:"tanker",     exposure:"Indian-flag tanker beneficiary on freight spike", risk:"med"}
 ];
 
 var TANKERS = [
@@ -2639,19 +2715,33 @@ renderHistoricalEvents();
 // price changes (oilSpikeNow derives from _brentPrice).
 setInterval(renderHistoricalEvents, 5 * 60 * 1000);
 
-var ir=document.getElementById("indiaRows");
-INDIA.forEach(function(s){
-  var row=document.createElement("div");row.className="india-row";
-  // P9 — name links to TradingView NSE page in a new tab
-  var tvHref = s.ticker ? "https://www.tradingview.com/symbols/NSE-" + encodeURIComponent(s.ticker) + "/" : null;
-  var nameHtml = tvHref
-    ? '<a href="'+tvHref+'" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted2)" title="Open '+s.name+' on TradingView">'+s.name+'</a>'
-    : s.name;
-  row.innerHTML='<div class="ir-name">'+nameHtml+'</div>'
-    +'<div class="ir-exposure">'+s.exposure+'</div>'
-    +'<div class="ir-tag '+(s.risk==="high"?"high":"med")+'">'+(s.risk==="high"?"HIGH":"MED")+'</div>';
-  ir.appendChild(row);
-});
+// India · 4-column ip-row renderer for the OS Mode 2 Data layer.
+// Columns: name (TradingView link) · ticker · sector · risk tag.
+// Qualitative exposure text on hover (title).
+(function renderIndiaPanel(){
+  var ir = document.getElementById("indiaRows");
+  if(!ir) return;
+  ir.innerHTML = "";
+  INDIA.forEach(function(s){
+    var tvHref = s.ticker
+      ? "https://www.tradingview.com/symbols/NSE-" + encodeURIComponent(s.ticker) + "/"
+      : null;
+    var nameHtml = tvHref
+      ? '<a href="' + tvHref + '" target="_blank" rel="noopener noreferrer" '
+        + 'style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted2)" '
+        + 'title="' + s.exposure + ' · open ' + s.name + ' on TradingView">' + s.name + '</a>'
+      : s.name;
+    var expClass = (s.risk === "high") ? "high" : "med";
+    var row = document.createElement("div");
+    row.className = "ip-row";
+    row.title = s.exposure;
+    row.innerHTML = '<div class="ip-name">' + nameHtml + '</div>'
+      + '<div class="ip-tkr">' + s.ticker + '</div>'
+      + '<div class="ip-sector">' + s.sector + '</div>'
+      + '<div class="ip-exp ' + expClass + '">' + (s.risk === "high" ? "HIGH" : "MED") + '</div>';
+    ir.appendChild(row);
+  });
+})();
 
 var tr=document.getElementById("tankerRows");
 TANKERS.forEach(function(s){
