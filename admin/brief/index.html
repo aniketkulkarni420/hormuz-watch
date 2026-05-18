@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Daily brief · Hormuz Watch</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0b0e16;--panel2:#0f131e;--border:#18202e;--border2:#222d3f;
+  --amber:#f09014;--blue:#38aaff;--red:#ff3e52;--green:#1dd47e;
+  --text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;
+  --mono:'JetBrains Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;padding:0;min-height:100vh}
+.wrap{max-width:680px;margin:0 auto;padding:40px 24px}
+.back{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--muted);
+  letter-spacing:.08em;text-transform:uppercase;text-decoration:none;margin-bottom:18px}
+.back:hover{color:var(--amber)}
+h1{font-size:28px;font-weight:900;letter-spacing:-.005em;margin-bottom:6px}
+.sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em;margin-bottom:24px}
+.current{margin-bottom:22px;padding:14px 18px;background:var(--panel);border:1px solid var(--border);border-radius:8px}
+.current-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.current-body{font-family:var(--sans);font-size:14px;color:var(--text);line-height:1.6;margin-bottom:6px}
+.current-meta{font-family:var(--mono);font-size:10px;color:var(--muted2)}
+.current.stale{border-color:rgba(255,62,82,.4)}
+.current.stale .current-meta{color:var(--red)}
+.token-row{margin-bottom:20px;padding:14px 16px;background:var(--panel);border:1px solid var(--border);
+  border-radius:6px;display:flex;gap:10px;align-items:center}
+.token-row label{font-family:var(--mono);font-size:10px;color:var(--muted);
+  letter-spacing:.06em;text-transform:uppercase;flex-shrink:0}
+.token-row input{flex:1;background:var(--panel2);border:1px solid var(--border2);color:var(--text);
+  padding:8px 10px;border-radius:4px;font-family:var(--mono);font-size:11px}
+.token-row button{background:transparent;border:1px solid var(--amber);color:var(--amber);
+  padding:7px 12px;border-radius:4px;font-family:var(--mono);font-size:10px;
+  cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
+.token-status{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.token-status.ok{color:var(--green)}
+form{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:30px}
+.field{margin-bottom:18px}
+.field label{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;font-weight:700}
+.field textarea{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);
+  padding:12px;border-radius:5px;font-family:var(--sans);font-size:14px;min-height:130px;resize:vertical;line-height:1.6}
+.field textarea:focus{outline:none;border-color:var(--amber)}
+.field input[type="text"]{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);
+  padding:10px 12px;border-radius:5px;font-family:var(--mono);font-size:13px}
+.charcount{font-family:var(--mono);font-size:10px;color:var(--muted2);text-align:right;margin-top:4px}
+.charcount.warn{color:var(--amber)}
+.charcount.err{color:var(--red)}
+.helper{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:4px;line-height:1.55}
+.submit{margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.submit button{background:var(--amber);color:#000;border:0;padding:11px 22px;border-radius:5px;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;cursor:pointer}
+.submit button:disabled{opacity:.4;cursor:not-allowed}
+.status{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+.status.ok{color:var(--green)} .status.err{color:var(--red)}
+.tips{margin-top:30px;padding:14px 18px;background:rgba(56,170,255,.04);border-left:3px solid var(--blue);
+  border-radius:0 4px 4px 0;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.65}
+.tips b{color:var(--text)}
+.foot{margin-top:30px;font-family:var(--mono);font-size:10px;color:var(--muted2);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="/">&larr; Back to dashboard</a>
+<h1>Daily brief admin</h1>
+<div class="sub">Editorial 2&ndash;3 sentence read that anchors the dashboard hero &middot; 36h staleness window</div>
+
+<div class="current" id="current">Loading current brief...</div>
+
+<div class="token-row">
+  <label>Admin token</label>
+  <input id="tok" type="password" placeholder="Paste ADMIN_TOKEN" autocomplete="off">
+  <button onclick="saveToken()">Save</button>
+  <span class="token-status" id="tokStatus">Not saved</span>
+</div>
+
+<form onsubmit="postBrief(event)">
+  <div class="field">
+    <label>Brief text *</label>
+    <textarea id="text" placeholder="2-3 sentences. Lead with the most important read of the day. Mention drivers + caveats. Plain English, mono numbers." maxlength="800"></textarea>
+    <div id="charcount" class="charcount">0 / 800</div>
+    <div class="helper">Minimum 20 chars, maximum 800. Tabular numerals will render via the dashboard's CSS — type plain text here.</div>
+  </div>
+  <div class="field">
+    <label>Author</label>
+    <input type="text" id="author" placeholder="Aniket" maxlength="60">
+    <div class="helper">Defaults to "Aniket". Shown in the hero meta line.</div>
+  </div>
+  <div class="submit">
+    <button type="submit" id="submitBtn">Publish brief</button>
+    <span class="status" id="status"></span>
+  </div>
+</form>
+
+<div class="tips">
+  <b>House-style for the brief.</b> Lead with what changed in the last 24h or the strongest current signal. Quote one number from oil / BDTI / transits / OFAC / IRR. Add a one-line interpretation. End with what to watch next. Avoid: hedge language, generic SaaS phrases, recommendation grammar ("we think you should..."). Match the dashboard's tone — sharp, data-backed, no fluff.
+</div>
+
+<div class="foot">Hormuz Watch &middot; admin/brief &middot; KV-backed via /api/brief</div>
+</div>
+
+<script>
+const TOK_KEY = "hw_admin_token";
+function saveToken(){
+  const v = document.getElementById("tok").value.trim();
+  if(!v){ localStorage.removeItem(TOK_KEY); _setTok("Not saved"); return; }
+  localStorage.setItem(TOK_KEY, v);
+  _setTok("Saved", true);
+}
+function _setTok(text, ok){
+  const s = document.getElementById("tokStatus");
+  s.textContent = text;
+  s.className = "token-status" + (ok ? " ok" : "");
+}
+function loadToken(){
+  const t = localStorage.getItem(TOK_KEY);
+  if(t){ document.getElementById("tok").value = t; _setTok("Saved", true); }
+}
+
+function loadCurrent(){
+  const el = document.getElementById("current");
+  fetch("/api/brief?_=" + Date.now())
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if(!d || !d.text){
+        el.innerHTML = '<div class="current-label">No brief published yet</div>'
+          + '<div class="current-meta">First brief will land here once published.</div>';
+        return;
+      }
+      const stale = !!d.stale;
+      el.className = "current" + (stale ? " stale" : "");
+      const ts = d.ts ? new Date(d.ts * 1000).toISOString().slice(0,16).replace("T", " ") : "—";
+      const ageStr = d.ageHours != null ? d.ageHours.toFixed(1) + "h ago" : "unknown age";
+      el.innerHTML = '<div class="current-label">Currently live</div>'
+        + '<div class="current-body">' + _esc(d.text) + '</div>'
+        + '<div class="current-meta">' + _esc(d.author || "Aniket") + ' &middot; ' + ts + ' UTC &middot; ' + ageStr + (stale ? ' &middot; <b>STALE — update needed</b>' : '') + '</div>';
+    })
+    .catch(() => {
+      el.innerHTML = '<div class="current-label">Could not load current brief</div>';
+    });
+}
+
+function _esc(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function updateCharCount(){
+  const ta = document.getElementById("text");
+  const cc = document.getElementById("charcount");
+  const len = ta.value.length;
+  cc.textContent = len + " / 800";
+  cc.className = "charcount" + (len < 20 ? " err" : len > 700 ? " warn" : "");
+}
+
+function postBrief(e){
+  e.preventDefault();
+  const tok = localStorage.getItem(TOK_KEY);
+  if(!tok){
+    document.getElementById("status").textContent = "Save admin token first";
+    document.getElementById("status").className = "status err";
+    return;
+  }
+  const text = document.getElementById("text").value.trim();
+  const author = document.getElementById("author").value.trim() || "Aniket";
+  const status = document.getElementById("status");
+  const btn = document.getElementById("submitBtn");
+  if(text.length < 20){
+    status.textContent = "Brief too short (min 20 chars)";
+    status.className = "status err";
+    return;
+  }
+  btn.disabled = true;
+  status.textContent = "Publishing...";
+  status.className = "status";
+  fetch("/api/brief", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Admin-Token": tok },
+    body: JSON.stringify({ text, author }),
+  }).then(r => r.json().then(d => ({ status: r.status, body: d })))
+  .then(({ status: code, body }) => {
+    if(code === 200 && body.ok){
+      status.textContent = "Published " + new Date().toLocaleTimeString();
+      status.className = "status ok";
+      document.getElementById("text").value = "";
+      updateCharCount();
+      loadCurrent();
+    } else {
+      status.textContent = "Error: " + (body.error || code);
+      status.className = "status err";
+    }
+  }).catch(e => {
+    status.textContent = "Network error: " + e.message;
+    status.className = "status err";
+  }).finally(() => { btn.disabled = false; });
+}
+
+loadToken();
+loadCurrent();
+document.getElementById("text").addEventListener("input", updateCharCount);
+updateCharCount();
+</script>
+</body>
+</html>

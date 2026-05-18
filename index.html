@@ -835,6 +835,20 @@ header{
     <!-- ═══════════ SECTION 1: TOP PRIORITY ═══════════ -->
     <div class="rsection">Top priority</div>
 
+    <!-- DAILY BRIEF · 2026-05-17 Phase-2 build #3 (4 — daily brief)
+         Editorial 2-3 sentence read that frames the dashboard. Aniket writes via
+         /admin/brief; this card reads /api/brief. Renders only when a brief is
+         available; auto-hides otherwise (no awkward empty state stealing the
+         hero slot). Stale flag fires at 36h via the API. -->
+    <div class="rblock" id="briefBlock" style="display:none">
+      <div class="rhead">
+        Daily brief
+        <span class="rhead-src src-blue" style="color:var(--blue)" id="briefSrc">Aniket &middot; &mdash;</span>
+      </div>
+      <div id="briefBody" style="font-family:var(--sans);font-size:13px;color:var(--text);line-height:1.6"></div>
+      <div id="briefMeta" style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);letter-spacing:.04em"></div>
+    </div>
+
     <!-- TENSION GAUGE / VERDICT (two-stage) -->
     <!-- HORMUZ RISK VERDICT — Option C (inverted pyramid). Replaced 2026-05-15
          the three stacked verdict-cards (Stage 1 / Stage 2 / Final + SVG
@@ -3463,6 +3477,42 @@ function pollSnapshotForDegradedMode(){
 }
 setTimeout(pollSnapshotForDegradedMode, 4000);
 setInterval(pollSnapshotForDegradedMode, 90000);
+
+// Daily brief · reads /api/brief (KV-backed). Auto-hides when no brief is
+// published; surfaces a "STALE" tag at 36h+. Updated every 5 min.
+function loadDailyBrief(){
+  fetch("/api/brief?_=" + Date.now())
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      var block = document.getElementById("briefBlock");
+      if(!block) return;
+      if(!d || !d.text){ block.style.display = "none"; return; }
+      block.style.display = "";
+      var body = document.getElementById("briefBody");
+      var meta = document.getElementById("briefMeta");
+      var src  = document.getElementById("briefSrc");
+      if(body) body.textContent = d.text;
+      var ageHours = d.ageHours;
+      var ageStr;
+      if(ageHours == null) ageStr = "unknown age";
+      else if(ageHours < 1) ageStr = Math.round(ageHours * 60) + "m ago";
+      else if(ageHours < 24) ageStr = ageHours.toFixed(1) + "h ago";
+      else ageStr = Math.round(ageHours / 24 * 10) / 10 + "d ago";
+      var staleMark = d.stale ? " · STALE — refresh needed" : "";
+      if(meta) meta.textContent = (d.author || "Aniket") + " · " + ageStr + staleMark;
+      if(src){
+        src.textContent = (d.author || "Aniket") + " · " + ageStr;
+        if(d.stale){ src.className = "rhead-src src-est"; src.style.color = "var(--amber)"; }
+        else { src.className = "rhead-src src-blue"; src.style.color = "var(--blue)"; }
+      }
+    })
+    .catch(function(){
+      var block = document.getElementById("briefBlock");
+      if(block) block.style.display = "none";
+    });
+}
+loadDailyBrief();
+setInterval(loadDailyBrief, 5 * 60 * 1000);
 
 // 4.12 v1 · OFAC enforcement timeline · reads ofac_recent_actions[] from snapshot
 function renderOfacTimeline(snap){
