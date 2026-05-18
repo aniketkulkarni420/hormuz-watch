@@ -195,8 +195,16 @@ function applyOverrides(baseVerdict, triggers) {
 
 // ─── STAGE 1 · structural weighted average (13 inputs) ──────────────────
 function computeVerdict(snapshot) {
-  const transitsScore   = (snapshot.transits_24h != null && snapshot.transits_24h > 0)
-                            ? scoreTransits(snapshot.transits_24h, BASELINE_TRANSITS) : null;
+  // 2026-05-18: when AIS is dormant we fall back to scraped_vessel_total
+  // (5-port VesselFinder count, ~143). It's a different denominator but
+  // ratio-vs-baseline still gives a usable structural signal — strictly
+  // better than emitting null and zero-weighting the input.
+  const transitsRaw = (snapshot.transits_24h != null && snapshot.transits_24h > 0)
+                        ? snapshot.transits_24h
+                        : (snapshot.scraped_vessel_total != null && snapshot.scraped_vessel_total > 0
+                            ? snapshot.scraped_vessel_total : null);
+  const transitsScore = transitsRaw != null
+                          ? scoreTransits(transitsRaw, BASELINE_TRANSITS) : null;
   const oilScore        = scoreOilSpike(snapshot.brent_price, snapshot.brent_dp_24h);
   const stocksScore     = scoreTankerStocks(snapshot.tanker_index);
   const aircraftScore   = scoreAircraft(snapshot.military_aircraft_count);
