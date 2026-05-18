@@ -1,9 +1,13 @@
 name: oil-scrape-web
 
+# CRON DISABLED 2026-05-17 — this workflow was clobbering oil-stooq's good
+# Tier-0 writes with low-confidence garbage from frozen investing.com +
+# macrotrends (both upstream sources are dead). oil-stooq alone is now
+# authoritative for the `oil_scraped` KV key. This workflow is retained
+# only for emergency manual dispatch if Stooq itself goes down. Re-enable
+# the schedule only after both upstream sources are verified live AND a
+# different KV key is used (so it cross-verifies rather than clobbers).
 on:
-  schedule:
-    # Every 15 minutes. Multi-source web scrape, cross-verified.
-    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 permissions:
