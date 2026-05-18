@@ -989,6 +989,27 @@ header{
       </div>
     </div>
 
+    <!-- CAPE OF GOOD HOPE REROUTING · 2026-05-17 Phase-1 build #6 (4.5)
+         Where the cargo went. Static seed for now (no live AIS bbox yet — that's
+         the Phase-2 scraper-extension work). Pairs with Vessel Type Mix above
+         (what stayed) and the Tanker Plays card (the equity beneficiaries).
+         Uses existing .tbar-row pattern from Vessel Type Mix — no new CSS. -->
+    <div class="rblock" id="capeBlock">
+      <div class="rhead">
+        Cape of Good Hope rerouting
+        <span class="rhead-src src-est" style="color:var(--muted)">STATIC SEED &middot; AIS soon</span>
+      </div>
+      <div class="mix-subhead">
+        <span style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums">435</span>
+        vessels diverted (24h) &middot; +14 days per leg &middot; ~$4M extra fuel / VLCC voyage
+      </div>
+      <div class="type-bars" id="capeBars"></div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.6">
+        Active SA port arrivals (24h): <b style="color:var(--text)">Durban 30</b> &middot;
+        Port Elizabeth 28 &middot; Cape Town 24 &middot; Saldanha Bay 21
+      </div>
+    </div>
+
     <!-- POLITICAL SIGNALS (consolidated: OFAC + News + GDELT + Currency) -->
     <div class="rblock" id="politicalBlock">
       <div class="rhead">
@@ -1054,6 +1075,76 @@ header{
       <div class="tile-row">
         <div class="tile-row-label"><span class="tile-row-dot dot-muted" id="mcImportsDot"></span>Persian Gulf imports</div>
         <div class="tile-row-val" id="mcImportsVal">&mdash;</div>
+      </div>
+    </div>
+
+    <!-- LNG FLOW · 2026-05-17 Phase-1 build #4 (4.10)
+         Qatar exports ~20% of global LNG, all through Hormuz. Persian Gulf
+         LNG transits have collapsed -99% per WTO Datalab (Apr-May 2026).
+         Static config + simple tile-row pattern. Will be AIS-driven later
+         when we extend the vessel scraper to filter ship-type = LNG carrier. -->
+    <div class="rblock" id="lngBlock">
+      <div class="rhead">
+        LNG flow through Hormuz
+        <span class="rhead-src src-blue" style="color:var(--blue)">WTO Datalab &middot; static</span>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-red"></span>LNG transits / day</div>
+        <div class="tile-row-val"><span style="color:var(--red);font-size:14px">1</span> <span style="color:var(--muted);font-weight:400">(vs ~30 pre-crisis)</span></div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-red"></span>Volume decline vs pre-Feb 26</div>
+        <div class="tile-row-val" style="color:var(--red)">&minus;99%</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-amber"></span>Qatar share of global LNG</div>
+        <div class="tile-row-val">~20% &middot; <span style="color:var(--muted);font-weight:400">all via Hormuz</span></div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-red"></span>European energy exposure</div>
+        <div class="tile-row-val" style="color:var(--red)">CRITICAL</div>
+      </div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.55">
+        Source: WTO Datalab Strait of Hormuz Trade Tracker (May 2026); AIS via AXSMarine.
+      </div>
+    </div>
+
+    <!-- FERTILIZER FLOW · 2026-05-17 Phase-1 build #5 (4.11)
+         Persian Gulf supplies a disproportionate share of global fertilizer
+         inputs (sulphur 50%, urea 25%, ammonia 18%, phosphate 13%). India is
+         a fertilizer-importing nation — direct agri-input cost transmission
+         to Indian farmgate by 6-12 months. Static config + tile-row pattern. -->
+    <div class="rblock" id="fertilizerBlock">
+      <div class="rhead">
+        Fertilizer flow
+        <span class="rhead-src src-blue" style="color:var(--blue)">WTO Datalab &middot; Apr-May</span>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-red"></span>Monthly volume decline</div>
+        <div class="tile-row-val" style="color:var(--red)">&minus;87% <span style="color:var(--muted);font-weight:400">vs pre-Feb 26</span></div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-red"></span>Sulphur &middot; PG share global</div>
+        <div class="tile-row-val">50%</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-amber"></span>Urea &middot; PG share global</div>
+        <div class="tile-row-val">25%</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-amber"></span>Ammonia &middot; PG share global</div>
+        <div class="tile-row-val">18%</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-amber"></span>Phosphate &middot; PG share global</div>
+        <div class="tile-row-val">13%</div>
+      </div>
+      <div class="tile-row">
+        <div class="tile-row-label"><span class="tile-row-dot dot-red"></span>India agri-import exposure</div>
+        <div class="tile-row-val" style="color:var(--red)">CRITICAL <span style="color:var(--muted);font-weight:400">(urea + DAP)</span></div>
+      </div>
+      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.55">
+        Pre-crisis: ~60 shipments / mo &middot; 2.7&ndash;3.1 Mt / mo. Source: WTO Datalab + UN Comtrade.
       </div>
     </div>
 
@@ -1416,6 +1507,32 @@ var SIM_FLEET = [
   {mmsi:477891234,name:"MSC ADRIATIC",    typeCode:71,heading:100,t:0.79,lane:"out",flag:"\uD83C\uDDF2\uD83C\uDDED"},
   {mmsi:357234567,name:"THOR INTEGRITY",  typeCode:89,heading:107,t:0.91,lane:"out",flag:"\uD83C\uDDF5\uD83C\uDDE6"}
 ];
+
+// 4.5 Cape of Good Hope rerouting \u00b7 static seed (will be AIS-driven in Phase 2
+// when the scraper is extended to the SA-waters bbox). Three buckets matching
+// the tightened vessel-type-mix vocabulary: Tanker \u00b7 Cargo \u00b7 Other.
+var CAPE_REROUTE = [
+  { type: "Tanker",  count: 80,  color: "var(--amber)" },
+  { type: "Cargo",   count: 300, color: "var(--green)" },
+  { type: "Other",   count: 55,  color: "var(--blue)"  }
+];
+
+function renderCapeReroute(){
+  var cb = document.getElementById("capeBars");
+  if(!cb) return;
+  var total = CAPE_REROUTE.reduce(function(s,r){ return s + r.count; }, 0) || 1;
+  cb.innerHTML = "";
+  CAPE_REROUTE.forEach(function(r){
+    var pct = Math.round(r.count / total * 100);
+    var row = document.createElement("div");
+    row.className = "tbar-row";
+    row.innerHTML = '<div class="tbar-label">' + r.type + '</div>'
+      + '<div class="tbar-track"><div class="tbar-fill" style="width:' + pct + '%;background:' + r.color + '"></div></div>'
+      + '<div class="tbar-pct">' + r.count + ' &middot; ' + pct + '%</div>';
+    cb.appendChild(row);
+  });
+}
+renderCapeReroute();
 
 // UNCTAD_SCENARIOS \u00b7 static config from osginf2026d2 (May 2026). Refresh when
 // UNCTAD republishes. The trade-growth + GDP-growth footer numbers are also
