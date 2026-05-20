@@ -41,10 +41,36 @@ const DEFAULT_WORKFLOWS = [
 export async function onRequestPost({ request, env }) {
   const t0 = Date.now();
 
-  // Auth
-  const token = request.headers.get("X-Admin-Token") || request.headers.get("X-Snapshot-Token");
-  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
-    return _json({ error: "unauthorized" }, 401);
+  // Auth — also trim trailing/leading whitespace before comparing because
+  // pasting tokens into cron-job.org / Cloudflare's UI is the #1 cause of
+  // 401s. (2026-05-20: cron-job.org test fire returned 401.)
+  const rawToken = request.headers.get("X-Admin-Token")
+                || request.headers.get("X-Snapshot-Token")
+                || "";
+  const token = rawToken.trim();
+  const envToken = (env.ADMIN_TOKEN || "").trim();
+
+  if (!envToken || token !== envToken) {
+    // Safe diagnostic: no token bytes leaked, just shape info so the
+    // operator can pin the failure (whitespace, wrong value, missing env).
+    return _json({
+      error: "unauthorized",
+      diag: {
+        env_admin_token_configured: !!env.ADMIN_TOKEN,
+        env_admin_token_len_after_trim: envToken.length,
+        header_received: !!rawToken,
+        header_len_raw: rawToken.length,
+        header_len_after_trim: token.length,
+        header_had_whitespace: rawToken !== token,
+        first_3_chars_match: envToken && token ? envToken.slice(0,3) === token.slice(0,3) : false,
+        last_3_chars_match:  envToken && token ? envToken.slice(-3) === token.slice(-3) : false,
+        hint: !envToken ? "CF env var ADMIN_TOKEN missing / empty in Production. Cloudflare → Pages → Settings → Environment variables → Production tab."
+            : !rawToken ? "Request did not carry an X-Admin-Token header. Check cron-job.org Headers section."
+            : rawToken !== token ? "Header value has leading/trailing whitespace. Re-paste without quotes or newline."
+            : envToken.length !== token.length ? `Length mismatch: header=${token.length}, env=${envToken.length}. Likely truncated paste or different token.`
+            : "Tokens are same length but bytes differ. Most likely wrong token used on one side.",
+      },
+    }, 401);
   }
   if (!env.GH_REFRESH_PAT) {
     return _json({
