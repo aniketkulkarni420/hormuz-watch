@@ -31,13 +31,19 @@
 const OWNER = "aniketkulkarni420";
 const REPO = "hormuz-watch";
 const DEFAULT_WORKFLOWS = [
-  "oil-stooq.yml",
-  "vessel-scrape.yml",
-  "news-scraper.yml",
-  "gdelt-scraper.yml",
-  "currency-scraper.yml",
-  "aircraft-scraper.yml",
-  "ais-scraper.yml",
+  // High-cadence price/volume feeds (every 10 min ideal)
+  "oil-stooq.yml",          // Brent/WTI intraday (Stooq + OPA cross-verified)
+  "vessel-scrape.yml",      // Persian Gulf port vessel counts
+  "ais-scraper.yml",        // AIS positions (currently key-revoked; firing harmless)
+  "aircraft-scraper.yml",   // adsb.lol ADS-B coverage
+  // Composite signal feeds (every 10 min OK; APIs are tolerant)
+  "news-scraper.yml",       // Headlines + categorisation
+  "gdelt-scraper.yml",      // Article volume + ToneChart sentiment
+  "currency-scraper.yml",   // IRR/USD official vs black-market
+  "weather-scraper.yml",    // Wind/sea state in strait
+  "seismic-scraper.yml",    // Iran earthquake activity
+  "ofac-scraper.yml",       // Iran enforcement actions
+  "oil-scraper.yml",        // EIA daily refs + OPEC + tanker stocks (slower, daily-cadence data)
 ];
 
 // 60s minimum between successful fanouts. GitHub's free-tier workflow
