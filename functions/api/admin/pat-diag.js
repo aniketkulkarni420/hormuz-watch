@@ -54,6 +54,83 @@ export async function onRequest({ env }) {
       out.verdict = "PAT_INVALID";
       out.next_step = "GitHub does not recognize this token. Causes: (1) PAT was revoked, (2) PAT expired, (3) PAT bytes corrupted on paste into CF, (4) CF env var still holds an older revoked PAT (not what you intended).";
     } else {
+      // Fallthrough → other status
+    }
+
+    // ── Probe 2: can this PAT see the repo? ─────────────────────────────
+    // Fine-grained PATs sometimes authenticate (/user works) but the
+    // "Only select repositories" list was left empty during creation —
+    // in which case GET /repos/<owner>/<repo> returns 404.
+    if (out.verdict === "PAT_VALID") {
+      try {
+        const rr = await fetch("https://api.github.com/repos/aniketkulkarni420/hormuz-watch", {
+          headers: {
+            "Authorization": `Bearer ${pat.trim()}`,
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "hormuz-watch-pat-diag/1.0",
+          },
+        });
+        out.repo_access_status = rr.status;
+        if (rr.status !== 200) {
+          let body = "";
+          try { body = await rr.text(); } catch {}
+          out.repo_error_body = body.slice(0, 200);
+          out.verdict = "PAT_VALID_BUT_NO_REPO_ACCESS";
+          out.next_step = "PAT authenticates with GitHub but cannot see aniketkulkarni420/hormuz-watch. Cause: 'Only select repositories' list was empty, OR hormuz-watch was NOT ticked, when generating the PAT. Regenerate the PAT and explicitly tick the hormuz-watch checkbox in 'Repository access'.";
+        }
+      } catch (e) {
+        out.repo_probe_error = String(e).slice(0, 160);
+      }
+    }
+
+    // ── Probe 3: can this PAT dispatch a workflow? ───────────────────────
+    // Tries POST .../actions/workflows/<bdti>/dispatches (BDTI is daily,
+    // safe to ping). 204 = success. 403 = scope missing. 404 = no access.
+    if (out.verdict === "PAT_VALID") {
+      try {
+        const dr = await fetch("https://api.github.com/repos/aniketkulkarni420/hormuz-watch/actions/workflows/bdti-weekly.yml/dispatches", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${pat.trim()}`,
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "hormuz-watch-pat-diag/1.0",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ref: "main" }),
+        });
+        out.dispatch_test_status = dr.status;
+        if (dr.status === 204) {
+          out.verdict = "PAT_FULLY_WORKING";
+          out.next_step = "PAT can dispatch workflows. /api/admin/refresh should work now. If it still fails, run it again and paste the response.";
+        } else {
+          let body = "";
+          try { body = await dr.text(); } catch {}
+          out.dispatch_error_body = body.slice(0, 200);
+          if (dr.status === 403) {
+            out.verdict = "PAT_LACKS_ACTIONS_WRITE";
+            out.next_step = "PAT can see the repo but cannot dispatch workflows. The 'Actions' permission was set to 'Read' or 'No access'. Regenerate the PAT with Actions: 'Read and write'.";
+          } else if (dr.status === 404) {
+            out.verdict = "PAT_REPO_404";
+            out.next_step = "Dispatch endpoint returned 404. PAT lacks repo access OR the workflow file path is wrong.";
+          } else if (dr.status === 401) {
+            out.verdict = "PAT_INCONSISTENT_AUTH";
+            out.next_step = "PAT authenticates on /user but fails 401 on workflow_dispatch — possibly a propagation lag inside GitHub right after PAT creation. Wait 60s and re-run this diag.";
+          }
+        }
+      } catch (e) {
+        out.dispatch_probe_error = String(e).slice(0, 160);
+      }
+    }
+
+    if (out.verdict === "PAT_VALID") {
+      // Reached if all probes passed but verdict didn't get upgraded
+      out.verdict = "PAT_VALID_PROBES_OK";
+    }
+
+    // Sentinel kept for backward compat of GitHub status fallthrough
+    if (!out.verdict) {
       let body = "";
       try { body = await r.text(); } catch {}
       out.github_error_body = body.slice(0, 200);
