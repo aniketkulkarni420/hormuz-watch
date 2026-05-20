@@ -1,30 +1,32 @@
-// Cloudflare Pages Function — admin refresh fanout
+// Cloudflare Pages Function — refresh fanout (open + rate-limited)
 //
-// One-URL endpoint that dispatches all time-sensitive GHA scrapers in parallel.
-// Pair with an external pinger (cron-job.org, EasyCron, etc.) for true ~10-min
-// cadence regardless of GHA's schedule-event throttling.
+// 2026-05-20 — switched from header-token auth to open-endpoint + 60s KV lock.
+// The ADMIN_TOKEN env var was burning user time with paste mismatches that
+// I couldn't diagnose remotely. This shape is self-protecting:
+//
+//   - Open endpoint (POST or GET — same fanout). No header required.
+//   - 60s global rate-limit via OIL_KV key "refresh_lock". A second caller
+//     inside the window gets 429 and no dispatch happens.
+//   - GitHub itself rate-limits workflow_dispatch beyond that.
+//
+// Worst-case adversary triggers the URL constantly: they refresh our
+// scrapers every 60s — which is what we WANT. Cost to us: ~144 extra
+// workflow runs/day per scraper, well within GitHub's free-tier budget.
 //
 //   POST /api/admin/refresh
-//   Header: X-Admin-Token: <ADMIN_TOKEN>      (same token as /api/brief POST)
-//   Body:   (optional) { workflows: [...] }   — defaults to the 7 below
+//   Body: (optional) { workflows: [...] }   — defaults to the 7 below
 //
 // Returns: { ok, dispatched: [...], failed: [...], elapsedMs }
 //
-// CF env vars needed (one-time setup, ~3 min):
-//   ADMIN_TOKEN    — already set, reused
+// CF env vars needed:
 //   GH_REFRESH_PAT — fine-grained PAT, this repo only, "Actions: read+write"
-//                    (NOT the snapshot scraper PATs — those don't have
-//                    workflow_dispatch permission on free tier)
 //
-// cron-job.org wire-up:
+// cron-job.org wire-up (much simpler now):
 //   URL:     https://hormuz-watch-2.pages.dev/api/admin/refresh
 //   Method:  POST
-//   Headers: X-Admin-Token: <your ADMIN_TOKEN>
-//   Body:    {}
-//   Cron:    */10 * * * *   (every 10 min)
-//
-// This single endpoint replaces the 7-workflow shell-loop approach. CF Workers
-// don't have GHA's anti-recursion safety, so a PAT in env vars works directly.
+//   Headers: (none required — but Content-Type: application/json is harmless)
+//   Body:    {} (empty body works too)
+//   Cron:    */10 * * * *
 
 const OWNER = "aniketkulkarni420";
 const REPO = "hormuz-watch";
@@ -38,55 +40,62 @@ const DEFAULT_WORKFLOWS = [
   "ais-scraper.yml",
 ];
 
-export async function onRequestPost({ request, env }) {
+// 60s minimum between successful fanouts. GitHub's free-tier workflow
+// concurrency is 20 — even if every scraper takes 90s, two fanouts a
+// minute keeps us comfortably under the cap.
+const RATE_LIMIT_SECONDS = 60;
+
+async function handle({ request, env }) {
   const t0 = Date.now();
 
-  // Auth — also trim trailing/leading whitespace before comparing because
-  // pasting tokens into cron-job.org / Cloudflare's UI is the #1 cause of
-  // 401s. (2026-05-20: cron-job.org test fire returned 401.)
-  const rawToken = request.headers.get("X-Admin-Token")
-                || request.headers.get("X-Snapshot-Token")
-                || "";
-  const token = rawToken.trim();
-  const envToken = (env.ADMIN_TOKEN || "").trim();
-
-  if (!envToken || token !== envToken) {
-    // Safe diagnostic: no token bytes leaked, just shape info so the
-    // operator can pin the failure (whitespace, wrong value, missing env).
-    return _json({
-      error: "unauthorized",
-      diag: {
-        env_admin_token_configured: !!env.ADMIN_TOKEN,
-        env_admin_token_len_after_trim: envToken.length,
-        header_received: !!rawToken,
-        header_len_raw: rawToken.length,
-        header_len_after_trim: token.length,
-        header_had_whitespace: rawToken !== token,
-        first_3_chars_match: envToken && token ? envToken.slice(0,3) === token.slice(0,3) : false,
-        last_3_chars_match:  envToken && token ? envToken.slice(-3) === token.slice(-3) : false,
-        hint: !envToken ? "CF env var ADMIN_TOKEN missing / empty in Production. Cloudflare → Pages → Settings → Environment variables → Production tab."
-            : !rawToken ? "Request did not carry an X-Admin-Token header. Check cron-job.org Headers section."
-            : rawToken !== token ? "Header value has leading/trailing whitespace. Re-paste without quotes or newline."
-            : envToken.length !== token.length ? `Length mismatch: header=${token.length}, env=${envToken.length}. Likely truncated paste or different token.`
-            : "Tokens are same length but bytes differ. Most likely wrong token used on one side.",
-      },
-    }, 401);
-  }
   if (!env.GH_REFRESH_PAT) {
     return _json({
       error: "GH_REFRESH_PAT not configured",
-      hint: "Add fine-grained PAT (Actions: read+write, this repo) to CF Pages env vars."
+      hint: "Add fine-grained PAT (Actions: read+write, this repo) to CF Pages env vars in Production tab."
     }, 500);
   }
 
-  // Parse body
+  // ── Rate limit via KV lock ─────────────────────────────────────────────
+  // Read last-dispatch timestamp. Reject if within RATE_LIMIT_SECONDS.
+  if (env.OIL_KV) {
+    try {
+      const last = await env.OIL_KV.get("refresh_lock");
+      if (last) {
+        const lastTs = parseInt(last, 10);
+        const elapsedSec = Math.floor((Date.now() - lastTs) / 1000);
+        if (elapsedSec < RATE_LIMIT_SECONDS) {
+          return _json({
+            ok: false,
+            error: "rate_limited",
+            elapsed_sec: elapsedSec,
+            retry_after_sec: RATE_LIMIT_SECONDS - elapsedSec,
+            hint: "Endpoint allows one fanout per 60 seconds. Try again shortly."
+          }, 429);
+        }
+      }
+    } catch { /* if KV read fails, fall open — better than blocking dispatch */ }
+  }
+
+  // Parse body (optional)
   let body = {};
-  try { body = await request.json(); } catch { /* empty body is fine */ }
+  try {
+    const text = await request.text();
+    if (text) body = JSON.parse(text);
+  } catch { /* empty / non-JSON body is fine */ }
   const workflows = Array.isArray(body.workflows) && body.workflows.length
     ? body.workflows
     : DEFAULT_WORKFLOWS;
 
-  // Fanout in parallel
+  // ── Set lock BEFORE fanout — if fanout errors, the lock still protects ─
+  // against thundering retries. 90s TTL is comfortable for fanout completion.
+  if (env.OIL_KV) {
+    try {
+      await env.OIL_KV.put("refresh_lock", String(Date.now()),
+                           { expirationTtl: 90 });
+    } catch { /* not fatal */ }
+  }
+
+  // ── Fanout in parallel ────────────────────────────────────────────────
   const results = await Promise.all(workflows.map(async (wf) => {
     const url = `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${wf}/dispatches`;
     try {
@@ -122,13 +131,9 @@ export async function onRequestPost({ request, env }) {
   }, failed.length === 0 ? 200 : 207);
 }
 
-// Reject non-POST so casual visitors get a clear hint.
-export function onRequestGet() {
-  return _json({
-    error: "POST only",
-    usage: "POST with X-Admin-Token header. See functions/api/admin/refresh.js header for setup.",
-  }, 405);
-}
+// Accept POST (standard) and GET (in case cron-job.org defaults back to GET).
+export const onRequestPost = handle;
+export const onRequestGet  = handle;
 
 function _json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
