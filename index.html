@@ -3468,8 +3468,9 @@ function pollSnapshotForDegradedMode(){
     })
     .catch(function(){});
 }
+// 2026-05-20: 90s → 180s. Same rationale as renderConsolidatedTiles.
 setTimeout(pollSnapshotForDegradedMode, 4000);
-setInterval(pollSnapshotForDegradedMode, 90000);
+setInterval(pollSnapshotForDegradedMode, 180000);
 
 // Daily brief · reads /api/brief (KV-backed). Auto-hides when no brief is
 // published; surfaces a "STALE" tag at 36h+. Updated every 5 min.
@@ -3548,8 +3549,20 @@ function fetchAisServer(){
     })
     .catch(function(){ /* silent — client-side fallback continues */ });
 }
-setTimeout(fetchAisServer, 5000);
-setInterval(fetchAisServer, 30000);
+// 2026-05-20: gate AIS-server polling on ais_health.reason. When AISStream
+// is dormant (free-tier quota exhausted / key revoked), the upstream worker
+// has nothing to serve, so a 30s poll is pure waste. Was 2,880 req/day per
+// tab → 0 when dead, 120/day (5-min cadence) when alive.
+function _maybeFetchAis(){
+  try {
+    var snap = (typeof _snapshotData === "object") ? _snapshotData : null;
+    var h = snap && snap.ais_health;
+    if (h && h.reason && h.reason !== "ok") return;     // AIS dead — skip
+  } catch(e){}
+  fetchAisServer();
+}
+setTimeout(_maybeFetchAis, 5000);
+setInterval(_maybeFetchAis, 5 * 60 * 1000);   // every 5 min when AIS alive (was 30s)
 
 // Destination whitelist — only display when AIS-reported destination string matches a known port.
 // Per "only certain" rule, ambiguous entries (FOR ORDERS, TBN, etc.) → silent.
@@ -4781,8 +4794,12 @@ function renderConsolidatedTiles(){
   _setDot("mcImportsDot", "muted");
 }
 // Run on a heartbeat — _snapshotData populates ~4s after load
+// 2026-05-20: 90s → 300s. Backend scrapers run every ~10 min via the
+// cron-job.org → /api/admin/refresh fanout, so polling 7 endpoints
+// every 90s is 5-7× more frequent than the data underneath actually
+// changes. Cuts per-tab traffic by ~4,500 req/day.
 setTimeout(renderConsolidatedTiles, 5000);
-setInterval(renderConsolidatedTiles, 90000);
+setInterval(renderConsolidatedTiles, 5 * 60 * 1000);
 
 // ═══════════════════════════════════════════════════
 // TWO-STAGE VERDICT TILE (2026-05-14) — polls /api/verdict
