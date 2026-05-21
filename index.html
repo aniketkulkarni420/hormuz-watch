@@ -610,11 +610,11 @@ header{
      tap thresholds. Inline-block + padding lifts them without breaking the
      flex layout in the parent .foot-discl. */
   .foot-discl{font-size:10px;gap:8px 12px;padding:10px 14px}
-  .foot-discl a{
-    display:inline-block;padding:10px 8px;margin:-4px 0;
+  .foot-discl a, .health-copy a{
+    display:inline-block;padding:12px 10px;margin:-6px 0;
     border-radius:3px;line-height:1.1;
   }
-  .foot-discl a:hover{background:rgba(74,160,240,.08)}
+  .foot-discl a:hover, .health-copy a:hover{background:rgba(74,160,240,.08)}
 }
 @media(max-width:480px){
   /* extra-small phones — further trim */
