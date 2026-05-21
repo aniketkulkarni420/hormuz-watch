@@ -3845,7 +3845,7 @@ function renderEIA() {
   // uses the exact same numbers as the spread shown in the panel header below —
   // never a second source. (Fixed 2026-05-14: header showed 4.2 from the live
   // feed while the verdict showed 3.6 from EIA weekly spot.)
-  _wtiPrice = isFinite(headlineWti) ? headlineWti : null;
+  _wtiPrice = Number.isFinite(headlineWti) ? headlineWti : null;
 
   var ctSub = document.getElementById("ctSub");
   if(ctSub) ctSub.textContent = "21M bbl/day × $" + headlineBrent.toFixed(1) + "/bbl Brent";
@@ -3856,7 +3856,7 @@ function renderEIA() {
   // helps debug "why does WTI show X when source says Y" complaints by
   // making the actual code path inspectable from the DOM. (2026-05-21)
   if(brentEl) brentEl.title = "Source: " + (_liveOil ? _liveOil.tier : "n/a")
-                            + " · raw: $" + (isFinite(headlineBrent) ? headlineBrent.toFixed(4) : "n/a");
+                            + " · raw: $" + (Number.isFinite(headlineBrent) ? headlineBrent.toFixed(4) : "n/a");
 
   // ── Official EIA reference row ────────────────────────────────────────────
   // Show only when a live estimate exists — two-row layout is meaningful then.
@@ -3900,11 +3900,11 @@ function renderEIA() {
   //   4th: EIA weekly WoW
   var chgEl = document.getElementById("brentChg");
   if(chgEl) {
-    if(primaryOil && isFinite(primaryOil.brent.changePct)) {
+    if(primaryOil && Number.isFinite(primaryOil.brent.changePct)) {
       var upP = primaryOil.brent.changePct >= 0;
       chgEl.textContent = (upP?"▲":"▼") + " " + (upP?"+":"") + primaryOil.brent.changePct.toFixed(2) + "%";
       chgEl.style.color = upP ? "var(--green)" : "var(--red)";
-    } else if(_brentDailyHistory && _brentDailyHistory.length >= 2 && isFinite(headlineBrent)) {
+    } else if(_brentDailyHistory && _brentDailyHistory.length >= 2 && Number.isFinite(headlineBrent)) {
       // Compute live change% from Yahoo daily history vs prior close
       var prevClose = _brentDailyHistory[_brentDailyHistory.length - 2].close;
       var liveChgPct = ((headlineBrent - prevClose) / prevClose) * 100;
@@ -3929,7 +3929,10 @@ function renderEIA() {
   var wtiEl = document.getElementById("wtiPrice");
   var spreadEl = document.getElementById("bwSpread");
   if(wtiEl) {
-    if (isFinite(headlineWti)) {
+    // 2026-05-21: Number.isFinite (strict), not global isFinite. JS gotcha:
+    // isFinite(null) === true because Number(null) === 0. The looser check
+    // let headlineWti=null through and crashed at .toFixed.
+    if (Number.isFinite(headlineWti)) {
       wtiEl.textContent = "$" + headlineWti.toFixed(1);
       if(spreadEl) spreadEl.textContent = "B–W spread: $" + (headlineBrent - headlineWti).toFixed(1);
       wtiEl.style.color = "";   // restore default color when value is live
