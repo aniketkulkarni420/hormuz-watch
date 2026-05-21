@@ -920,8 +920,14 @@ header{
         </div>
         <div style="margin-bottom:8px">
           <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:5px">Brent 4-week trend</div>
-          <svg id="brentSparkline" viewBox="0 0 238 58" width="100%" height="58" preserveAspectRatio="none">
-            <text x="50%" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#4a5870">loading&hellip;</text>
+          <svg id="brentSparkline" viewBox="0 0 280 78" width="100%" height="78" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="brentTrendGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#f09014" stop-opacity="0.32"/>
+                <stop offset="100%" stop-color="#f09014" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <text x="50%" y="40" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#4a5870">loading&hellip;</text>
           </svg>
         </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5" id="brentNote">
@@ -3950,14 +3956,16 @@ function renderEIA() {
     }
   }
 
-  // 2026-05-21: Brent sparkline now uses DAILY history from /api/oil-history
-  // (Yahoo BZ=F) instead of EIA weekly. EIA weekly = max 4 datapoints across
-  // 4 weeks, each up to a week stale. Daily gives 20+ points, ~5-min lag.
-  // Falls back to weekly EIA if /api/oil-history is unreachable.
-  if (typeof _brentDailyHistory === "object" && _brentDailyHistory && _brentDailyHistory.length) {
-    drawSparkline(_brentDailyHistory.map(function(d){ return { val: d.close, period: d.date }; }),
-                  "brentSparkline", 44);
-  } else {
+  // 2026-05-21: Brent sparkline uses DAILY history from /api/oil-history
+  // (Yahoo BZ=F) rendered via drawBrentTrendArea (Option A — line + area +
+  // collision-safe min/max/now markers). Falls back to legacy bar render
+  // on EIA weekly if /api/oil-history hasn't loaded.
+  if (typeof _brentDailyHistory === "object" && _brentDailyHistory && _brentDailyHistory.length >= 2) {
+    drawBrentTrendArea(
+      _brentDailyHistory.map(function(d){ return { val: d.close, period: d.date }; }),
+      "brentSparkline"
+    );
+  } else if (eiaState.brent && eiaState.brent.length) {
     drawSparkline(eiaState.brent.slice(0, 4).reverse(), "brentSparkline", 44);
   }
 
@@ -4011,6 +4019,156 @@ function renderEIA() {
   eiaState.loaded = true;
   markFetched("eia");
   if (typeof updateVolRow === "function") updateVolRow();
+}
+
+/**
+ * Option-A Brent trend: line + filled area + min/max/now markers + weekly grid.
+ * Collision-safe label placement: never overlaps even if peak/trough/latest
+ * cluster within 40px. Priority order = latest > max > min.
+ *
+ * data: [{ val: number, period: "YYYY-MM-DD" }, ...] — chronological asc
+ * svgId: "brentSparkline" (or any other)
+ *
+ * SVG canvas: 280×78 viewBox. Top 14px for max-label, bottom 22px for date axis +
+ * min-label, middle 42px = chart area.
+ */
+function drawBrentTrendArea(data, svgId) {
+  svgId = svgId || "brentSparkline";
+  var svg = document.getElementById(svgId);
+  if (!svg || !data || !data.length) return;
+  // Guard against single point
+  if (data.length < 2) { svg.innerHTML = ""; return; }
+
+  var W = 280, H = 78;
+  var pad = { l: 6, r: 6, t: 14, b: 22 };
+  var chartW = W - pad.l - pad.r;
+  var chartH = H - pad.t - pad.b;
+  var n = data.length;
+
+  // Filter any null/NaN — defensive (oil-history.js already filters, but cheap to recheck)
+  var pts = [];
+  for (var i = 0; i < n; i++) {
+    var v = data[i] && data[i].val;
+    if (Number.isFinite(v)) pts.push({ val: v, period: data[i].period });
+  }
+  n = pts.length;
+  if (n < 2) { svg.innerHTML = ""; return; }
+
+  var vals = pts.map(function(d){ return d.val; });
+  var mn = Math.min.apply(null, vals);
+  var mx = Math.max.apply(null, vals);
+  var range = (mx - mn) || 1;
+
+  var x = function(i){ return pad.l + (n === 1 ? chartW/2 : i * (chartW / (n - 1))); };
+  var y = function(v){ return pad.t + chartH - ((v - mn) / range) * chartH; };
+
+  // ── Line + area paths ────────────────────────────────────────────────────
+  var lineD = "";
+  for (var i = 0; i < n; i++) {
+    lineD += (i === 0 ? "M " : " L ") + x(i).toFixed(2) + " " + y(vals[i]).toFixed(2);
+  }
+  var areaD = lineD + " L " + x(n-1).toFixed(2) + " " + (pad.t + chartH).toFixed(2)
+            + " L " + x(0).toFixed(2) + " " + (pad.t + chartH).toFixed(2) + " Z";
+
+  // ── Weekly grid lines (5 trading days per stride, drawn at indices 5,10,15,20…) ─
+  var gridD = "";
+  for (var g = 5; g < n; g += 5) {
+    var gx = x(g).toFixed(2);
+    gridD += "M " + gx + " " + pad.t + " L " + gx + " " + (pad.t + chartH) + " ";
+  }
+
+  // ── Marker positions ─────────────────────────────────────────────────────
+  // latest = last point, min = arg-min, max = arg-max
+  var iLatest = n - 1;
+  var iMin = 0, iMax = 0;
+  for (var k = 1; k < n; k++) {
+    if (vals[k] < vals[iMin]) iMin = k;
+    if (vals[k] > vals[iMax]) iMax = k;
+  }
+  // Build candidate markers in render priority (latest first → highest stack rank)
+  // Each carries: x, y, color, label text, default vertical anchor ("above"|"below")
+  var raw = [
+    { id: "latest", i: iLatest, color: "#f09014", label: "$" + vals[iLatest].toFixed(1), anchor: "above" },
+    { id: "max",    i: iMax,    color: "#f09014", label: "↑$" + vals[iMax].toFixed(0),    anchor: "above" },
+    { id: "min",    i: iMin,    color: "#4aa0f0", label: "↓$" + vals[iMin].toFixed(0),    anchor: "below" },
+  ];
+
+  // ── Collision-safe label placement ───────────────────────────────────────
+  // Approximate label width: 4.8px per char × text length. Reject any marker
+  // whose label would overlap a previously placed (higher-priority) label
+  // sharing the same anchor side.
+  function estW(s) { return s.length * 4.8 + 4; }
+  var placed = [];
+  var markers = [];
+  raw.forEach(function(m){
+    // Skip min/max if it IS the latest point (redundant)
+    if (m.id !== "latest" && m.i === iLatest) return;
+    // Skip max if same point as min (degenerate flat series)
+    if (m.id === "min" && m.i === iMax) return;
+    var mx_ = x(m.i), my_ = y(vals[m.i]);
+    var halfW = estW(m.label) / 2;
+    // Clamp horizontally inside chart
+    var labelX = Math.min(W - halfW - 2, Math.max(halfW + 2, mx_));
+    // Try preferred anchor first; if collision, flip
+    var anchors = m.anchor === "above" ? ["above", "below"] : ["below", "above"];
+    for (var a = 0; a < anchors.length; a++) {
+      var labelY = anchors[a] === "above" ? Math.max(10, my_ - 7) : Math.min(H - 14, my_ + 12);
+      var collision = false;
+      for (var p = 0; p < placed.length; p++) {
+        var pp = placed[p];
+        var dx = Math.abs(labelX - pp.labelX);
+        var dy = Math.abs(labelY - pp.labelY);
+        if (dx < (halfW + pp.halfW) && dy < 11) { collision = true; break; }
+      }
+      if (!collision) {
+        placed.push({ labelX: labelX, labelY: labelY, halfW: halfW });
+        markers.push({ id: m.id, mx: mx_, my: my_, color: m.color,
+                       label: m.label, labelX: labelX, labelY: labelY,
+                       anchor: anchors[a] });
+        break;
+      }
+      // If both anchors collide, marker dot is still drawn but label dropped (max/min only)
+      if (a === anchors.length - 1 && m.id === "latest") {
+        // Latest must show — force-place above with horizontal offset
+        var forceY = Math.max(10, my_ - 7);
+        markers.push({ id: m.id, mx: mx_, my: my_, color: m.color,
+                       label: m.label, labelX: labelX, labelY: forceY, anchor: "above", forced: true });
+      }
+    }
+  });
+
+  // ── Build SVG ────────────────────────────────────────────────────────────
+  var html = "";
+  // Defs reused via <use> isn't needed — the gradient is already declared in the SVG's <defs> in HTML.
+  // Re-declare locally so the function is portable to any SVG container.
+  html += '<defs><linearGradient id="brentGrad_'+svgId+'" x1="0" y1="0" x2="0" y2="1">'
+        + '<stop offset="0%" stop-color="#f09014" stop-opacity="0.32"/>'
+        + '<stop offset="100%" stop-color="#f09014" stop-opacity="0"/>'
+        + '</linearGradient></defs>';
+  // Grid (subtle weekly verticals)
+  if (gridD) html += '<path d="' + gridD + '" stroke="rgba(128,153,179,0.08)" stroke-width="1" fill="none"/>';
+  // Baseline at the value-floor
+  html += '<line x1="' + pad.l + '" y1="' + (pad.t + chartH) + '" x2="' + (W - pad.r) + '" y2="' + (pad.t + chartH)
+        + '" stroke="rgba(128,153,179,0.18)" stroke-width="1"/>';
+  // Area fill
+  html += '<path d="' + areaD + '" fill="url(#brentGrad_' + svgId + ')"/>';
+  // Trend line
+  html += '<path d="' + lineD + '" stroke="#f09014" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+  // Marker dots + labels
+  markers.forEach(function(m){
+    html += '<circle cx="' + m.mx.toFixed(2) + '" cy="' + m.my.toFixed(2)
+          + '" r="2.6" fill="' + m.color + '" stroke="#0c1119" stroke-width="1.2"/>'
+          + '<text x="' + m.labelX.toFixed(2) + '" y="' + m.labelY.toFixed(2)
+          + '" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" font-weight="700" fill="' + m.color + '">'
+          + m.label + '</text>';
+  });
+  // Date axis: first + last only (no overlap risk)
+  html += '<text x="' + pad.l + '" y="' + (H - 6) + '" text-anchor="start" font-family="JetBrains Mono,monospace" font-size="8" fill="#627a95">'
+        + pts[0].period.slice(5) + '</text>'
+        + '<text x="' + (W - pad.r) + '" y="' + (H - 6) + '" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="8" fill="#627a95">'
+        + pts[n-1].period.slice(5) + '</text>';
+
+  svg.innerHTML = html;
 }
 
 function drawSparkline(data, svgId, H) {
