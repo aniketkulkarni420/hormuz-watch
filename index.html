@@ -3914,7 +3914,16 @@ function renderEIA() {
     }
   }
 
-  drawSparkline(eiaState.brent.slice(0, 4).reverse(), "brentSparkline", 44);
+  // 2026-05-21: Brent sparkline now uses DAILY history from /api/oil-history
+  // (Yahoo BZ=F) instead of EIA weekly. EIA weekly = max 4 datapoints across
+  // 4 weeks, each up to a week stale. Daily gives 20+ points, ~5-min lag.
+  // Falls back to weekly EIA if /api/oil-history is unreachable.
+  if (typeof _brentDailyHistory === "object" && _brentDailyHistory && _brentDailyHistory.length) {
+    drawSparkline(_brentDailyHistory.map(function(d){ return { val: d.close, period: d.date }; }),
+                  "brentSparkline", 44);
+  } else {
+    drawSparkline(eiaState.brent.slice(0, 4).reverse(), "brentSparkline", 44);
+  }
 
   // ── Note line ───────────────────────────────────────────────────────────
   var noteEl = document.getElementById("brentNote");
@@ -4021,7 +4030,11 @@ setInterval(fetchEIA, 6*60*60*1000);
 // ═══════════════════════════════════════════════════
 var _liveOil = null; // {brent:{c,d,dp,t}, wti:{c,d,dp,t}, source, fetchedAt}
 function fetchOil(){
-  fetch("/api/oil")
+  // 2026-05-21: cache-bust. Browser was occasionally serving stale /api/oil
+  // payload missing wti.level → headline fell back to EIA-weekly stale value
+  // ($105.1 labeled as live WTI). Date.now() forces a fresh edge fetch each
+  // poll while still letting CF cache the response at the function layer.
+  fetch("/api/oil?_=" + Date.now())
     .then(function(r){ if(!r.ok) throw new Error("oil "+r.status); return r.json(); })
     .then(function(d){
       if(!d) return;
@@ -4045,6 +4058,32 @@ function fetchOil(){
 }
 fetchOil();
 setInterval(fetchOil, 5*60*1000); // 5-min refresh
+
+// ═══════════════════════════════════════════════════
+// DAILY OIL HISTORY — for the Brent + WTI sparklines
+// Source: Yahoo Finance via /api/oil-history. Daily settlements, ~30 day
+// lookback. Refreshes every 30 min — sparkline is daily-granular so any
+// faster is wasted. Falls back gracefully to EIA weekly if unreachable.
+// ═══════════════════════════════════════════════════
+var _brentDailyHistory = null;
+var _wtiDailyHistory   = null;
+function fetchOilHistory(){
+  fetch("/api/oil-history?range=1mo&_=" + Date.now())
+    .then(function(r){ if(!r.ok) throw new Error("oil-history "+r.status); return r.json(); })
+    .then(function(d){
+      if (d && Array.isArray(d.brent) && d.brent.length) {
+        _brentDailyHistory = d.brent;
+      }
+      if (d && Array.isArray(d.wti) && d.wti.length) {
+        _wtiDailyHistory = d.wti;
+      }
+      // Trigger sparkline redraw if EIA already loaded
+      if (eiaState.loaded) try { renderEIA(); } catch(e){}
+    })
+    .catch(function(e){ console.warn("oil-history fetch:", e.message); });
+}
+fetchOilHistory();
+setInterval(fetchOilHistory, 30 * 60 * 1000); // 30-min refresh (sparkline is daily-granular)
 
 // ═══════════════════════════════════════════════════
 // EIA DAILY (FALLBACK ONLY) — used if FinnHub is down. 1-2 day lag.
