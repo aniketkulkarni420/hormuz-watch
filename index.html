@@ -1855,7 +1855,7 @@ var PRECRISIS_BRENT  = 80;
   if(subEl){
     var todayMb = (BASELINE_BBL_DAY * todayRatio / 1e6).toFixed(1);
     subEl.textContent = todayVess>0
-      ? (todayVess + " tankers · ~" + todayMb + "M bbl/day · $" + _brentPrice.toFixed(2) + "/bbl")
+      ? (todayVess + " tankers · ~" + todayMb + "M bbl/day · $" + _brentPrice.toFixed(1) + "/bbl")
       : ("Awaiting AIS · pre-crisis " + (BASELINE_BBL_DAY/1e6) + "M bbl/day baseline");
   }
 
@@ -1898,7 +1898,7 @@ var PRECRISIS_BRENT  = 80;
 
   // Brent in tooltip
   var ttBrent=document.getElementById("ttBrent");
-  if(ttBrent) ttBrent.textContent="$"+_brentPrice.toFixed(2)+"/bbl";
+  if(ttBrent) ttBrent.textContent="$"+_brentPrice.toFixed(1)+"/bbl";
 
   setTimeout(tick,1000);
 })();
@@ -3817,14 +3817,15 @@ function renderEIA() {
   _wtiPrice = isFinite(headlineWti) ? headlineWti : null;
 
   var ctSub = document.getElementById("ctSub");
-  if(ctSub) ctSub.textContent = "21M bbl/day × $" + headlineBrent.toFixed(2) + "/bbl Brent";
+  if(ctSub) ctSub.textContent = "21M bbl/day × $" + headlineBrent.toFixed(1) + "/bbl Brent";
 
   var brentEl = document.getElementById("brentPrice");
-  // 2026-05-21: 2-decimal precision on oil headlines. Crude moves in cents;
-  // toFixed(1) was rounding $99.15 → "$99.2" which read as 7c high vs the
-  // common $99.13 reference at Yahoo / TradingEconomics. $XX.XX matches the
-  // industry norm for spot pricing.
-  if(brentEl) brentEl.textContent = "$" + headlineBrent.toFixed(2);
+  if(brentEl) brentEl.textContent = "$" + headlineBrent.toFixed(1);
+  // Tooltip surfacing the underlying full-precision value + source tier —
+  // helps debug "why does WTI show X when source says Y" complaints by
+  // making the actual code path inspectable from the DOM. (2026-05-21)
+  if(brentEl) brentEl.title = "Source: " + (_liveOil ? _liveOil.tier : "n/a")
+                            + " · raw: $" + (isFinite(headlineBrent) ? headlineBrent.toFixed(4) : "n/a");
 
   // ── Official EIA reference row ────────────────────────────────────────────
   // Show only when a live estimate exists — two-row layout is meaningful then.
@@ -3880,8 +3881,11 @@ function renderEIA() {
   var wtiEl = document.getElementById("wtiPrice");
   var spreadEl = document.getElementById("bwSpread");
   if(wtiEl && isFinite(headlineWti)) {
-    wtiEl.textContent = "$" + headlineWti.toFixed(2);
-    if(spreadEl) spreadEl.textContent = "B–W spread: $" + (headlineBrent - headlineWti).toFixed(2);
+    wtiEl.textContent = "$" + headlineWti.toFixed(1);
+    if(spreadEl) spreadEl.textContent = "B–W spread: $" + (headlineBrent - headlineWti).toFixed(1);
+    // Same debug tooltip as Brent — surfaces source tier + full-precision value.
+    wtiEl.title = "Source: " + (_liveOil ? _liveOil.tier : "n/a")
+                + " · raw: $" + (isFinite(headlineWti) ? headlineWti.toFixed(4) : "n/a");
   }
 
   drawSparkline(eiaState.brent.slice(0, 4).reverse(), "brentSparkline", 44);
