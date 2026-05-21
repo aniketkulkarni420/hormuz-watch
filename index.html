@@ -4122,7 +4122,7 @@ function drawBrentTrendArea(data, svgId) {
       }
       if (!collision) {
         placed.push({ labelX: labelX, labelY: labelY, halfW: halfW });
-        markers.push({ id: m.id, mx: mx_, my: my_, color: m.color,
+        markers.push({ id: m.id, i: m.i, mx: mx_, my: my_, color: m.color,
                        label: m.label, labelX: labelX, labelY: labelY,
                        anchor: anchors[a] });
         break;
@@ -4131,7 +4131,7 @@ function drawBrentTrendArea(data, svgId) {
       if (a === anchors.length - 1 && m.id === "latest") {
         // Latest must show — force-place above with horizontal offset
         var forceY = Math.max(10, my_ - 7);
-        markers.push({ id: m.id, mx: mx_, my: my_, color: m.color,
+        markers.push({ id: m.id, i: m.i, mx: mx_, my: my_, color: m.color,
                        label: m.label, labelX: labelX, labelY: forceY, anchor: "above", forced: true });
       }
     }
@@ -4162,11 +4162,22 @@ function drawBrentTrendArea(data, svgId) {
           + '" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" font-weight="700" fill="' + m.color + '">'
           + m.label + '</text>';
   });
-  // Date axis: first + last only (no overlap risk)
-  html += '<text x="' + pad.l + '" y="' + (H - 6) + '" text-anchor="start" font-family="JetBrains Mono,monospace" font-size="8" fill="#627a95">'
-        + pts[0].period.slice(5) + '</text>'
-        + '<text x="' + (W - pad.r) + '" y="' + (H - 6) + '" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="8" fill="#627a95">'
-        + pts[n-1].period.slice(5) + '</text>';
+  // Date axis: first + last only — but SKIP either side if a marker label
+  // is already placed at that edge (avoids overlap when min/max happens
+  // to be the first or last day). Latest is always at n-1, so the end-
+  // date label is dropped whenever the latest marker label sits below;
+  // and start-date is dropped if min or max happens to be index 0.
+  // (Caught by headless self-test 2026-05-21.)
+  var hasStartMarker = markers.some(function(m){ return m.i === 0; });
+  var hasEndMarker   = markers.some(function(m){ return m.i === n - 1 && m.anchor === "below"; });
+  if (!hasStartMarker) {
+    html += '<text x="' + pad.l + '" y="' + (H - 6) + '" text-anchor="start" font-family="JetBrains Mono,monospace" font-size="8" fill="#627a95">'
+          + pts[0].period.slice(5) + '</text>';
+  }
+  if (!hasEndMarker) {
+    html += '<text x="' + (W - pad.r) + '" y="' + (H - 6) + '" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="8" fill="#627a95">'
+          + pts[n-1].period.slice(5) + '</text>';
+  }
 
   svg.innerHTML = html;
 }
