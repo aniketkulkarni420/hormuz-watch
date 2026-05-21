@@ -3800,14 +3800,29 @@ function renderEIA() {
   var officialBrent = (_liveOil && _liveOil.brentOfficial && isFinite(_liveOil.brentOfficial.level))
                         ? _liveOil.brentOfficial : null;
 
+  // 2026-05-21: WTI render bug — when primaryOil.wti.level was missing
+  // (cached response / fetch race), we fell back to `wti` which is EIA's
+  // WEEKLY series, stale by days. User saw $105.1 labelled as WTI when
+  // real WTI was $99.15. New rule: NEVER fall back to stale data for the
+  // headline. wtiOfficial is 1-2d lag, eiaState.wti is weekly — both can
+  // be wrong by $10+/bbl. If live WTI is missing, render null (→ "$—")
+  // so the operator KNOWS the feed faulted rather than seeing a stale
+  // number labelled live.
   var headlineBrent, headlineWti;
   if (primaryOil) {
     headlineBrent = primaryOil.brent.level;
-    headlineWti   = primaryOil.wti && isFinite(primaryOil.wti.level) ? primaryOil.wti.level : wti;
+    if (primaryOil.wti && isFinite(primaryOil.wti.level)) {
+      headlineWti = primaryOil.wti.level;
+    } else {
+      console.warn("WTI live missing from /api/oil tier-0 payload; rendering '—' rather than stale fallback.");
+      headlineWti = null;
+    }
   } else {
     var refBrent = _stooqDoD && isFinite(_stooqDoD.today) ? _stooqDoD.today : brent;
     headlineBrent = refBrent;
-    headlineWti   = wti;
+    // Same rule: no stale fallback for the WTI headline.
+    headlineWti = null;
+    console.warn("/api/oil primaryOil missing (tier likely secondary/tertiary); WTI headline → '—'.");
   }
   _brentPrice = headlineBrent;
   // Keep the headline WTI in a global so the spread VERDICT (renderConclusions)
@@ -3880,12 +3895,23 @@ function renderEIA() {
   // ── WTI + spread ────────────────────────────────────────────────────────
   var wtiEl = document.getElementById("wtiPrice");
   var spreadEl = document.getElementById("bwSpread");
-  if(wtiEl && isFinite(headlineWti)) {
-    wtiEl.textContent = "$" + headlineWti.toFixed(1);
-    if(spreadEl) spreadEl.textContent = "B–W spread: $" + (headlineBrent - headlineWti).toFixed(1);
-    // Same debug tooltip as Brent — surfaces source tier + full-precision value.
-    wtiEl.title = "Source: " + (_liveOil ? _liveOil.tier : "n/a")
-                + " · raw: $" + (isFinite(headlineWti) ? headlineWti.toFixed(4) : "n/a");
+  if(wtiEl) {
+    if (isFinite(headlineWti)) {
+      wtiEl.textContent = "$" + headlineWti.toFixed(1);
+      if(spreadEl) spreadEl.textContent = "B–W spread: $" + (headlineBrent - headlineWti).toFixed(1);
+      wtiEl.style.color = "";   // restore default color when value is live
+      wtiEl.title = "Source: " + (_liveOil ? _liveOil.tier : "n/a")
+                  + " · raw: $" + headlineWti.toFixed(4);
+    } else {
+      // Live WTI missing — show honest "—" + a tooltip with the diagnosis.
+      // Never silently render EIA stale weekly under "WTI" label.
+      wtiEl.textContent = "$—";
+      wtiEl.style.color = "var(--muted)";
+      if(spreadEl) spreadEl.textContent = "B–W spread: —";
+      wtiEl.title = "Live WTI unavailable from /api/oil. Tier: "
+                  + (_liveOil ? _liveOil.tier : "no_response")
+                  + ". Not falling back to EIA weekly (stale by days).";
+    }
   }
 
   drawSparkline(eiaState.brent.slice(0, 4).reverse(), "brentSparkline", 44);
