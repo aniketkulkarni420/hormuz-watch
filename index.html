@@ -604,6 +604,17 @@ header{
 
   /* hide LinkedIn credit on very narrow screens to keep header clean */
   .hsub-credit{font-size:9px}
+
+  /* Mobile audit pass-3 — footer disclaimer links need tappable padding.
+     Default text-only <a> ends up 29-73px × 12-13px which is below mobile
+     tap thresholds. Inline-block + padding lifts them without breaking the
+     flex layout in the parent .foot-discl. */
+  .foot-discl{font-size:10px;gap:8px 12px;padding:10px 14px}
+  .foot-discl a{
+    display:inline-block;padding:6px 4px;
+    border-radius:3px;line-height:1.1;
+  }
+  .foot-discl a:hover{background:rgba(74,160,240,.08)}
 }
 @media(max-width:480px){
   /* extra-small phones — further trim */
@@ -4210,7 +4221,7 @@ function drawBrentTrendArea(data, svgId) {
     html += '<circle cx="' + m.mx.toFixed(2) + '" cy="' + m.my.toFixed(2)
           + '" r="2.6" fill="' + m.color + '" stroke="#0c1119" stroke-width="1.2"/>'
           + '<text x="' + m.labelX.toFixed(2) + '" y="' + m.labelY.toFixed(2)
-          + '" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" font-weight="700" fill="' + m.color + '">'
+          + '" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="' + m.color + '">'
           + m.label + '</text>';
   });
   // Date axis: first + last only — but SKIP either side if a marker label
@@ -4222,11 +4233,11 @@ function drawBrentTrendArea(data, svgId) {
   var hasStartMarker = markers.some(function(m){ return m.i === 0; });
   var hasEndMarker   = markers.some(function(m){ return m.i === n - 1 && m.anchor === "below"; });
   if (!hasStartMarker) {
-    html += '<text x="' + pad.l + '" y="' + (H - 6) + '" text-anchor="start" font-family="JetBrains Mono,monospace" font-size="8" fill="#627a95">'
+    html += '<text x="' + pad.l + '" y="' + (H - 6) + '" text-anchor="start" font-family="JetBrains Mono,monospace" font-size="9" fill="#627a95">'
           + pts[0].period.slice(5) + '</text>';
   }
   if (!hasEndMarker) {
-    html += '<text x="' + (W - pad.r) + '" y="' + (H - 6) + '" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="8" fill="#627a95">'
+    html += '<text x="' + (W - pad.r) + '" y="' + (H - 6) + '" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="9" fill="#627a95">'
           + pts[n-1].period.slice(5) + '</text>';
   }
 
