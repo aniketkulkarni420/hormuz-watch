@@ -485,7 +485,15 @@ header{
   header{height:auto;min-height:54px;padding:8px 12px;flex-wrap:wrap;gap:8px}
   .hlogo{flex:1 1 auto;min-width:0}
   .htitle{font-size:12px}
-  .hsub{font-size:8px;line-height:1.4}
+  /* Mobile audit #3 — 8px below legibility threshold on phone DPI;
+     bump all known 8px sites to 10px when on mobile only */
+  .hsub{font-size:10px;line-height:1.4}
+  .ctt-hint{font-size:10px}
+  .ifield-label{font-size:10px}
+  .idep{font-size:10px}
+  .health-copy{font-size:10px}
+  .tile-age{font-size:10px}
+  .live-badge{font-size:10px}
   .cargo-ticker{order:3;flex:1 1 100%;justify-content:flex-start;padding:4px 0 0}
   .ct-label{display:inline}
   .ct-value{font-size:14px}
@@ -498,14 +506,24 @@ header{
     transform:translateY(20px)!important;min-width:0;width:auto;max-width:none;padding:14px 16px}
   .ct-tooltip.visible{transform:translateY(0)!important}
 
-  /* ----- SIGNAL BAR: horizontal scroll strip ----- */
+  /* ----- SIGNAL BAR: horizontal scroll strip (Mobile audit #1 · Option A) ----- */
   .signal-bar{height:auto;overflow-x:auto;overflow-y:hidden;
-    scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+    scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    /* Right-edge fade-mask hints at scrollable content. WebKit + standard syntax. */
+    -webkit-mask-image:linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
+    mask-image:linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
+    position:relative;
+  }
   .signal-bar::-webkit-scrollbar{display:none}
   .sig{flex:0 0 140px;scroll-snap-align:start;padding:8px 12px;border-right:1px solid var(--border)}
-  .sig-label{font-size:9px}
-  .sig-src{font-size:9px}
+  .sig-label{font-size:10px}
+  .sig-src{font-size:10px}
   .sig-val{font-size:16px}
+  /* Once user scrolls, drop the fade (cleaner look + user has discovered it) */
+  .signal-bar.has-scrolled{
+    -webkit-mask-image:none;
+    mask-image:none;
+  }
 
   /* signal-bar tooltip — repositioned, click-to-show */
   .sig-tooltip{display:none;position:fixed;left:8px;right:8px;top:auto;bottom:80px;
@@ -547,6 +565,20 @@ header{
   .mtab.active::after{
     content:"";position:absolute;top:0;left:25%;right:25%;height:2px;background:var(--amber);
   }
+  /* Mobile audit #4 — Intel-tab discoverability hint.
+     Pulsing amber dot in the corner of the Intel tab icon until the user
+     opens it for the first time. localStorage flag persists the dismissal. */
+  .mtab[data-tab="intel"]:not(.discovered) .mtab-icon::before{
+    content:"";position:absolute;top:6px;right:calc(50% - 14px);
+    width:7px;height:7px;border-radius:50%;background:var(--amber);
+    box-shadow:0 0 0 0 rgba(240,144,20,.7);
+    animation:intel-pulse 1.6s cubic-bezier(.66,0,0,1) infinite;
+  }
+  @keyframes intel-pulse{
+    0%   { box-shadow:0 0 0 0 rgba(240,144,20,.65); }
+    70%  { box-shadow:0 0 0 9px rgba(240,144,20,0); }
+    100% { box-shadow:0 0 0 0 rgba(240,144,20,0); }
+  }
 
   /* ----- INFOCARD — bottom sheet ----- */
   .infocard{position:fixed;left:8px;right:8px;bottom:72px;width:auto;
@@ -559,7 +591,8 @@ header{
   .ldash{width:10px;height:2px}
   .lbname{font-size:10px}
   .tiles{padding:4px;gap:4px}
-  .tbtn{padding:6px 10px;font-size:10px;min-width:60px}
+  /* Mobile audit #2 — map style buttons need >= 36px height for Android tap targets */
+  .tbtn{padding:11px 14px;font-size:10px;min-width:60px;min-height:36px}
 
   /* ----- TYPOGRAPHY BUMPS ----- */
   .rblock{padding:16px 18px}
@@ -2377,6 +2410,18 @@ async function renderXV(aisCount){
   _wireTensionGauge(out.severity);
 }
 renderXV(0);
+
+// Mobile signal-bar: drop the right-edge fade once user starts scrolling
+// the strip (they've discovered swipe). 2026-05-21 audit #1 ship.
+(function _sigbarFadeOnce(){
+  var bar = document.querySelector(".signal-bar");
+  if (!bar) return;
+  var once = false;
+  bar.addEventListener("scroll", function(){
+    if (once) return;
+    if (bar.scrollLeft > 8) { bar.classList.add("has-scrolled"); once = true; }
+  }, { passive: true });
+})();
 
 // ═══════════════════════════════════════════════════
 // MAP
@@ -4775,10 +4820,28 @@ function setMobileTab(tab){
 function initMobile(){
   var tabsEl = document.querySelector(".mobile-tabs");
   if(!tabsEl) return; // bail if nav not yet rendered
+
+  // Mobile audit #4 — Intel-tab discoverability hint.
+  // Pulsing dot on the Intel tab until the user opens Intel at least once.
+  // The flag persists across reloads via localStorage.
+  var DISCOVERED_KEY = "hw_intel_discovered";
+  var intelBtn = document.querySelector('.mtab[data-tab="intel"]');
+  if (intelBtn) {
+    try {
+      if (localStorage.getItem(DISCOVERED_KEY) === "1") {
+        intelBtn.classList.add("discovered");
+      }
+    } catch(e) { /* localStorage may be unavailable in private mode */ }
+  }
+
   document.querySelectorAll(".mtab").forEach(function(b){
     b.addEventListener("click", function(e){
       e.stopPropagation();
       setMobileTab(this.dataset.tab);
+      if (this.dataset.tab === "intel") {
+        this.classList.add("discovered");
+        try { localStorage.setItem(DISCOVERED_KEY, "1"); } catch(e){}
+      }
     });
   });
   // Default landing tab on mobile is the map
