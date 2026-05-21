@@ -3751,7 +3751,19 @@ function fetchEIA() {
   if(tag){ tag.textContent="EIA..."; tag.style.color="var(--muted)"; tag.style.background=""; }
 
   var done = 0;
-  function check(){ if(++done >= 2){ if(eiaState.brent.length) renderEIA(); else showEIAError("All fetch methods failed"); } }
+  // 2026-05-21: try/catch so a renderEIA crash doesn't bubble up to the
+  // eiaFetch .then chain as a misleading "EIA [RBRTE] failed: null.toFixed"
+  // warning. Surface the actual stack so future bugs are pinpointable.
+  function check(){
+    if(++done >= 2){
+      if(eiaState.brent.length) {
+        try { renderEIA(); }
+        catch(e) { console.error("renderEIA crashed:", e.message, "stack:", e.stack); showEIAError("renderEIA: " + e.message); }
+      } else {
+        showEIAError("All fetch methods failed");
+      }
+    }
+  }
 
   // RBRTE = Brent crude weekly spot (EIA v2 series code)
   eiaFetch("RBRTE", 6, function(err, rows){
