@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Brent 4-week trend — 3 redesign options</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #07090e;
+  --panel: #11161f;
+  --panel2: #0c1119;
+  --border: #1a2230;
+  --text: #cdd8e8;
+  --muted: #8099b3;
+  --muted2: #4a5a72;
+  --amber: #f09014;
+  --green: #2cce81;
+  --red: #ff3e52;
+  --blue: #4aa0f0;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  padding: 40px 24px;
+  line-height: 1.5;
+}
+.wrap { max-width: 980px; margin: 0 auto; }
+h1 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+.sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+.opt {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 22px 24px;
+  margin-bottom: 24px;
+}
+.opt-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.opt-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--amber);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.opt-rec {
+  font-size: 11px;
+  color: var(--green);
+  font-weight: 600;
+}
+.opt-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 18px;
+  max-width: 700px;
+}
+/* simulated card chrome — matches the live dashboard's brent panel width */
+.tile {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  width: 320px;
+}
+.tile-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.tile-title {
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tile-tag {
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(74,160,240,0.1);
+  color: var(--blue);
+  border: 1px solid rgba(74,160,240,0.3);
+}
+.headline-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.headline-px {
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--amber);
+}
+.headline-chg {
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 600;
+}
+.headline-chg.dn { color: var(--red); }
+.range-meta {
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  color: var(--muted2);
+  letter-spacing: 0.04em;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ── BEFORE (current implementation) ── */
+.bar-current { width: 100%; height: 62px; }
+.bar-current rect { fill: var(--muted2); opacity: 0.7; }
+.bar-current rect.latest { fill: var(--amber); opacity: 1; }
+.bar-current text { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 7px; fill: var(--muted); }
+.bar-current text.latest { fill: var(--amber); font-weight: 700; }
+
+.note {
+  background: rgba(255,62,82,0.08);
+  border-left: 2px solid var(--red);
+  padding: 10px 14px;
+  border-radius: 0 4px 4px 0;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 14px;
+}
+
+.compare {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.compare-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--muted);
+  padding-top: 8px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Brent 4-week trend — 3 redesign options</h1>
+<p class="sub">Same data (24 daily Yahoo closes, Apr 20 → May 21). Pick one.</p>
+
+<!-- ─────────────────────────── BEFORE ─────────────────────────── -->
+<div class="opt" style="border-color:rgba(255,62,82,0.3)">
+  <div class="opt-head">
+    <span class="opt-name" style="color:var(--red)">BEFORE — current</span>
+    <span class="opt-rec" style="color:var(--red)">SHIP-BLOCKER</span>
+  </div>
+  <p class="opt-desc">24 daily bars in 238px → ~6px per bar → labels overlap → bars look squashed → no useful trend reading. Was originally designed for 4 weekly bars from EIA.</p>
+  <div class="tile">
+    <div class="tile-head"><span class="tile-title">BRENT 4-WEEK TREND</span><span class="tile-tag">DAILY</span></div>
+    <svg viewBox="0 0 238 62" class="bar-current">
+      <!-- 24 bars in 238 width = ~9px stride, ~6px bar -->
+      <g id="bars-before"></g>
+    </svg>
+    <div class="range-meta"><span>04-20</span><span>$95.5 → $105.8</span><span>05-21</span></div>
+  </div>
+</div>
+
+<!-- ─────────────────────────── OPTION A: LINE + AREA ─────────────────────────── -->
+<div class="opt">
+  <div class="opt-head">
+    <span class="opt-name">Option A — Line + filled area (RECOMMENDED)</span>
+    <span class="opt-rec">★ recommended</span>
+  </div>
+  <p class="opt-desc">Smooth daily line with subtle fill below. Min/max/latest markers labeled. Weekly grid lines for date orientation. Reads as a "trend" not a histogram. Industry standard for price series.</p>
+  <div class="tile">
+    <div class="tile-head"><span class="tile-title">BRENT 4-WEEK TREND</span><span class="tile-tag">DAILY · YAHOO</span></div>
+    <div class="headline-row">
+      <span class="headline-px">$105.80</span>
+      <span class="headline-chg">▲ +0.74% DoD</span>
+    </div>
+    <svg viewBox="0 0 280 70" style="width:100%;height:70px;overflow:visible">
+      <defs>
+        <linearGradient id="brentGradA" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f09014" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#f09014" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <!-- weekly grid lines (vertical) -->
+      <g stroke="rgba(128,153,179,0.08)" stroke-width="1">
+        <line x1="70" y1="0" x2="70" y2="60"/>
+        <line x1="140" y1="0" x2="140" y2="60"/>
+        <line x1="210" y1="0" x2="210" y2="60"/>
+      </g>
+      <!-- baseline -->
+      <line x1="0" y1="60" x2="280" y2="60" stroke="rgba(128,153,179,0.15)" stroke-width="1"/>
+      <!-- area + line will be injected -->
+      <path id="brentAreaA" fill="url(#brentGradA)"></path>
+      <path id="brentLineA" stroke="#f09014" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+      <!-- min/max/latest markers (injected) -->
+      <g id="brentMarkersA"></g>
+    </svg>
+    <div class="range-meta">
+      <span>Apr 20 · $95.5</span>
+      <span style="color:var(--amber)">peak $111.3 · May 19</span>
+      <span>May 21 · $105.8</span>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────── OPTION B: BIG SPARK ─────────────────────────── -->
+<div class="opt">
+  <div class="opt-head">
+    <span class="opt-name">Option B — Minimalist sparkline</span>
+    <span class="opt-rec" style="color:var(--blue)">cleanest</span>
+  </div>
+  <p class="opt-desc">Just the line. No fill, no markers, no gridlines. Range communicated in the meta row only. Cleanest possible. Tradeoff: less context within the chart itself.</p>
+  <div class="tile">
+    <div class="tile-head"><span class="tile-title">BRENT 4-WEEK TREND</span><span class="tile-tag">DAILY · YAHOO</span></div>
+    <div class="headline-row">
+      <span class="headline-px">$105.80</span>
+      <span class="headline-chg">▲ +0.74% DoD</span>
+    </div>
+    <svg viewBox="0 0 280 50" style="width:100%;height:50px">
+      <path id="brentLineB" stroke="#f09014" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+    </svg>
+    <div class="range-meta">
+      <span>4 wks</span>
+      <span>low $95.5 · high $111.3</span>
+      <span>+10.8% over period</span>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────── OPTION C: CANDLES ─────────────────────────── -->
+<div class="opt">
+  <div class="opt-head">
+    <span class="opt-name">Option C — Weekly candlesticks</span>
+    <span class="opt-rec" style="color:var(--muted)">info-dense</span>
+  </div>
+  <p class="opt-desc">4 weekly OHLC candles instead of 24 daily dots. Communicates open/close/high/low per week. Looks like a Bloomberg terminal. Tradeoff: hides intra-week volatility, more cognitive load.</p>
+  <div class="tile">
+    <div class="tile-head"><span class="tile-title">BRENT 4-WEEK TREND</span><span class="tile-tag">WEEKLY OHLC</span></div>
+    <div class="headline-row">
+      <span class="headline-px">$105.80</span>
+      <span class="headline-chg">▲ +0.74% DoD</span>
+    </div>
+    <svg viewBox="0 0 280 70" style="width:100%;height:70px">
+      <line x1="0" y1="60" x2="280" y2="60" stroke="rgba(128,153,179,0.15)" stroke-width="1"/>
+      <g id="brentCandlesC"></g>
+    </svg>
+    <div class="range-meta">
+      <span>Apr 20-26</span>
+      <span>Apr 27-May 3</span>
+      <span>May 4-10</span>
+      <span>May 11-21</span>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <strong>My recommendation:</strong> Option A. It tells the story at a glance — clear trend direction (rose to $111 May 19, pulled back to $106 today), labeled peak/trough markers so the eye lands on what matters, weekly grid lines for date orientation. Implementation effort: ~30 min in <code>drawSparkline()</code> — rewrite to emit path data instead of bars. The other two options are good if you want minimal (B) or trader-grade detail (C).
+</div>
+
+</div>
+
+<script>
+// ─── Same 24-day dataset for all 3 options ───
+// Yahoo BZ=F close prices, Apr 20 → May 21 2026
+const BRENT = [
+  ["04-20", 95.48], ["04-21", 98.48], ["04-22", 101.91], ["04-23", 103.20],
+  ["04-24", 106.30], ["04-27", 109.50], ["04-28", 108.20], ["04-29", 110.40],
+  ["04-30", 112.10], ["05-01", 119.63], ["05-04", 116.20], ["05-05", 114.40],
+  ["05-06", 113.10], ["05-07", 111.80], ["05-08", 105.88], ["05-11", 107.50],
+  ["05-12", 109.20], ["05-13", 108.70], ["05-14", 109.40], ["05-15", 110.53],
+  ["05-18", 108.66], ["05-19", 111.28], ["05-20", 105.02], ["05-21", 105.80],
+];
+
+// ─── BEFORE: bar render (faithful copy of current drawSparkline logic) ───
+(function renderBefore(){
+  const W=238, H=62, pad=10, topPad=14;
+  const vals = BRENT.map(d=>d[1]);
+  const mn = Math.min(...vals)*0.997, mx = Math.max(...vals)*1.003;
+  const barW = Math.floor((W - pad*(vals.length+1)) / vals.length);
+  const g = document.getElementById("bars-before");
+  vals.forEach((v,i)=>{
+    const x = pad + i*(barW+pad);
+    const bH = Math.max(3, Math.round(((v-mn)/(mx-mn||1))*(H-topPad)));
+    const y = H - bH;
+    const latest = (i===vals.length-1);
+    g.innerHTML += `<rect x="${x}" y="${y}" width="${barW}" height="${bH}" rx="1" class="${latest?'latest':''}"/>`
+                 + `<text x="${x+barW/2}" y="${y-2}" text-anchor="middle" class="${latest?'latest':''}">${v.toFixed(0)}</text>`
+                 + `<text x="${x+barW/2}" y="${H+8}" text-anchor="middle">${BRENT[i][0].slice(3)}</text>`;
+  });
+})();
+
+// ─── Option A: line + area ───
+(function renderOptionA(){
+  const W=280, H=60, pad=8;
+  const vals = BRENT.map(d=>d[1]);
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const xs = BRENT.map((_,i)=> pad + i*((W-pad*2)/(BRENT.length-1)));
+  const ys = vals.map(v=> H - 4 - ((v-mn)/(mx-mn))*(H-12));
+  const linePts = xs.map((x,i)=> `${x},${ys[i]}`).join(" L ");
+  const areaPts = `M ${xs[0]},${H} L ${linePts} L ${xs[xs.length-1]},${H} Z`;
+  document.getElementById("brentLineA").setAttribute("d", "M " + linePts);
+  document.getElementById("brentAreaA").setAttribute("d", areaPts);
+  // Markers: min, max, latest
+  const minIdx = vals.indexOf(mn), maxIdx = vals.indexOf(mx), latestIdx = vals.length-1;
+  const mk = document.getElementById("brentMarkersA");
+  const dot = (x,y,c,label,offset)=>`<circle cx="${x}" cy="${y}" r="2.5" fill="${c}"/><text x="${x}" y="${y+offset}" font-family="JetBrains Mono,monospace" font-size="8" fill="${c}" text-anchor="middle" font-weight="700">$${label}</text>`;
+  mk.innerHTML = dot(xs[maxIdx], ys[maxIdx], "#f09014", vals[maxIdx].toFixed(0), -6)
+              + dot(xs[minIdx], ys[minIdx], "#4aa0f0", vals[minIdx].toFixed(0), 12)
+              + dot(xs[latestIdx], ys[latestIdx], "#f09014", "now $" + vals[latestIdx].toFixed(1), -6);
+})();
+
+// ─── Option B: minimalist line ───
+(function renderOptionB(){
+  const W=280, H=50, pad=6;
+  const vals = BRENT.map(d=>d[1]);
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const xs = BRENT.map((_,i)=> pad + i*((W-pad*2)/(BRENT.length-1)));
+  const ys = vals.map(v=> H - 6 - ((v-mn)/(mx-mn))*(H-12));
+  const linePts = xs.map((x,i)=> `${x},${ys[i]}`).join(" L ");
+  document.getElementById("brentLineB").setAttribute("d", "M " + linePts);
+})();
+
+// ─── Option C: weekly OHLC candles ───
+(function renderOptionC(){
+  // Bucket into 4 weeks
+  const weeks = [
+    BRENT.slice(0,5),    // Apr 20-26
+    BRENT.slice(5,10),   // Apr 27-May 3
+    BRENT.slice(10,15),  // May 4-10
+    BRENT.slice(15,24),  // May 11-21
+  ];
+  const allVals = BRENT.map(d=>d[1]);
+  const mn = Math.min(...allVals), mx = Math.max(...allVals);
+  const W=280, H=60, padX=30;
+  const stride = (W - padX*2)/(weeks.length-1);
+  const candleW = 16;
+  const yFor = v => H - 6 - ((v-mn)/(mx-mn))*(H-12);
+  const g = document.getElementById("brentCandlesC");
+  weeks.forEach((wk,i)=>{
+    if (!wk.length) return;
+    const open = wk[0][1], close = wk[wk.length-1][1];
+    const high = Math.max(...wk.map(d=>d[1])), low = Math.min(...wk.map(d=>d[1]));
+    const x = padX + i*stride;
+    const yO = yFor(open), yC = yFor(close), yH = yFor(high), yL = yFor(low);
+    const up = close >= open;
+    const col = up ? "#2cce81" : "#ff3e52";
+    // wick
+    g.innerHTML += `<line x1="${x}" y1="${yH}" x2="${x}" y2="${yL}" stroke="${col}" stroke-width="1.2"/>`
+                 // body
+                 + `<rect x="${x-candleW/2}" y="${Math.min(yO,yC)}" width="${candleW}" height="${Math.max(2,Math.abs(yO-yC))}" fill="${col}" opacity="0.85"/>`
+                 // close label
+                 + `<text x="${x}" y="${H+12}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="${col}" font-weight="700">$${close.toFixed(0)}</text>`;
+  });
+})();
+</script>
+</body>
+</html>

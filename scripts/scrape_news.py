@@ -42,17 +42,29 @@ KV_NS         = os.environ.get("CF_KV_NAMESPACE_ID", "")
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
 
 FEEDS = [
+    # Geopolitical (existing)
     ("Al Jazeera",              "https://www.aljazeera.com/xml/rss/all.xml"),
     ("BBC Middle East",         "http://feeds.bbci.co.uk/news/world/middle_east/rss.xml"),
     ("Hellenic Shipping News",  "https://www.hellenicshippingnews.com/feed/"),
     ("Times of Israel",         "https://www.timesofisrael.com/feed/"),
     ("Tehran Times",            "https://www.tehrantimes.com/rss"),
+    # Oil price + energy markets (added 2026-05-21)
+    ("OilPrice.com",            "https://oilprice.com/rss/main"),
+    ("OilPrice Geopolitics",    "https://oilprice.com/rss/geopolitics"),
+    ("Reuters Energy",          "https://www.reuters.com/business/energy/rss"),
+    ("Rigzone Top Stories",     "https://www.rigzone.com/news/rss/rigzone_latest.aspx"),
 ]
 
 KEYWORDS = [
+    # Geopolitical (existing)
     "hormuz", "iran", "tanker", "strait", "persian gulf", "irgcn", "fujairah",
     "bandar abbas", "opec", "sanctions", "oil supply", "crude oil", "shipping",
     "naval", "irans", "iranian", "gulf",
+    # Oil price + market terms (added 2026-05-21)
+    "brent", "wti", "oil price", "oil prices", "crude prices", "oil futures",
+    "barrel", "per barrel", "$/bbl", "opec+", "opec plus", "saudi aramco",
+    "rosneft", "lukoil", "energy market", "refinery", "refining margin",
+    "vlcc", "suezmax", "aframax",
 ]
 
 
