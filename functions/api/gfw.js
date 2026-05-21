@@ -33,11 +33,17 @@ async function _handleGfwPost({ request, env }) {
   }
 
   // ── KV cache check ────────────────────────────────────────────────────────
+  // 2026-05-21: cache key collision bug — old code did btoa(...).slice(0,20)
+  // which truncated BEFORE the differing `dataset` name (it was the last
+  // field in the object), so encounters and loitering both hashed to the
+  // same key. Second call returned first call's data. Fixed by (a) putting
+  // dataset FIRST so the differing bytes appear early in the base64 and
+  // (b) keeping the full hash instead of truncating.
   const cacheKey = "gfw_" + btoa(JSON.stringify({
+    dataset: body.datasets?.[0],
     start: body.startDate,
     end: body.endDate,
-    dataset: body.datasets?.[0]
-  })).slice(0, 20);
+  }));
 
   const FOUR_HOURS = 4 * 3600 * 1000;
 
