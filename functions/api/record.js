@@ -358,16 +358,24 @@ async function _handleRecord({ request, env }) {
   const vAnchored   = isFinite(aisSummary.categories?.anchored) ? aisSummary.categories.anchored : null;
   const vApproach   = isFinite(aisSummary.categories?.approach) ? aisSummary.categories.approach : null;
 
+  // 2026-05-21: same bug class as dashboard's wtiPrice $105.1 incident —
+  // checked only tier==="primary" but our tier is "tier0-xverified" or
+  // "scrape" today, so verdict was being computed against EIA-daily $116
+  // (3 days stale) instead of live $105. Now accept tier0/scrape/primary
+  // (all are real-time-ish), fall to EIA only if all live tiers fail.
   let brent = null, wti = null, brentSource = "none";
-  if (oilD && oilD.tier === "primary" && oilD.brent) {
-    brent = oilD.brent.level; wti = oilD.wti.level; brentSource = "twelvedata";
+  const LIVE_TIERS = ["tier0-xverified", "scrape", "primary", "primary-stale"];
+  if (oilD && LIVE_TIERS.includes(oilD.tier) && oilD.brent && isFinite(oilD.brent.level)) {
+    brent = oilD.brent.level;
+    wti = isFinite(oilD.wti?.level) ? oilD.wti.level : null;
+    brentSource = oilD.tier;
   } else if (stooqD && isFinite(stooqD.today)) {
     brent = stooqD.today;
     brentSource = oilD && oilD.tier === "secondary" ? "etf+eia" : "eia";
   } else if (eiaD && eiaD.response && eiaD.response.data && eiaD.response.data[0]) {
     brent = parseFloat(eiaD.response.data[0].value); brentSource = "eia-weekly";
   }
-  if (oilD && oilD.tier === "primary" && oilD.wti) wti = oilD.wti.level;
+  if (oilD && LIVE_TIERS.includes(oilD.tier) && oilD.wti && isFinite(oilD.wti.level)) wti = oilD.wti.level;
 
   const bwSpread = (isFinite(brent) && isFinite(wti)) ? (brent - wti) : null;
 

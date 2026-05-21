@@ -2280,19 +2280,23 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
     rows.push({ label:"Inventory pressure", id:"xv-inventory", status:invStatus, statusColor:invColor, body:invBody });
   }
 
-  // Row 9 — Production stability (OPEC mbpd vs target 29.5)
+  // Row 9 — Production stability (OPEC mbpd vs quota target)
+  // 2026-05-21: target was 29.5 (OPEC-13 wide) but snap.opec_production_mbpd
+  // sources from EIA STEO PAPR_OPEC which tracks the OPEC-9 quota members
+  // (~20 mbpd). Apples-to-oranges → permanently red "BELOW TARGET" row.
+  // Aligned target to PAPR_OPEC's actual quota baseline (~21 mbpd).
   var opec = snap.opec_production_mbpd;
   if(opec == null){
     rows.push({ label:"Production stability", id:"xv-production", status:"—", statusColor:"var(--muted)",
                 body:"OPEC production data unavailable." });
   } else {
-    var target = 29.5;
+    var target = 21.0;   // OPEC-9 quota baseline matching EIA STEO PAPR_OPEC series
     var diff = opec - target;
     var prodColor, prodStatus;
     if(Math.abs(diff) < 0.5){ prodColor = "var(--green)"; prodStatus = "ON-TARGET"; }
     else if(diff < -1.0){ prodColor = "var(--red)"; prodStatus = "BELOW TARGET"; bump(3, "HIGH", "var(--red)"); }
     else { prodColor = "var(--amber)"; prodStatus = "DEVIATION"; bump(2, "ELEVATED", "var(--amber)"); }
-    var prodBody = "OPEC " + opec.toFixed(1) + " mbpd vs target ~" + target + " mbpd. " +
+    var prodBody = "OPEC-9 quota members " + opec.toFixed(1) + " mbpd vs target ~" + target + " mbpd (EIA STEO). " +
                    (diff > 0 ? "Output above target." : diff < -0.5 ? "Output below target — supply concern." : "Output broadly aligned.");
     rows.push({ label:"Production stability", id:"xv-production", status:prodStatus, statusColor:prodColor, body:prodBody });
   }
@@ -3874,12 +3878,29 @@ function renderEIA() {
   }
 
   // ── Brent change line ─────────────────────────────────────────────────────
+  // 2026-05-21: changed fallback ladder. Tier-0 cross-verified payload
+  // doesn't ship changePct (only level), so the prior code ALWAYS landed
+  // on _stooqDoD which is EIA DAILY (2-3 day lag). Result: green +2.4%
+  // label while live Brent fell -5.6% from yesterday. New ladder:
+  //   1st: primaryOil.changePct (live, when available)
+  //   2nd: Yahoo daily history (compute today vs prev close — same day)
+  //   3rd: _stooqDoD (EIA daily, labeled "DoD" honestly)
+  //   4th: EIA weekly WoW
   var chgEl = document.getElementById("brentChg");
   if(chgEl) {
     if(primaryOil && isFinite(primaryOil.brent.changePct)) {
       var upP = primaryOil.brent.changePct >= 0;
       chgEl.textContent = (upP?"▲":"▼") + " " + (upP?"+":"") + primaryOil.brent.changePct.toFixed(2) + "%";
       chgEl.style.color = upP ? "var(--green)" : "var(--red)";
+    } else if(_brentDailyHistory && _brentDailyHistory.length >= 2 && isFinite(headlineBrent)) {
+      // Compute live change% from Yahoo daily history vs prior close
+      var prevClose = _brentDailyHistory[_brentDailyHistory.length - 2].close;
+      var liveChgPct = ((headlineBrent - prevClose) / prevClose) * 100;
+      var upL = liveChgPct >= 0;
+      chgEl.textContent = (upL?"▲":"▼") + " " + (upL?"+":"") + liveChgPct.toFixed(2) + "% DoD";
+      chgEl.style.color = upL ? "var(--green)" : "var(--red)";
+      chgEl.title = "Computed live: " + headlineBrent.toFixed(2) + " vs " + prevClose.toFixed(2)
+                  + " (Yahoo " + _brentDailyHistory[_brentDailyHistory.length - 2].date + ")";
     } else if(_stooqDoD && isFinite(_stooqDoD.change)) {
       var up2 = _stooqDoD.change >= 0;
       chgEl.textContent = (up2?"▲":"▼") + " " + (up2?"+":"") + _stooqDoD.pct.toFixed(1) + "% DoD";
@@ -4007,17 +4028,33 @@ function drawSparkline(data, svgId, H) {
 }
 
 function showEIAError(msg) {
-  // Still populate the panel with a clearly-labelled estimate so it's never blank
-  var EST_BRENT = 82; // rough current estimate if API is unreachable
+  // 2026-05-21: killed the frozen EST_BRENT=82 constant. Same bug class as
+  // the dark_vessels=947 and WTI=$105.1 stale-fallback incidents \u2014 a
+  // hardcoded number rendered as if it were live data. In 2026, $82 Brent
+  // would be wildly wrong. Now: prefer last cached Yahoo daily close,
+  // else show "\u2014" and let the operator know the feed is down.
   var brentEl = document.getElementById("brentPrice");
-  if(brentEl) brentEl.textContent = "~$" + EST_BRENT;
   var chgEl = document.getElementById("brentChg");
-  if(chgEl){ chgEl.textContent = "est."; chgEl.style.color = "var(--muted)"; }
   var noteEl = document.getElementById("brentNote");
-  if(noteEl) noteEl.textContent = "EIA unreachable \u2014 estimated value. " + (msg||"");
   var tag = document.getElementById("eiaPulseTag");
-  if(tag){ tag.textContent="EIA EST"; tag.style.color="var(--amber)"; tag.style.background="var(--amber-dim)"; }
-  console.warn("EIA all proxies failed:", msg);
+  var lastDaily = (_brentDailyHistory && _brentDailyHistory.length)
+                    ? _brentDailyHistory[_brentDailyHistory.length - 1] : null;
+  if (brentEl) {
+    if (lastDaily && isFinite(lastDaily.close)) {
+      brentEl.textContent = "$" + lastDaily.close.toFixed(1);
+      brentEl.title = "Live Brent feed down. Showing Yahoo daily close from " + lastDaily.date;
+    } else {
+      brentEl.textContent = "$\u2014";
+      brentEl.style.color = "var(--muted)";
+      brentEl.title = "Brent feed down. " + (msg||"");
+    }
+  }
+  if(chgEl){ chgEl.textContent = lastDaily ? "(stale)" : "\u2014"; chgEl.style.color = "var(--muted)"; }
+  if(noteEl) noteEl.textContent = lastDaily
+                                  ? ("Live feed down \u2014 showing Yahoo daily close from " + lastDaily.date)
+                                  : ("All oil feeds unreachable. " + (msg||""));
+  if(tag){ tag.textContent="STALE"; tag.style.color="var(--amber)"; tag.style.background="var(--amber-dim)"; }
+  console.warn("EIA all proxies failed:", msg, "\u00b7 using cached:", !!lastDaily);
 }
 
 fetchEIA();
@@ -4262,9 +4299,13 @@ function vBdti(level, wowPct){
   return                  _verdict("normal",   "BDTI in normal range (800-1100). No tanker urgency.");
 }
 
-// 5. Incidents/30d (ACLED — currently hardcoded 14)
-function vIncidents(n){
+// 5. Incidents/30d (ACLED — currently HARDCODED 58 in snapshot.js static_fields).
+// 2026-05-21: gate verdict on whether snapshot actually flags this as static.
+// Showing "HIGH · 58 events" perma-red was misleading; until ACLED is wired,
+// surface as "not tracked" rather than a fake live signal.
+function vIncidents(n, isStatic){
   if(n == null) return null;
+  if(isStatic) return _verdict("normal",  "ACLED incident feed not wired — using static baseline only. Not a live signal.");
   if(n < 8)   return _verdict("low",      n+" events / 30d. Below regional baseline.");
   if(n <= 20) return _verdict("normal",   n+" events / 30d. Normal regional baseline.");
   if(n <= 35) return _verdict("elevated", n+" events / 30d. Active period — monitor closely.");
@@ -4829,7 +4870,8 @@ function renderConsolidatedTiles(){
   // ─── MACRO CONTEXT ─────────────────────────────────────────
   var opec = s.opec_production_mbpd;
   if(opec != null){
-    var devNote = (Math.abs(opec - 29.5) < 0.5) ? "on-target" : (opec < 28.5 ? "below target" : "deviation");
+    // 2026-05-21: target 29.5 → 21.0 (EIA STEO PAPR_OPEC tracks OPEC-9 ~21 mbpd, not OPEC-13 ~29)
+    var devNote = (Math.abs(opec - 21.0) < 0.5) ? "on-target" : (opec < 20.0 ? "below target" : "deviation");
     _setText("mcOpecVal", opec.toFixed(1) + " mbpd · " + devNote);
     _setDot("mcOpecDot", devNote === "on-target" ? "green" : devNote === "below target" ? "red" : "amber");
   } else {
