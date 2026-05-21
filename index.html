@@ -611,7 +611,7 @@ header{
      flex layout in the parent .foot-discl. */
   .foot-discl{font-size:10px;gap:8px 12px;padding:10px 14px}
   .foot-discl a{
-    display:inline-block;padding:6px 4px;
+    display:inline-block;padding:10px 8px;margin:-4px 0;
     border-radius:3px;line-height:1.1;
   }
   .foot-discl a:hover{background:rgba(74,160,240,.08)}
@@ -647,7 +647,10 @@ header{
 .disclaimer a{color:var(--blue);text-decoration:none;border-bottom:1px dotted var(--blue)}
 .ip-layer{padding:9px 0;border-bottom:1px solid var(--border)}
 .ip-layer:last-child{border-bottom:0}
-.ip-tag{display:inline-block;font-family:var(--mono);font-size:8.5px;font-weight:700;
+/* 2026-05-21: was 8.5px globally; mobile-only override lost to source-order
+   in CSS cascade. Bumping global to 10px — small enough for the inline tag
+   chrome on desktop, big enough to clear the mobile legibility threshold. */
+.ip-tag{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;
   padding:1.5px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.06em;
   margin-bottom:5px}
 .ip-tag.data{background:rgba(56,170,255,.12);color:var(--blue);border:1px solid rgba(56,170,255,.3)}
