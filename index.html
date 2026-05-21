@@ -494,6 +494,7 @@ header{
   .health-copy{font-size:10px}
   .tile-age{font-size:10px}
   .live-badge{font-size:10px}
+  .ip-tag{font-size:10px}
   .cargo-ticker{order:3;flex:1 1 100%;justify-content:flex-start;padding:4px 0 0}
   .ct-label{display:inline}
   .ct-value{font-size:14px}
@@ -609,7 +610,12 @@ header{
   .htitle{font-size:11px;letter-spacing:.1em}
   .hsub{display:none}
   .ct-label{display:none}
-  .live-badge{font-size:8px}
+  /* Mobile audit re-run 2026-05-21: 8px sub-480px was below legibility.
+     Bumped to 10px to match the rest of the mobile floor. */
+  .live-badge{font-size:10px}
+  /* .ip-tag (India panel tags) was 8.5px globally — push to 10px on
+     extra-small so brent-tagged interpretation labels stay readable. */
+  .ip-tag{font-size:10px}
 }
 
 /* ─── 4.12 v1 · OFAC enforcement timeline (2026-05-17 Phase-2 #2) ─── */
