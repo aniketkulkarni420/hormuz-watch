@@ -191,10 +191,11 @@ def main():
         source = "opensky"
     if not states:
         print("  Both ADS-B sources failed — flagging degraded")
-        status_body = json.dumps({"fetchedAt": int(time.time()), "ok": False,
-                                  "job": "aircraft-scraper",
-                                  "reason": "both_sources_failed"}, separators=(",", ":"))
-        put_kv("scrape_status_aircraft", status_body)
+        # 2026-05-22: diff-aware status (only writes on transition)
+        try:
+            from _status import write_status
+            write_status("aircraft-scraper", ok=False, reason="both_sources_failed")
+        except Exception: pass
         sys.exit(0)
 
     print(f"  fetched {len(states)} aircraft states via {source}")
@@ -272,14 +273,12 @@ def main():
     body = json.dumps(payload, separators=(",", ":"))
     ok = put_kv("aircraft_state", body)
 
-    status_body = json.dumps({
-        "fetchedAt": int(time.time()),
-        "ok": bool(ok and count >= 0),
-        "count": count,
-        "militaryCount": mil,
-        "job": "aircraft-scraper",
-    }, separators=(",", ":"))
-    put_kv("scrape_status_aircraft", status_body)
+    # 2026-05-22: diff-aware status — writes only when ok-state changes
+    try:
+        from _status import write_status
+        write_status("aircraft-scraper", ok=bool(ok and count >= 0),
+                     count=count, militaryCount=mil)
+    except Exception: pass
 
     print(f"  ✓ KV write OK ({len(body)}B) · {count} aircraft, {mil} military")
     if not ok:

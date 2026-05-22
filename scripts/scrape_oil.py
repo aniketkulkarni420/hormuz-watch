@@ -567,17 +567,12 @@ def main():
     #                fro: {...}, stng: {...}, ... },
     #   }
     ok = put_kv("latest", body)
-    # P8 — surface scrape status so /health can show it without opening the Actions tab
-    status_body = json.dumps({
-        "fetchedAt": int(time.time()),
-        "ok": bool(ok and results),
-        "symbolCount": len(results),
-        "job": "data-refresh",
-    }, separators=(",", ":"))
+    # 2026-05-22: diff-aware status (only writes on transition)
     try:
-        put_kv("scrape_status_oil", status_body)
+        from _status import write_status
+        write_status("data-refresh", ok=bool(ok and results), symbolCount=len(results))
     except Exception as e:
-        print(f"warn: scrape_status_oil write failed: {e}")
+        print(f"warn: write_status failed: {e}")
     if not ok:
         sys.exit(1)
     print(f"✓ KV write OK ({len(body)}B, {len(results)} symbols)")

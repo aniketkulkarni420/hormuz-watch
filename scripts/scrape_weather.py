@@ -96,14 +96,11 @@ def main():
     }
     body = json.dumps(payload, separators=(",", ":"))
     ok = put_kv("weather_state", body)
-    status_body = json.dumps({
-        "fetchedAt": int(time.time()),
-        "ok": bool(ok),
-        "windMaxKnots": wind_max,
-        "rough": bool(rough),
-        "job": "weather-scraper",
-    }, separators=(",", ":"))
-    put_kv("scrape_status_weather", status_body)
+    # 2026-05-22: diff-aware status (only writes on transition)
+    try:
+        from _status import write_status
+        write_status("weather-scraper", ok=bool(ok), windMaxKnots=wind_max, rough=bool(rough))
+    except Exception: pass
     print(f"  ✓ KV write OK · max wind {wind_max}kn, min vis {vis_min}km, rough={rough}")
     if not ok:
         sys.exit(1)

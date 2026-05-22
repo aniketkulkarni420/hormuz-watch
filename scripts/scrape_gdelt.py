@@ -47,10 +47,11 @@ def main():
         # the watchdog see it, and DON'T touch gdelt_state — preserve the
         # previous value rather than clobbering it with a 0-count payload.
         # The old code exited 0 here (silent success on total failure).
-        put_kv("scrape_status_gdelt", json.dumps({
-            "fetchedAt": int(time.time()), "ok": False,
-            "reason": reason, "job": "gdelt-scraper",
-        }, separators=(",", ":")))
+        # 2026-05-22: diff-aware status (only writes on transition)
+        try:
+            from _status import write_status
+            write_status("gdelt-scraper", ok=False, reason=reason)
+        except Exception: pass
         sys.exit(1)
 
     try:
@@ -155,13 +156,11 @@ def main():
     }
     body = json.dumps(payload, separators=(",", ":"))
     ok = put_kv("gdelt_state", body)
-    status_body = json.dumps({
-        "fetchedAt": int(time.time()),
-        "ok": bool(ok),
-        "article_count_24h": count,
-        "job": "gdelt-scraper",
-    }, separators=(",", ":"))
-    put_kv("scrape_status_gdelt", status_body)
+    # 2026-05-22: diff-aware status (only writes on transition)
+    try:
+        from _status import write_status
+        write_status("gdelt-scraper", ok=bool(ok), article_count_24h=count)
+    except Exception: pass
     print(f"  ✓ KV write OK · {count} articles · ToneChart: avg_tone={tone_avg} neg_tone_pct={tone_neg_pct} (sample {tone_total})")
     if not ok:
         sys.exit(1)

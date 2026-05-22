@@ -257,17 +257,25 @@ async def listen_and_capture(state, transits, crossing_imos):
         health_reason = "non_position_only"
         health_detail = f"Got {other_msgs} non-position frames (auth errors likely)"
 
-    # Write the health record. Soft-fail (don't block main flow if this errors).
+    # 2026-05-22: diff-write only — read prior ais_health, skip the put
+    # if `reason` hasn't changed. AISStream has been in steady silent_no_messages
+    # for weeks, so this was writing the same record every 30 min for ~140 KV
+    # writes/day. Diff-write drops that to ~0/day in steady state.
     try:
-        kv_put("ais_health", json.dumps({
-            "fetchedAt": int(time.time()),
-            "reason": health_reason,
-            "detail": health_detail,
-            "msg_count": msg_count,
-            "other_msgs": other_msgs,
-            "error_samples": error_samples[:3],
-            "actionable": health_reason in ("ws_closed_mid_subscription", "silent_no_messages"),
-        }, separators=(",", ":")))
+        prev = kv_get("ais_health") or {}
+        if prev.get("reason") == health_reason:
+            print(f"  ais_health unchanged (reason={health_reason}) — skipping KV write")
+        else:
+            kv_put("ais_health", json.dumps({
+                "fetchedAt": int(time.time()),
+                "reason": health_reason,
+                "detail": health_detail,
+                "msg_count": msg_count,
+                "other_msgs": other_msgs,
+                "error_samples": error_samples[:3],
+                "actionable": health_reason in ("ws_closed_mid_subscription", "silent_no_messages"),
+            }, separators=(",", ":")))
+            print(f"  ais_health TRANSITION: {prev.get('reason','(none)')} -> {health_reason}")
     except Exception as e:
         print(f"  ⚠ ais_health KV write failed: {e}")
     if other_msgs > 0:
@@ -381,18 +389,12 @@ def main():
     #     currentInbound: int (transit vessels heading 250-320, westbound),
     #     currentOutbound: int (transit vessels heading 70-140, eastbound) }
     ok = kv_put("ais_state", body)
-    # P8 — surface scrape status for /health
+    # 2026-05-22: diff-aware status (only writes on transition)
     try:
-        status_body = json.dumps({
-            "fetchedAt": int(time.time()),
-            "ok": bool(ok and msg_count > 0),
-            "messageCount": msg_count,
-            "vesselCount": len(state),
-            "job": "vessel-sync",
-        }, separators=(",", ":"))
-        kv_put("scrape_status_ais", status_body)
-    except Exception as e:
-        print(f"  warn: scrape_status_ais write failed: {e}")
+        from _status import write_status
+        write_status("vessel-sync", ok=bool(ok and msg_count > 0),
+                     messageCount=msg_count, vesselCount=len(state))
+    except Exception: pass
     if not ok:
         print("  KV write FAILED"); sys.exit(1)
     print(f"  ✓ KV write OK ({len(body)} bytes, {msg_count} messages, {len(state)} vessels, {len(transits)} transits, {len(crossing_imos)} unique IMOs, cats={cats})")

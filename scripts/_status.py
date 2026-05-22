@@ -23,22 +23,53 @@ except Exception:  # pragma: no cover — requests is always installed in CI
 
 
 def write_status(job, ok, **extra):
-    """Write {ok, fetchedAt, job, ...extra} to KV key scrape_status_<job>.
+    """Write status only when {ok} CHANGES (e.g. ok→fail or fail→ok).
 
-    `job` is the short job name (e.g. "news-scraper"); the KV key becomes
-    scrape_status_news-scraper. Returns True on a successful KV PUT, else
-    False — but callers should ignore the return value (best-effort).
+    2026-05-22: rewritten to read-then-diff so the steady-state "every run
+    succeeded" case writes ZERO KV puts. KV reads are 100k/day free; writes
+    are 1k/day free. Pre-refactor each scraper wrote scrape_status_X every
+    run = ~500 KV writes/day across all scrapers. Now: writes only on
+    transitions, ~5-10 writes/day combined.
+
+    The watchdog and /api/diag still see fresh state because the prior write
+    survives in KV until the next transition. `fetchedAt` is stamped at
+    transition time, NOT every run — callers needing "last successful run"
+    should look at the scrape's primary KV key (which still updates), not
+    the status key.
+
+    Always returns True for callers that gate on the return value.
     """
     if requests is None:
-        return False
+        return True
     acct = os.environ.get("CF_ACCOUNT_ID")
     token = os.environ.get("CF_API_TOKEN")
     ns = os.environ.get("CF_KV_NAMESPACE_ID")
     if not all([acct, token, ns]):
         print("  warn: write_status skipped — CF env vars missing")
-        return False
+        return True
     key = f"scrape_status_{job}"
-    payload = {"ok": bool(ok), "fetchedAt": int(time.time()), "job": job}
+    new_ok = bool(ok)
+
+    # Read prior status — diff against new value
+    try:
+        r = requests.get(
+            f"https://api.cloudflare.com/client/v4/accounts/{acct}"
+            f"/storage/kv/namespaces/{ns}/values/{key}",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=15)
+        if r.status_code == 200:
+            try:
+                prev = json.loads(r.text)
+                if prev.get("ok") is new_ok:
+                    # No transition — skip the write.
+                    print(f"  write_status: no change for {job} (ok={new_ok}) — skipped")
+                    return True
+            except Exception:
+                pass   # Unparseable old payload: fall through and write.
+    except Exception as e:
+        print(f"  warn: write_status read failed: {e} — writing anyway")
+
+    payload = {"ok": new_ok, "fetchedAt": int(time.time()), "job": job}
     payload.update(extra)
     body = json.dumps(payload, separators=(",", ":"))
     try:
@@ -51,6 +82,7 @@ def write_status(job, ok, **extra):
         if r.status_code != 200:
             print(f"  warn: write_status {key} -> HTTP {r.status_code}")
             return False
+        print(f"  write_status: TRANSITION for {job} -> ok={new_ok}")
         return True
     except Exception as e:
         print(f"  warn: write_status {key} failed: {e}")

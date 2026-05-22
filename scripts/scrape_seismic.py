@@ -117,13 +117,11 @@ def main():
     }
     body = json.dumps(payload, separators=(",", ":"))
     ok = put_kv("seismic_state", body)
-    status_body = json.dumps({
-        "fetchedAt": int(time.time()),
-        "ok": bool(ok),
-        "count_7d": count,
-        "job": "seismic-scraper",
-    }, separators=(",", ":"))
-    put_kv("scrape_status_seismic", status_body)
+    # 2026-05-22: diff-aware status (only writes on transition)
+    try:
+        from _status import write_status
+        write_status("seismic-scraper", ok=bool(ok), count_7d=count)
+    except Exception: pass
     print(f"  ✓ KV write OK · {count} events, max mag {max_mag}")
     if not ok:
         sys.exit(1)
