@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hormuz Watch — cognitive-load + typography + IA audit · 2026-05-22</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e; --panel:#11161f; --panel2:#0c1119;
+  --border:#1a2230; --border2:#222d3f;
+  --text:#cdd8e8; --muted:#8099b3; --muted2:#627a95;
+  --amber:#f09014; --green:#2cce81; --red:#ff3e52; --blue:#4aa0f0;
+  --purple:#b47aff;
+}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,"Segoe UI",system-ui,sans-serif;
+  line-height:1.55;padding:32px 20px 100px;
+}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-size:24px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em}
+.sub{font-size:13px;color:var(--muted);margin-bottom:32px}
+
+h2{font-size:18px;font-weight:700;margin:42px 0 14px;
+   padding-bottom:10px;border-bottom:1px solid var(--border2);
+   display:flex;align-items:baseline;gap:10px}
+h2 .pill{font-size:10px;padding:3px 8px;border-radius:3px;font-weight:700;letter-spacing:.04em}
+h2 .num{color:var(--amber);font-family:"JetBrains Mono",monospace;font-size:14px}
+
+h3{font-size:15px;font-weight:600;margin:28px 0 10px;color:var(--text)}
+.lead{font-size:14px;color:var(--text);margin-bottom:14px}
+
+.pill{font-family:"JetBrains Mono",monospace;font-size:10px;padding:3px 8px;border-radius:3px;font-weight:700;letter-spacing:.04em;display:inline-block}
+.p0{background:rgba(255,62,82,.15);color:var(--red);border:1px solid rgba(255,62,82,.4)}
+.p1{background:rgba(240,144,20,.15);color:var(--amber);border:1px solid rgba(240,144,20,.4)}
+.p2{background:rgba(74,160,240,.12);color:var(--blue);border:1px solid rgba(74,160,240,.4)}
+.bad{color:var(--red)}
+.good{color:var(--green)}
+
+.issue{background:var(--panel);border:1px solid var(--border);border-radius:8px;
+       padding:20px 22px;margin-bottom:16px}
+.issue-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.issue-title{font-size:14px;font-weight:600}
+.issue-desc{font-size:13px;color:var(--text)}
+.issue-brutal{font-size:13px;color:var(--text);background:rgba(255,62,82,.06);
+              border-left:3px solid var(--red);padding:10px 14px;border-radius:0 4px 4px 0;
+              margin:10px 0;font-style:italic}
+.issue-fix{font-size:13px;color:var(--text);background:rgba(44,206,129,.06);
+           border-left:3px solid var(--green);padding:10px 14px;border-radius:0 4px 4px 0;
+           margin:10px 0}
+.issue-fix strong{color:var(--green)}
+
+.split{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:14px 0}
+@media(max-width:780px){.split{grid-template-columns:1fr}}
+.panel-demo{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;min-height:120px}
+.panel-demo-title{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);
+                  text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.panel-demo-title.bad{color:var(--red)}
+.panel-demo-title.good{color:var(--green)}
+
+.note{background:rgba(74,160,240,.08);border-left:3px solid var(--blue);padding:12px 16px;
+      border-radius:0 4px 4px 0;font-size:13px;margin:14px 0}
+.note strong{color:var(--blue)}
+
+.callout-amber{background:rgba(240,144,20,.08);border:1px solid rgba(240,144,20,.3);
+               border-radius:6px;padding:16px 20px;margin:18px 0}
+.callout-amber h3{color:var(--amber);margin-top:0}
+
+.kbd{font-family:"JetBrains Mono",monospace;font-size:11px;background:var(--panel2);
+     border:1px solid var(--border);border-radius:3px;padding:1px 6px;color:var(--blue)}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12.5px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+th{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+td.num{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* ── Demo: current vs proposed signal bar ── */
+.demo-current-sigbar{display:flex;background:var(--panel2);border:1px solid var(--border);
+                      border-radius:4px;height:42px;align-items:center;overflow:hidden}
+.demo-current-sigbar .sig{flex:1;padding:0 12px;border-right:1px solid var(--border);
+                            font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--text)}
+.demo-current-sigbar .sig:last-child{border-right:none}
+.sig-val{font-size:13px;font-weight:700;line-height:1.2}
+.sig-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
+
+/* Proposed verdict-first hero */
+.demo-hero{background:linear-gradient(180deg,rgba(240,144,20,0.08),transparent 80%);
+           border:1px solid rgba(240,144,20,0.3);border-radius:8px;padding:24px;margin:14px 0}
+.demo-hero-tag{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);
+               text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.demo-hero-verdict{font-size:32px;font-weight:800;color:var(--amber);line-height:1;margin-bottom:6px;letter-spacing:-0.02em}
+.demo-hero-score{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);margin-bottom:14px}
+.demo-hero-summary{font-size:14px;color:var(--text);line-height:1.55;max-width:680px;margin-bottom:14px}
+.demo-hero-drivers{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.demo-hero-drivers strong{color:var(--text);font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+
+/* Proposed section header */
+.demo-section-h2{display:flex;align-items:baseline;justify-content:space-between;
+                  padding:10px 0;margin:16px 0 12px;border-bottom:1px solid var(--border2)}
+.demo-section-h2 .lbl{font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.06em}
+.demo-section-h2 .meta{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);text-transform:uppercase}
+
+/* Type scale demo */
+.type-row{display:flex;gap:20px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border)}
+.type-row .label{flex:0 0 110px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.type-row .sample{flex:1}
+
+.option{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:16px 20px;margin-bottom:12px}
+.option-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.option-name{font-size:14px;font-weight:600}
+.option-rec{font-size:10px;color:var(--green);font-weight:700;font-family:"JetBrains Mono",monospace;text-transform:uppercase}
+
+.approve{background:var(--panel);border:1px solid var(--amber);border-radius:8px;padding:22px 24px;margin-top:36px}
+.approve h3{color:var(--amber);margin-top:0}
+.approve ul{margin-left:20px;font-size:13px}
+.approve ul li{margin-bottom:8px}
+
+ul.findings{list-style:none;padding:0;margin:14px 0}
+ul.findings li{padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+ul.findings li:before{content:"✗ ";color:var(--red);font-weight:700}
+ul.findings li.good:before{content:"✓ ";color:var(--green)}
+
+.tldr{background:linear-gradient(180deg,rgba(74,160,240,0.08),transparent 80%);
+       border:1px solid rgba(74,160,240,0.3);border-radius:8px;padding:24px;margin:18px 0 30px}
+.tldr h3{color:var(--blue);margin-top:0;margin-bottom:12px}
+.tldr ul{margin-left:20px;font-size:13.5px;line-height:1.8}
+.tldr ul li strong{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Hormuz Watch — design + data + typography audit</h1>
+<p class="sub">Brutal. Devil's advocate. No code changes yet. Captured 2026-05-22 against the live dashboard at <span class="kbd">hormuz-watch-2.pages.dev</span>.</p>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- TL;DR                                                                     -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="tldr">
+  <h3>TL;DR — three sentences</h3>
+  <ul>
+    <li><strong>1.</strong> You have a brilliant data pipeline strapped to an undifferentiated wall of 30+ tiles, all rendered at roughly the same visual weight; the dashboard doesn't tell a story, it tells facts in parallel.</li>
+    <li><strong>2.</strong> The first thing to fix is not the sidebar width — it's the absence of a hierarchy. Headings + section grouping + verdict-as-hero will buy 80% of the cognitive-load relief at 20% of the redesign cost.</li>
+    <li><strong>3.</strong> Then collapse <strong>~30 tiles to ~12</strong>, and only then reconsider sidebar/map split. Most likely answer: keep the map but shrink it to a 240-300px header strip on desktop, give the analytics surface 70% of the screen. But not yet — fix hierarchy first.</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 1 — Headline findings                                              -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2><span class="num">§1</span> 16 findings, ranked brutally</h2>
+<p class="lead">Each finding is real. Each is fixable. None of them require touching the data pipeline.</p>
+
+<ul class="findings">
+  <li><span class="pill p0">P0</span> &nbsp; No H1 / H2 / H3 system. Title is a 12-22px sticky in the header; everything below is at the same visual rank. User cannot skim.</li>
+  <li><span class="pill p0">P0</span> &nbsp; ~30 tiles all rendered with identical chrome (rblock, 16-18px padding, mono 10px label). Verdict tile and "CAPE reroute static reference" look equally important.</li>
+  <li><span class="pill p0">P0</span> &nbsp; The verdict is buried in the right panel as one card among many. The primary user task ("is something happening?") needs the answer as a HERO, not as item #4 in a list.</li>
+  <li><span class="pill p0">P0</span> &nbsp; Signal bar has 5 tiles but ranks none of them. BDTI gets the same weight as IRR spread, which gets the same weight as Brent. Trader can't tell what to act on first.</li>
+  <li><span class="pill p1">P1</span> &nbsp; No section headers in the right panel. 20+ cards scroll as a flat list with zero grouping. "Markets" + "Geopolitics" + "Macro" + "Conditions" + "India" are mentally separable but visually identical.</li>
+  <li><span class="pill p1">P1</span> &nbsp; Map takes ~60% of desktop viewport for a dashboard whose primary task is "verdict + driver explanation." Map is reference, not the answer.</li>
+  <li><span class="pill p1">P1</span> &nbsp; Cross-signal verdict (xv-list) is the only multi-factor synthesis tile, but it's visually identical to single-metric tiles. The most analytically dense element is invisible.</li>
+  <li><span class="pill p1">P1</span> &nbsp; "Conditions" card combines weather + aircraft + seismic. Three unrelated signals, one tile, no clear interpretation. Reader can't tell what they're collectively saying.</li>
+  <li><span class="pill p1">P1</span> &nbsp; News tile shows raw headlines. No sentiment, no clustering, no "the system thinks these 3 matter." Just a list.</li>
+  <li><span class="pill p1">P1</span> &nbsp; Brent and WTI are separate tiles. They tell one story ("crude oil + spread"). Should be one composite tile, not two separate ones competing for attention.</li>
+  <li><span class="pill p1">P1</span> &nbsp; BDTI has just shipped Brent's daily-history chart but BDTI itself still shows only "value + WoW%". Inconsistent — both deserve the same trend-chart treatment.</li>
+  <li><span class="pill p1">P1</span> &nbsp; Currency tile shows IRR spread % but no trajectory. "62% spread" is meaningless without "trending tighter or wider over 4 weeks?"</li>
+  <li><span class="pill p2">P2</span> &nbsp; LNG, fertilizer, CAPE-reroute are static reference data. They belong on a "context" sidebar or methodology page, not the live dashboard.</li>
+  <li><span class="pill p2">P2</span> &nbsp; Cargo ticker concept is brilliant but visually treated as decoration. It says "this is happening live RIGHT NOW" — should be the dashboard's heartbeat, not a third-class header element.</li>
+  <li><span class="pill p2">P2</span> &nbsp; No global "as-of" timestamp. Each tile shows its own freshness (some hide it). Reader doesn't know whether the WHOLE dashboard is current.</li>
+  <li><span class="pill p2">P2</span> &nbsp; Tabular vs sans split is muddled — mono labels, mono badges, mono headings, mono numbers. The mono is supposed to align numbers; using it everywhere makes the whole UI read as a developer terminal.</li>
+</ul>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 2 — Typography audit                                              -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2><span class="num">§2</span> Typography audit — what's missing</h2>
+
+<h3>Current state (the bad)</h3>
+<p class="issue-desc">Font sizes used in <span class="kbd">index.html</span> right now (sample, not exhaustive):</p>
+<table>
+  <thead><tr><th>Size</th><th>Where</th><th>Honest verdict</th></tr></thead>
+  <tbody>
+    <tr><td class="num">8px</td><td>Tooltip hint, separator pipes</td><td class="bad">Below legible on mobile · audit already caught + fixed</td></tr>
+    <tr><td class="num">9px</td><td>Live badge, sig source, footer</td><td class="bad">Crowded · could compress to 10 with no info loss</td></tr>
+    <tr><td class="num">10px</td><td>Labels, badges, ip-tags, card titles</td><td>OK but used for too many roles</td></tr>
+    <tr><td class="num">11px</td><td>(rare)</td><td>Underused</td></tr>
+    <tr><td class="num">12-13px</td><td>Body, descriptions</td><td>OK</td></tr>
+    <tr><td class="num">14px</td><td>Signal-bar values, sub-headings</td><td>OK but indistinguishable from body</td></tr>
+    <tr><td class="num">16-18px</td><td>Card price headlines</td><td>Confused — sometimes price, sometimes section title</td></tr>
+    <tr><td class="num">22-24px</td><td>Brent main price, cargo ticker</td><td class="bad">Should have a distinct H1 above this</td></tr>
+  </tbody>
+</table>
+
+<div class="issue-brutal">
+  No modular scale. Sizes were picked ad-hoc per component. Result: 14+ distinct sizes for ~5 actual semantic roles (page title, section header, card title, body, label, mono number, badge).
+</div>
+
+<h3>Proposed type scale (3-tier semantic system)</h3>
+
+<div class="type-row">
+  <div class="label">H1 · page</div>
+  <div class="sample" style="font-size:28px;font-weight:800;letter-spacing:-0.01em">Hormuz Watch</div>
+</div>
+<div class="type-row">
+  <div class="label">H2 · section</div>
+  <div class="sample" style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Markets</div>
+</div>
+<div class="type-row">
+  <div class="label">H3 · card</div>
+  <div class="sample" style="font-size:13px;font-weight:600">Brent crude oil</div>
+</div>
+<div class="type-row">
+  <div class="label">Body</div>
+  <div class="sample" style="font-size:13px;font-weight:400">Brent rose 0.7% intra-day to \$105.66 after Tuesday's pullback. Spread vs WTI back inside normal range.</div>
+</div>
+<div class="type-row">
+  <div class="label">Mono / number</div>
+  <div class="sample" style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--amber)">\$105.66</div>
+</div>
+<div class="type-row">
+  <div class="label">Mono / label</div>
+  <div class="sample" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">LIVE · 1.5 min ago</div>
+</div>
+
+<p class="lead" style="margin-top:16px">
+  <strong>Rules:</strong> sans for prose/headings, mono ONLY for numbers + tabular data + tiny labels. Drop the 8px tier entirely. Consolidate 14 sizes into 6.
+</p>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 3 — Heading hierarchy proposal                                    -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2><span class="num">§3</span> Heading hierarchy — what's missing today</h2>
+<p class="lead">The dashboard currently has zero structural hierarchy. Proposed system below:</p>
+
+<div class="callout-amber">
+  <h3>Proposed: H1 · H2 · H3 · body — applied to Intel panel</h3>
+  <p style="font-size:13px;margin-bottom:14px">Right panel currently is a flat list of ~20 cards. Group them under 4 section headers (H2) with sticky sub-nav. Each card gets a clear H3.</p>
+
+  <!-- Example -->
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:18px 20px;margin-top:12px">
+    <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:14px;letter-spacing:-0.01em">Hormuz Watch</div>
+
+    <div class="demo-section-h2">
+      <span class="lbl">Markets</span>
+      <span class="meta">4 signals</span>
+    </div>
+    <div style="padding:10px 0;color:var(--muted);font-size:12.5px">— Crude (Brent + WTI + spread) · BDTI · Tanker stocks · OPEC production</div>
+
+    <div class="demo-section-h2">
+      <span class="lbl">Strait activity</span>
+      <span class="meta">3 signals</span>
+    </div>
+    <div style="padding:10px 0;color:var(--muted);font-size:12.5px">— Vessel movement · Dark vessels (GFW) · OFAC enforcement timeline</div>
+
+    <div class="demo-section-h2">
+      <span class="lbl">Geopolitics &amp; macro</span>
+      <span class="meta">3 signals</span>
+    </div>
+    <div style="padding:10px 0;color:var(--muted);font-size:12.5px">— News (volume + tone) · IRR currency (trajectory) · India exposure (3-layer)</div>
+
+    <div class="demo-section-h2">
+      <span class="lbl">Operating conditions</span>
+      <span class="meta">2 signals</span>
+    </div>
+    <div style="padding:10px 0;color:var(--muted);font-size:12.5px">— Weather (calm/rough) · Coalition military air activity</div>
+
+    <div class="demo-section-h2">
+      <span class="lbl">Reference &amp; methodology</span>
+      <span class="meta">collapsed</span>
+    </div>
+    <div style="padding:10px 0;color:var(--muted2);font-size:12px">— Historical comparison · UNCTAD scenarios · LNG / fertilizer / CAPE reroute (collapsed by default · click to expand)</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 4 — Verdict-first hero proposal                                    -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2><span class="num">§4</span> Verdict-first hero — fix the 5-second test</h2>
+<p class="lead">Currently the verdict is one tile among 20+. Proposal: promote to hero block above-the-fold on every viewport. Cargo ticker as a secondary chip beneath.</p>
+
+<div class="split">
+  <div class="panel-demo">
+    <div class="panel-demo-title bad">CURRENT — verdict buried in rpanel</div>
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:12px;font-size:12px">
+      <div style="color:var(--muted);font-size:10px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Verdict</div>
+      <div style="font-weight:700;color:var(--amber);font-size:14px">ELEVATED · score 1.18</div>
+      <div style="color:var(--muted);font-size:11px;margin-top:6px">Stage1 inputs: oil 3 · bdti 2 · ofac 2 · currency 1 · news 1 · ...</div>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-top:8px">Visual weight identical to "LNG card." User has to read every tile to find this.</p>
+  </div>
+
+  <div class="panel-demo">
+    <div class="panel-demo-title good">PROPOSED — hero above the fold</div>
+    <div class="demo-hero" style="margin:0">
+      <div class="demo-hero-tag">Current verdict · updated 1 min ago</div>
+      <div class="demo-hero-verdict">ELEVATED</div>
+      <div class="demo-hero-score">structural score 1.18 · score went 0.99 → 1.18 in the last 6 h</div>
+      <div class="demo-hero-summary">Brent steady at \$105 but BDTI rates dropped sharply WoW and OFAC enforcement picked up. IRR parallel spread widened to 62%. Three contributing signals worsened, none improved.</div>
+      <div class="demo-hero-drivers">
+        <div>↑ oil <strong>+0.7% DoD</strong></div>
+        <div>↓ BDTI <strong>−6.3% WoW</strong></div>
+        <div>↑ OFAC <strong>3 actions / 30d</strong></div>
+        <div>↑ IRR <strong>62% spread</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="issue-fix">
+  <strong>What this fixes:</strong> 5-second test. Trader can answer "is something happening + what's driving it" without scrolling or reading more than 4 lines. The hero replaces 5-10 disconnected tiles with one narrative-shaped synthesis.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 5 — Card consolidation                                            -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2><span class="num">§5</span> Card consolidation — 30 → 12</h2>
+<p class="lead">Devil's-advocate question: of the 30 tiles, how many does a commodity-desk trader actually USE day-to-day? Honest answer: probably 8-12.</p>
+
+<table>
+  <thead><tr><th>Current tile</th><th>Verdict</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td>Brent oil</td><td class="good">KEEP</td><td>Merge with WTI into one "Crude" card</td></tr>
+    <tr><td>WTI oil</td><td class="good">MERGE</td><td>Show as second line + spread in Crude card</td></tr>
+    <tr><td>BDTI</td><td class="good">KEEP + EXPAND</td><td>Add daily trend chart (same treatment as Brent Option A)</td></tr>
+    <tr><td>Vessel movement / transits</td><td class="good">KEEP</td><td>Promote — currently buried</td></tr>
+    <tr><td>Verdict block</td><td class="good">PROMOTE TO HERO</td><td>Above the fold, full-width, see §4</td></tr>
+    <tr><td>Daily brief</td><td class="good">KEEP</td><td>Position as editorial chip under hero</td></tr>
+    <tr><td>OFAC enforcement timeline</td><td class="good">KEEP</td><td>Add severity coding (sanctions / SDN / press)</td></tr>
+    <tr><td>India panel (3-layer)</td><td class="good">KEEP</td><td>Compliance pattern preserved</td></tr>
+    <tr><td>Cross-signal (xv-list)</td><td class="good">KEEP &amp; DIFFERENTIATE</td><td>Visually distinct — synthesis card, not list</td></tr>
+    <tr><td>Currency (IRR)</td><td class="good">KEEP + EXPAND</td><td>Add 4-week spread trajectory chart</td></tr>
+    <tr><td>News (24h)</td><td class="good">KEEP + REDESIGN</td><td>Add tone gauge + top-3 categorized</td></tr>
+    <tr><td>Aircraft (military)</td><td class="good">KEEP</td><td>Compact tile, count + last-callsigns</td></tr>
+    <tr><td>Conditions (weather + aircraft + seismic)</td><td class="bad">SPLIT</td><td>Three unrelated signals merged into one card. Break into separate tiles OR collapse to single "Operating environment: calm" boolean</td></tr>
+    <tr><td>Weather</td><td>FOLD INTO CONDITIONS BOOLEAN</td><td>Only surface when rough = true</td></tr>
+    <tr><td>Seismic</td><td>FOLD INTO CONDITIONS BOOLEAN</td><td>Only surface when mag &gt; 4.5</td></tr>
+    <tr><td>Historical comparison</td><td>COLLAPSE</td><td>Move to "Reference" section, collapsed by default</td></tr>
+    <tr><td>UNCTAD scenarios</td><td>COLLAPSE</td><td>Same — reference data, not daily-use</td></tr>
+    <tr><td>LNG context</td><td>MOVE TO METHODOLOGY</td><td>Static reference belongs on /methodology, not the live dashboard</td></tr>
+    <tr><td>Fertilizer context</td><td>MOVE TO METHODOLOGY</td><td>Same</td></tr>
+    <tr><td>CAPE reroute</td><td>MOVE TO METHODOLOGY</td><td>Same</td></tr>
+    <tr><td>EIA stocks / OPEC production</td><td class="good">KEEP</td><td>Group under "Markets" section</td></tr>
+    <tr><td>Tanker stocks (FRO/INSW/etc)</td><td>COLLAPSE OR MOVE</td><td>Equity sentiment is secondary — move to "Reference" or hide behind toggle</td></tr>
+    <tr><td>GDELT tone</td><td>FOLD INTO NEWS</td><td>Should be inside the redesigned news tile</td></tr>
+    <tr><td>Mobile-tabs nav</td><td class="good">KEEP</td><td>Working as designed</td></tr>
+    <tr><td>Cargo ticker</td><td class="good">PROMOTE</td><td>Header → chip directly under hero verdict</td></tr>
+    <tr><td>Map</td><td class="good">SHRINK</td><td>See §7 below</td></tr>
+    <tr><td>Left panel vessel log</td><td class="good">KEEP</td><td>Important for "what's transiting now" curiosity</td></tr>
+    <tr><td>Health bar (data freshness)</td><td class="good">KEEP</td><td>Compress; move to footer</td></tr>
+    <tr><td>Cross-signal verdict list</td><td>REDESIGN</td><td>Make it visually distinct — it's the synthesis tile</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>Net:</strong> 30 tiles → 12 active cards in the right panel + 4 reference items collapsed by default. ~60% reduction in surface area. Same data accessible, but with a clear scan-path.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 6 — Data presentation audit                                       -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2><span class="num">§6</span> Data presentation — brutal</h2>
+
+<div class="issue">
+  <div class="issue-head"><span class="pill p1">P1</span><span class="issue-title">Verdict shows a level + list of stage-1 inputs, but no SCORE TREND</span></div>
+  <p class="issue-desc">"ELEVATED · score 1.18" tells me the current level. It doesn't tell me whether we're trending into HIGH or back toward NORMAL.</p>
+  <div class="issue-fix">Fix: add a 24h sparkline of the score itself in the hero. Trajectory > snapshot.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head"><span class="pill p1">P1</span><span class="issue-title">Brent + WTI in two tiles tell one story</span></div>
+  <p class="issue-desc">Both are "crude oil." Their spread IS the story. One tile, two prices stacked, spread as the third line.</p>
+  <div class="issue-fix">Fix: <span class="kbd">Crude oil</span> card. Brent line + WTI line + spread chip. Single sparkline showing both.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head"><span class="pill p1">P1</span><span class="issue-title">Currency tile shows spread % but no trajectory</span></div>
+  <p class="issue-desc">"IRR spread 62%" is meaningless without history. "Trending tighter from 71% three weeks ago" tells the actual story.</p>
+  <div class="issue-fix">Fix: 4-week spread trajectory chart inside the currency tile. Same Option-A treatment as Brent.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head"><span class="pill p1">P1</span><span class="issue-title">News tile is a raw headline list</span></div>
+  <p class="issue-desc">No tone, no clustering, no "the system thinks these matter." Just chronological dump.</p>
+  <div class="issue-fix">Fix: <span class="kbd">News pulse</span> card with three rows — (1) GDELT tone gauge + 24h article count delta, (2) top 3 headlines tagged by category (Iran / OPEC / Vessel incident / Sanctions), (3) "see all" expand.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head"><span class="pill p1">P1</span><span class="issue-title">xv-list (cross-signal) buried with same visual weight as single-metric tiles</span></div>
+  <p class="issue-desc">This is the only synthesis tile. It tells the reader what combinations of signals are saying. Currently it looks like just another card.</p>
+  <div class="issue-fix">Fix: distinct visual treatment — full-width strip, "synthesis" or "cross-check" badge, possibly a small radar/scoreboard graphic.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head"><span class="pill p2">P2</span><span class="issue-title">No global "as of" timestamp</span></div>
+  <p class="issue-desc">Each tile has its own age. Reader doesn't know overall dashboard freshness at a glance.</p>
+  <div class="issue-fix">Fix: subtle "as of 2026-05-22 07:55 UTC · live" pill in the header, color-coded green if all sources &lt;15m old, amber otherwise.</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 7 — Layout: sidebar vs map                                         -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2><span class="num">§7</span> Layout — should we increase rpanel and shrink map?</h2>
+<p class="lead">Your question. Devil's-advocate answer: <strong>not yet</strong>. Three options:</p>
+
+<div class="option">
+  <div class="option-head"><span class="option-name">Option A — keep current widths, fix hierarchy first</span><span class="option-rec">RECOMMENDED FIRST</span></div>
+  <p class="issue-desc">Map ~60% / rpanel 360px. Don't change anything spatially. Apply §3-6 first (hierarchy, hero, consolidate, group). Re-measure cognitive load. If still bad, then resize.</p>
+  <p style="font-size:12px;color:var(--muted);margin-top:6px"><strong>Why:</strong> if the problem is "too many tiles," giving them more space doesn't fix the noise — it just gives the noise more room.</p>
+</div>
+
+<div class="option">
+  <div class="option-head"><span class="option-name">Option B — rpanel 360 → 480, map shrinks to ~50%</span><span class="option-rec" style="color:var(--blue)">SAFE MIDDLE</span></div>
+  <p class="issue-desc">More room for the redesigned cards. Brent + Currency + BDTI trend charts get full width. Hero verdict spans more comfortably.</p>
+  <p style="font-size:12px;color:var(--muted);margin-top:6px"><strong>Tradeoff:</strong> map becomes secondary visually. Still usable but no longer dominant.</p>
+</div>
+
+<div class="option">
+  <div class="option-head"><span class="option-name">Option C — map collapses to top header strip (240-300px tall), rpanel takes 70%+</span><span class="option-rec" style="color:var(--purple)">ANALYTICS-FIRST</span></div>
+  <p class="issue-desc">Map becomes a slim geographic reference strip above the analytics. Vessels still visible as dots, but the "answer the verdict question" becomes the dominant surface.</p>
+  <p style="font-size:12px;color:var(--muted);margin-top:6px"><strong>Tradeoff:</strong> users who came for the map are now scrolling for it. Risk of breaking the geographic-anchor identity.</p>
+</div>
+
+<div class="callout-amber">
+  <h3>My recommendation</h3>
+  <p style="font-size:13px;line-height:1.7">
+    <strong>Ship Option A first</strong> (no layout change), then run a 5-user test of the redesign. If users still complain about cognitive load AFTER hierarchy + consolidation, ship Option B. Consider Option C only if research shows the map is <em>not</em> a primary navigational anchor (likely — most users don't pan the map; they just want to see "is anything moving").
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 8 — Color & semantic audit                                         -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2><span class="num">§8</span> Color &amp; semantic audit</h2>
+
+<p class="lead">Two simultaneous color-coding systems compete:</p>
+<table>
+  <thead><tr><th>System</th><th>Maps to</th><th>Where used</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill" style="background:rgba(44,206,129,.15);color:var(--green)">Green</span> / <span class="pill" style="background:rgba(240,144,20,.15);color:var(--amber)">Amber</span> / <span class="pill" style="background:rgba(255,62,82,.15);color:var(--red)">Red</span></td><td>Verdict severity</td><td>Verdict tile · cross-signal · health bar</td></tr>
+    <tr><td><span class="pill" style="background:rgba(44,206,129,.15);color:var(--green)">Green</span> / <span class="pill" style="background:rgba(255,62,82,.15);color:var(--red)">Red</span></td><td>Price delta direction</td><td>Brent change · BDTI change · WTI change</td></tr>
+  </tbody>
+</table>
+
+<div class="issue-brutal">
+  Green ↑ in a price tile means "price went up" (which could be bullish or bearish depending on context). Green ↑ in the verdict tile means "all clear, NORMAL." Two opposite meanings, same color. Trader has to read each tile twice to figure out what green means here.
+</div>
+
+<div class="issue-fix">
+  <strong>Fix:</strong> reserve red/amber/green for VERDICT severity only. Use a different palette for price deltas (e.g., blue ↑ / orange ↓ — directional but not semantic). Or drop color from price deltas entirely; rely on ▲ / ▼ arrows + bold numbers.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 9 — Mobile-specific findings                                      -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2><span class="num">§9</span> Mobile — additional brutal findings</h2>
+<p class="lead">Mobile audit is structurally clean (we shipped 6 passes recently), but the cognitive-load problem amplifies:</p>
+
+<ul class="findings">
+  <li><span class="pill p1">P1</span> &nbsp; Bottom-tab nav fragments the data across 3 surfaces (Map / Ships / Intel). User loses context switching tabs.</li>
+  <li><span class="pill p1">P1</span> &nbsp; Default landing is Map tab. For "what's happening?" task, Intel should be default. Map is exploration.</li>
+  <li><span class="pill p1">P1</span> &nbsp; Intel tab = a single long scroll of 20+ cards. Same hierarchy problem amplified on a tiny screen.</li>
+  <li><span class="pill p2">P2</span> &nbsp; Signal-bar swipe is now discoverable (fade-mask shipped) but users still see only 2 tiles at a time. Stack vertically on mobile?</li>
+</ul>
+
+<div class="issue-fix">
+  <strong>Fix:</strong> default to Intel tab on mobile. Apply the same §3 section grouping to the Intel scroll (sticky H2 sub-nav at the top). Consider replacing horizontal swipe-bar with a vertical "key signals" header (Brent · BDTI · Verdict in 3 stacked rows above the rest).
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 10 — If you only do 3 things                                       -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2><span class="num">§10</span> If you only do 3 things, do these</h2>
+
+<ol style="margin-left:24px;font-size:14px;line-height:1.9">
+  <li><strong>Verdict-as-hero (§4)</strong> — biggest immediate cognitive-load relief. Pulls the 5-second answer out of the rpanel and puts it above the fold with a 1-sentence "what changed" summary. ROI: 10x.</li>
+  <li><strong>H2 section grouping in rpanel (§3)</strong> — turn the 20-card flat scroll into 4 grouped sections (Markets · Strait activity · Geopolitics · Conditions). User can scan section headers in 3 seconds, drill into a section in another 5. ROI: 5x.</li>
+  <li><strong>Card consolidation per §5</strong> — merge Brent+WTI, fold weather/seismic/aircraft into a single "operating environment" boolean, move LNG/fertilizer/CAPE to /methodology. ROI: 3x.</li>
+</ol>
+
+<p style="margin-top:20px;color:var(--muted);font-size:13px">Sidebar resize (§7) explicitly DEFERRED — fix hierarchy first, then re-evaluate.</p>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- APPROVAL                                                                  -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="approve">
+  <h3>Awaiting your approval — no code changes yet</h3>
+  <p style="font-size:13px;margin-bottom:14px">Tell me which to ship (or all). Each is independent; can be ordered.</p>
+  <ul>
+    <li><strong>§3 — Heading hierarchy + section grouping in rpanel</strong>: <span class="kbd">yes</span> / <span class="kbd">no</span></li>
+    <li><strong>§4 — Verdict-as-hero above the fold</strong>: <span class="kbd">yes</span> / <span class="kbd">no</span></li>
+    <li><strong>§5 — Card consolidation 30→12</strong> (use the table as the contract, can edit before ship): <span class="kbd">yes</span> / <span class="kbd">no</span> / <span class="kbd">partial</span></li>
+    <li><strong>§6 — Data presentation fixes</strong> (score trend, Crude merge, currency trajectory, news pulse, xv-list redesign): <span class="kbd">yes</span> / <span class="kbd">no</span> / <span class="kbd">subset</span></li>
+    <li><strong>§7 — Layout</strong>: <span class="kbd">A</span> (keep widths) / <span class="kbd">B</span> (rpanel 480) / <span class="kbd">C</span> (analytics-first)</li>
+    <li><strong>§8 — Color semantic cleanup</strong>: <span class="kbd">yes</span> / <span class="kbd">no</span></li>
+    <li><strong>§9 — Mobile-specific</strong>: <span class="kbd">yes</span> / <span class="kbd">no</span></li>
+    <li><strong>Type scale consolidation (§2)</strong>: <span class="kbd">yes</span> / <span class="kbd">no</span></li>
+  </ul>
+  <p style="font-size:12px;color:var(--muted);margin-top:16px">
+    Each gets shipped with a self-test pass (the same Playwright harness I used for the Brent trend + mobile audit) so we know it passes before you see it live.
+  </p>
+</div>
+
+<p style="margin-top:40px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);letter-spacing:.06em">
+  audit captured 2026-05-22 · no code changed · awaiting approval before touching index.html
+</p>
+
+</div>
+</body>
+</html>
