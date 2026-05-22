@@ -1,9 +1,8 @@
 name: currency-scraper
 
 on:
-  schedule:
-    # Hourly — FX moves slow, no need to thrash sources
-    - cron: "0 * * * *"
+  # 2026-05-22: native cron disabled — /api/admin/refresh pinger fanout
+  # (every 30 min) is now the sole driver.
   workflow_dispatch:
 
 permissions:

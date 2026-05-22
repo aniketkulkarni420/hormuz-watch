@@ -1,9 +1,9 @@
 name: aircraft-scraper
 
 on:
-  schedule:
-    # Every 15 min = 96/day, well under OpenSky anonymous tier 100/day
-    - cron: "4,19,34,49 * * * *"
+  # 2026-05-22: native cron disabled — /api/admin/refresh pinger fanout
+  # (every 30 min) is now the sole driver. Cuts KV writes against the
+  # 1000/day free-tier limit.
   workflow_dispatch:
 
 permissions:

@@ -46,10 +46,13 @@ const DEFAULT_WORKFLOWS = [
   "oil-scraper.yml",        // EIA daily refs + OPEC + tanker stocks (slower, daily-cadence data)
 ];
 
-// 60s minimum between successful fanouts. GitHub's free-tier workflow
-// concurrency is 20 — even if every scraper takes 90s, two fanouts a
-// minute keeps us comfortably under the cap.
-const RATE_LIMIT_SECONDS = 60;
+// 2026-05-22: bumped 60s → 1800s (30 min) to cut KV write volume.
+// Pre-bump: pinger fired every 10 min × 11 workflows × ~2.3 writes ≈ 3,600
+// writes/day from this fanout alone — 3.6× the CF Workers KV free-tier
+// daily limit of 1,000 writes. Server-side enforcement means cron-job.org
+// can keep its 10-min cadence (1 of every 3 calls succeeds), no need to
+// reconfigure the external pinger.
+const RATE_LIMIT_SECONDS = 1800;
 
 async function handle({ request, env }) {
   const t0 = Date.now();
@@ -97,7 +100,7 @@ async function handle({ request, env }) {
   if (env.OIL_KV) {
     try {
       await env.OIL_KV.put("refresh_lock", String(Date.now()),
-                           { expirationTtl: 90 });
+                           { expirationTtl: RATE_LIMIT_SECONDS + 60 });
     } catch { /* not fatal */ }
   }
 
