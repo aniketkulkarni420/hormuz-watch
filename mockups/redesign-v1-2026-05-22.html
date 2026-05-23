@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hormuz Watch — proposed redesign · 2026-05-22</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* Surface */
+  --bg:#07090e; --panel:#0c1119; --panel2:#11161f;
+  --border:#1a2230; --border2:#222d3f;
+  /* Text */
+  --text:#cdd8e8; --muted:#8099b3; --muted2:#627a95;
+  /* Verdict severity (RESERVED — never used for price deltas) */
+  --normal:#2cce81; --elevated:#f09014; --high:#ff8a3c; --critical:#ff3e52;
+  /* Price delta (directional, not semantic) */
+  --up:#4aa0f0; --down:#ff8a3c;
+  /* Accent / informational */
+  --amber:#f09014; --blue:#4aa0f0; --teal:#5fd0c5; --purple:#b47aff;
+  /* Type scale (6 tiers) */
+  --t-h1:28px; --t-h2:13px; --t-h3:14px; --t-body:13.5px; --t-small:11.5px; --t-mono:10px;
+  /* Spacing scale (8px base) */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'Manrope',-apple-system,system-ui,sans-serif;
+  font-size:var(--t-body); line-height:1.55;
+  -webkit-font-smoothing:antialiased; min-height:100vh;
+}
+.tabular{font-variant-numeric:tabular-nums}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+
+/* ── Top banner: prototype warning ── */
+.proto-banner{
+  background:linear-gradient(90deg, rgba(240,144,20,.18), rgba(240,144,20,.08));
+  border-bottom:1px solid rgba(240,144,20,.35);
+  padding:8px 24px; display:flex; align-items:center; justify-content:space-between;
+  font-family:'JetBrains Mono',monospace; font-size:11px;
+  color:var(--amber); letter-spacing:.04em;
+}
+.proto-banner a{color:var(--blue); text-decoration:none; font-weight:700}
+.proto-banner a:hover{text-decoration:underline}
+
+/* ── Layout container ── */
+.shell{max-width:1440px; margin:0 auto; padding:0 24px 48px}
+
+/* ── Header ── */
+header{
+  display:flex; align-items:center; gap:var(--s5); padding:var(--s5) 0 var(--s3);
+  border-bottom:1px solid var(--border);
+}
+header .h1-wrap{flex:1 1 auto; min-width:0}
+header h1{
+  font-size:var(--t-h1); font-weight:800; letter-spacing:-0.015em;
+  color:var(--text); line-height:1.1;
+}
+header .h1-sub{
+  font-size:var(--t-small); color:var(--muted); margin-top:3px;
+  letter-spacing:.01em;
+}
+header .as-of{
+  font-family:'JetBrains Mono',monospace; font-size:var(--t-mono);
+  color:var(--muted); letter-spacing:.06em; text-transform:uppercase;
+  padding:6px 10px; border:1px solid var(--border); border-radius:4px;
+  display:flex; align-items:center; gap:6px;
+}
+header .as-of .dot{
+  width:6px; height:6px; border-radius:50%; background:var(--normal);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+header .cargo-chip{
+  font-family:'JetBrains Mono',monospace; font-size:var(--t-small);
+  color:var(--text); padding:7px 12px;
+  background:rgba(240,144,20,.08); border:1px solid rgba(240,144,20,.3);
+  border-radius:4px; display:flex; align-items:baseline; gap:8px;
+  font-variant-numeric:tabular-nums;
+}
+header .cargo-chip .lbl{color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.08em}
+header .cargo-chip .val{color:var(--amber); font-weight:700; font-size:13px}
+
+/* ── Hero verdict ── */
+.hero{
+  margin:var(--s5) 0 var(--s4);
+  padding:var(--s5) var(--s6);
+  background:linear-gradient(180deg, rgba(240,144,20,0.07) 0%, rgba(240,144,20,0.02) 60%, transparent);
+  border:1px solid rgba(240,144,20,.28);
+  border-radius:10px;
+  display:grid; grid-template-columns:1fr auto; gap:var(--s5);
+}
+.hero-tag{
+  font-family:'JetBrains Mono',monospace; font-size:var(--t-mono);
+  color:var(--muted); text-transform:uppercase; letter-spacing:.08em;
+  margin-bottom:var(--s2);
+}
+.hero-verdict{
+  font-size:40px; font-weight:800; letter-spacing:-0.02em; line-height:1;
+  margin-bottom:var(--s2);
+}
+.hero-verdict.normal{color:var(--normal)}
+.hero-verdict.elevated{color:var(--elevated)}
+.hero-verdict.high{color:var(--high)}
+.hero-verdict.critical{color:var(--critical)}
+.hero-score{
+  font-family:'JetBrains Mono',monospace; font-size:var(--t-small);
+  color:var(--muted); margin-bottom:var(--s3); font-variant-numeric:tabular-nums;
+}
+.hero-summary{
+  font-size:14.5px; color:var(--text); line-height:1.65;
+  max-width:720px; margin-bottom:var(--s4);
+}
+.hero-drivers{display:flex; gap:var(--s4); flex-wrap:wrap}
+.driver{
+  padding:8px 12px; background:var(--panel2); border:1px solid var(--border);
+  border-radius:4px; font-size:var(--t-small); color:var(--muted);
+  font-variant-numeric:tabular-nums; display:flex; align-items:baseline; gap:6px;
+}
+.driver .ar{font-weight:700}
+.driver .ar.up{color:var(--up)} .driver .ar.down{color:var(--down)}
+.driver .ar.bad{color:var(--critical)}
+.driver strong{color:var(--text); font-weight:600; font-family:'JetBrains Mono',monospace; font-size:12.5px}
+
+/* Hero sparkline */
+.hero-spark{
+  width:200px; align-self:start;
+  font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--muted);
+  text-align:right;
+}
+.hero-spark .lbl{margin-bottom:6px; letter-spacing:.06em; text-transform:uppercase}
+
+/* ── Map strip (compact — analytics-first option C lite) ── */
+.map-strip{
+  height:220px; background:linear-gradient(135deg, #0b1626 0%, #0a1320 100%);
+  border:1px solid var(--border); border-radius:8px;
+  margin-bottom:var(--s5); position:relative; overflow:hidden;
+}
+.map-strip-placeholder{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:var(--muted2); font-family:'JetBrains Mono',monospace; font-size:11px;
+  letter-spacing:.06em; text-transform:uppercase;
+}
+.map-strip-overlay{
+  position:absolute; top:12px; left:12px;
+  background:rgba(7,9,14,.85); backdrop-filter:blur(6px);
+  border:1px solid var(--border); border-radius:4px;
+  padding:8px 12px; font-size:var(--t-small);
+  display:flex; gap:14px; align-items:baseline;
+}
+.map-strip-overlay .lbl{color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:.06em}
+.map-strip-overlay .v{font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--text); font-variant-numeric:tabular-nums}
+
+/* ── Section ── */
+section{margin-top:var(--s6); margin-bottom:var(--s4)}
+h2.section{
+  font-size:var(--t-h2); font-weight:700; color:var(--text);
+  text-transform:uppercase; letter-spacing:.1em;
+  padding-bottom:8px; border-bottom:1px solid var(--border2);
+  margin-bottom:var(--s3); display:flex; align-items:baseline; justify-content:space-between;
+}
+h2.section .count{
+  font-family:'JetBrains Mono',monospace; font-size:10px;
+  color:var(--muted); font-weight:500; letter-spacing:.04em;
+}
+
+/* ── Card grid ── */
+.cards{display:grid; gap:var(--s3)}
+.cards.cols-2{grid-template-columns:1fr 1fr}
+.cards.cols-3{grid-template-columns:1fr 1fr 1fr}
+.cards.cols-12{grid-template-columns:1fr 1fr; grid-auto-rows:auto}
+.cards .card-wide{grid-column:1 / -1}
+@media(max-width:780px){
+  .cards.cols-2, .cards.cols-3, .cards.cols-12{grid-template-columns:1fr}
+}
+
+/* ── Card chrome ── */
+.card{
+  background:var(--panel); border:1px solid var(--border); border-radius:8px;
+  padding:var(--s4); position:relative;
+}
+.card-head{
+  display:flex; align-items:baseline; justify-content:space-between;
+  margin-bottom:var(--s3);
+}
+.card-title{font-size:var(--t-h3); font-weight:600; color:var(--text); letter-spacing:-0.005em}
+.card-tag{
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:var(--muted); text-transform:uppercase; letter-spacing:.06em;
+  padding:2px 7px; border:1px solid var(--border); border-radius:3px;
+}
+.card-tag.live{color:var(--normal); border-color:rgba(44,206,129,.3); background:rgba(44,206,129,.06)}
+.card-tag.stale{color:var(--elevated); border-color:rgba(240,144,20,.3); background:rgba(240,144,20,.06)}
+.card-tag.dormant{color:var(--muted); border-color:var(--border)}
+
+.card-price{
+  font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700;
+  color:var(--text); letter-spacing:-0.01em; font-variant-numeric:tabular-nums;
+  line-height:1.1; margin-bottom:4px;
+}
+.card-delta{
+  font-family:'JetBrains Mono',monospace; font-size:var(--t-small);
+  color:var(--muted); font-variant-numeric:tabular-nums; margin-bottom:var(--s3);
+}
+.card-delta .ar{font-weight:700}
+.card-delta .ar.up{color:var(--up)} .card-delta .ar.down{color:var(--down)}
+
+/* Crude card — combined Brent + WTI */
+.crude-stack{display:flex; gap:var(--s4); align-items:baseline; margin-bottom:var(--s2)}
+.crude-side{display:flex; flex-direction:column; gap:2px}
+.crude-side .lbl{font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em}
+.crude-side .val{font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1}
+.crude-side .val.brent{color:var(--amber)}
+.crude-side .val.wti{color:var(--blue)}
+.crude-spread{
+  font-family:'JetBrains Mono',monospace; font-size:var(--t-small); color:var(--muted);
+  padding-left:var(--s3); border-left:1px solid var(--border);
+  font-variant-numeric:tabular-nums; align-self:center;
+}
+.crude-spread strong{color:var(--text); font-weight:700; font-size:13px}
+
+/* Sparkline */
+.spark{height:50px; margin-top:var(--s2)}
+.spark svg{width:100%; height:100%; display:block}
+
+/* News pulse */
+.news-pulse{display:flex; gap:var(--s4); align-items:baseline; padding:var(--s2) 0 var(--s3); border-bottom:1px solid var(--border)}
+.news-tone-gauge{flex:1; height:8px; background:var(--panel2); border-radius:4px; overflow:hidden; position:relative}
+.news-tone-bar{height:100%; background:linear-gradient(90deg, var(--normal), var(--elevated), var(--critical))}
+.news-pulse .stat{font-family:'JetBrains Mono',monospace; font-size:var(--t-small); font-variant-numeric:tabular-nums; color:var(--muted)}
+.news-pulse .stat strong{color:var(--text); font-weight:700; font-size:13px}
+.news-list{margin-top:var(--s2)}
+.news-item{padding:6px 0; font-size:12.5px; color:var(--text); border-bottom:1px dashed var(--border)}
+.news-item:last-child{border-bottom:none}
+.news-item .src{font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--muted); margin-right:6px}
+.news-item .cat{font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--blue); text-transform:uppercase; letter-spacing:.04em; margin-left:6px}
+
+/* xv-list synthesis — visually distinct */
+.synthesis{
+  background:linear-gradient(180deg, rgba(74,160,240,.05), transparent);
+  border:1px solid rgba(74,160,240,.3); border-radius:8px;
+  padding:var(--s4) var(--s5); margin-top:var(--s4);
+}
+.synthesis-head{display:flex; align-items:baseline; gap:var(--s3); margin-bottom:var(--s3)}
+.synthesis-head .badge{font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--blue); background:rgba(74,160,240,.12); border:1px solid rgba(74,160,240,.3); padding:3px 8px; border-radius:3px; text-transform:uppercase; letter-spacing:.06em}
+.synthesis-head h3{font-size:var(--t-h3); font-weight:600}
+.synthesis-rows{display:grid; gap:var(--s2)}
+.synthesis-row{
+  display:grid; grid-template-columns:160px auto 1fr; gap:var(--s3);
+  padding:8px 0; border-bottom:1px solid rgba(74,160,240,.08); align-items:baseline;
+}
+.synthesis-row:last-child{border-bottom:none}
+.synthesis-row .label{font-family:'JetBrains Mono',monospace; font-size:var(--t-small); color:var(--text); font-weight:600}
+.synthesis-row .pill{font-family:'JetBrains Mono',monospace; font-size:9px; padding:2px 7px; border-radius:3px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; width:fit-content}
+.synthesis-row .pill.normal{color:var(--normal); background:rgba(44,206,129,.1); border:1px solid rgba(44,206,129,.3)}
+.synthesis-row .pill.elevated{color:var(--elevated); background:rgba(240,144,20,.1); border:1px solid rgba(240,144,20,.3)}
+.synthesis-row .pill.high{color:var(--critical); background:rgba(255,62,82,.1); border:1px solid rgba(255,62,82,.3)}
+.synthesis-row .pill.dim{color:var(--muted); background:var(--panel2); border:1px solid var(--border)}
+.synthesis-row .body{font-size:12.5px; color:var(--muted)}
+
+/* India 3-layer (compliance pattern preserved) */
+.india-layers{display:grid; gap:var(--s2); margin-top:var(--s2)}
+.india-layer{padding:8px 12px; background:var(--panel2); border-radius:4px; border:1px solid var(--border); display:flex; gap:var(--s2); align-items:baseline}
+.india-layer .tag{font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:1.5px 6px; border-radius:3px}
+.india-layer .tag.data{color:var(--blue); background:rgba(74,160,240,.12); border:1px solid rgba(74,160,240,.3)}
+.india-layer .tag.interp{color:var(--amber); background:rgba(240,144,20,.12); border:1px solid rgba(240,144,20,.3)}
+.india-layer .tag.notice{color:var(--muted); background:rgba(128,153,179,.12); border:1px solid rgba(128,153,179,.3)}
+.india-layer .body{font-size:12.5px; color:var(--text); flex:1}
+
+/* Collapsed reference section */
+.collapsed-ref{
+  background:var(--panel); border:1px solid var(--border); border-radius:8px;
+  padding:var(--s3) var(--s4); margin-top:var(--s4); cursor:pointer;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.collapsed-ref .ttl{font-family:'JetBrains Mono',monospace; font-size:var(--t-mono); color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
+.collapsed-ref .more{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--blue)}
+
+/* OFAC timeline */
+.ofac-list{display:grid; gap:6px; margin-top:var(--s2)}
+.ofac-item{display:grid; grid-template-columns:84px 1fr; gap:var(--s3); padding:6px 0; border-bottom:1px dashed var(--border); font-size:12.5px}
+.ofac-item:last-child{border-bottom:none}
+.ofac-item .date{font-family:'JetBrains Mono',monospace; font-size:var(--t-small); color:var(--muted); font-variant-numeric:tabular-nums}
+.ofac-item .body{color:var(--text)}
+
+/* Conditions boolean tile */
+.cond-tile{
+  display:flex; gap:var(--s3); align-items:center; padding:14px 16px;
+  background:rgba(44,206,129,.06); border:1px solid rgba(44,206,129,.25);
+  border-radius:6px; font-size:13px;
+}
+.cond-tile.warn{background:rgba(240,144,20,.06); border-color:rgba(240,144,20,.25)}
+.cond-tile.bad{background:rgba(255,62,82,.06); border-color:rgba(255,62,82,.25)}
+.cond-tile .dot{width:10px; height:10px; border-radius:50%; flex:0 0 auto}
+.cond-tile.calm .dot{background:var(--normal)}
+.cond-tile.warn .dot{background:var(--elevated)}
+.cond-tile.bad .dot{background:var(--critical)}
+.cond-tile .text{flex:1; color:var(--text)}
+.cond-tile .meta{font-family:'JetBrains Mono',monospace; font-size:var(--t-mono); color:var(--muted)}
+
+/* Footer disclaimer */
+.foot{margin-top:var(--s7); padding:var(--s4); border-top:1px solid var(--border); font-family:'JetBrains Mono',monospace; font-size:var(--t-mono); color:var(--muted2); letter-spacing:.04em; text-align:center}
+.foot a{color:var(--blue); text-decoration:none}
+.foot .sebi{margin-top:6px; color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- Top banner — prototype                                                    -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="proto-banner">
+  <span>⚠ PROTOTYPE — proposed redesign · not yet shipped · live data via /api/*</span>
+  <span><a href="https://hormuz-watch-2.pages.dev/" target="_blank">compare to current ↗</a></span>
+</div>
+
+<div class="shell">
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- HEADER                                                                    -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<header>
+  <div class="h1-wrap">
+    <h1>Hormuz Watch</h1>
+    <div class="h1-sub">Real-time intelligence — Strait of Hormuz crisis tracker</div>
+  </div>
+  <div class="cargo-chip">
+    <span class="lbl">Oil transited today</span>
+    <span class="val" id="cargoVal">$0.00B</span>
+  </div>
+  <div class="as-of">
+    <span class="dot" id="freshDot"></span>
+    <span id="asOf">— UTC</span>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- HERO — verdict above the fold                                              -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="hero-main">
+    <div class="hero-tag">Current verdict · score updated <span id="verdictAge">—</span></div>
+    <div class="hero-verdict elevated" id="verdictName">—</div>
+    <div class="hero-score" id="verdictScore">structural score —</div>
+    <div class="hero-summary" id="verdictSummary">Loading current situation summary…</div>
+    <div class="hero-drivers" id="verdictDrivers">
+      <!-- populated by JS -->
+    </div>
+  </div>
+  <div class="hero-spark">
+    <div class="lbl">24 h score trajectory</div>
+    <svg id="scoreSpark" viewBox="0 0 200 50" preserveAspectRatio="none" style="height:50px">
+      <!-- populated by JS -->
+    </svg>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- MAP STRIP                                                                  -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="map-strip">
+  <div class="map-strip-placeholder">[ Map · Strait of Hormuz · 220 px strip — Leaflet renders here ]</div>
+  <div class="map-strip-overlay">
+    <span><span class="lbl">vessels</span> <span class="v" id="mapVessels">—</span></span>
+    <span><span class="lbl">dark</span> <span class="v" id="mapDark">—</span></span>
+    <span><span class="lbl">military</span> <span class="v" id="mapMilitary">—</span></span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 1 — MARKETS                                                        -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2 class="section"><span>Markets</span><span class="count">3 signals</span></h2>
+  <div class="cards cols-12">
+
+    <div class="card card-wide">
+      <div class="card-head">
+        <div class="card-title">Crude oil</div>
+        <span class="card-tag live" id="oilTag">LIVE · 1 m</span>
+      </div>
+      <div class="crude-stack">
+        <div class="crude-side">
+          <span class="lbl">Brent</span>
+          <span class="val brent" id="brentVal">$—</span>
+        </div>
+        <div class="crude-side">
+          <span class="lbl">WTI</span>
+          <span class="val wti" id="wtiVal">$—</span>
+        </div>
+        <div class="crude-spread">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">B-W spread</div>
+          <strong id="spreadVal">$—</strong>
+        </div>
+      </div>
+      <div class="card-delta">
+        <span class="ar up" id="brentDelta">▲ +0.00%</span> DoD · 4-week range $— to $—
+      </div>
+      <div class="spark">
+        <svg id="crudeSpark" viewBox="0 0 600 50" preserveAspectRatio="none"></svg>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">BDTI · freight rates</div>
+        <span class="card-tag live" id="bdtiTag">LIVE · daily</span>
+      </div>
+      <div class="card-price tabular" id="bdtiVal">—</div>
+      <div class="card-delta">
+        <span class="ar down" id="bdtiDelta">▼ —% WoW</span> · last publish <span id="bdtiAsOf">—</span>
+      </div>
+      <div class="spark">
+        <svg id="bdtiSpark" viewBox="0 0 280 50" preserveAspectRatio="none"></svg>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">OPEC production</div>
+        <span class="card-tag" id="opecTag">EIA STEO · monthly</span>
+      </div>
+      <div class="card-price tabular" id="opecVal">— <span style="font-size:13px;color:var(--muted);font-weight:400">mbpd</span></div>
+      <div class="card-delta">
+        OPEC-9 quota · target ~21 · <span id="opecDelta">—</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 2 — STRAIT ACTIVITY                                                -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2 class="section"><span>Strait activity</span><span class="count">3 signals</span></h2>
+  <div class="cards cols-3">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Vessel movement</div>
+        <span class="card-tag" id="vesselTag">WEB SCRAPE</span>
+      </div>
+      <div class="card-price tabular" id="vesselVal">—</div>
+      <div class="card-delta">
+        vessels at 5 Persian Gulf ports · baseline <strong style="color:var(--text)">140</strong>
+      </div>
+      <div style="margin-top:var(--s2); font-size:11px; color:var(--muted)">
+        <span id="vesselBreak">— transit · — anchored · — approach</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Dark vessels</div>
+        <span class="card-tag" id="darkTag">SATELLITE · 4 h</span>
+      </div>
+      <div class="card-price tabular" id="darkVal">—</div>
+      <div class="card-delta">
+        encounters + loitering · GFW satellite · 30-day window
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">OFAC enforcement</div>
+        <span class="card-tag" id="ofacTag">— actions / 30 d</span>
+      </div>
+      <div class="ofac-list" id="ofacList">
+        <div class="ofac-item"><span class="date">—</span><span class="body">Loading…</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 3 — SYNTHESIS (cross-signal)                                       -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="synthesis">
+  <div class="synthesis-head">
+    <span class="badge">⚡ Synthesis</span>
+    <h3>Cross-signal verdict — what the data agrees on</h3>
+  </div>
+  <div class="synthesis-rows">
+    <div class="synthesis-row">
+      <span class="label">Flow vs baseline</span>
+      <span class="pill normal">NORMAL</span>
+      <span class="body">Vessel scrape 143 vs 30-day baseline 140 — within ±5%</span>
+    </div>
+    <div class="synthesis-row">
+      <span class="label">Rate-volume divergence</span>
+      <span class="pill elevated">WATCH</span>
+      <span class="body">Oil $105 stable but BDTI -6.3% WoW → tanker market not pricing supply scare</span>
+    </div>
+    <div class="synthesis-row">
+      <span class="label">Enforcement posture</span>
+      <span class="pill elevated">WATCH</span>
+      <span class="body">3 OFAC Iran actions in 30 d · enforcement tightening (vs 1 baseline)</span>
+    </div>
+    <div class="synthesis-row">
+      <span class="label">Domestic Iran stress</span>
+      <span class="pill elevated">WATCH</span>
+      <span class="body">IRR parallel spread 62% — wide, persistent</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 4 — GEOPOLITICS & MACRO                                            -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2 class="section"><span>Geopolitics &amp; macro</span><span class="count">3 signals</span></h2>
+  <div class="cards cols-12">
+
+    <div class="card card-wide">
+      <div class="card-head">
+        <div class="card-title">News pulse · 24 h</div>
+        <span class="card-tag" id="newsTag">— articles · — % neg tone</span>
+      </div>
+      <div class="news-pulse">
+        <div class="stat"><strong id="newsCount">—</strong> articles</div>
+        <div class="news-tone-gauge"><div class="news-tone-bar" id="newsToneBar" style="width:0%"></div></div>
+        <div class="stat"><strong id="newsTone">—%</strong> negative</div>
+      </div>
+      <div class="news-list" id="newsList">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">IRR currency</div>
+        <span class="card-tag" id="irrTag">LIVE · — m</span>
+      </div>
+      <div class="card-price tabular" id="irrVal">—%</div>
+      <div class="card-delta">
+        official-vs-black-market spread · domestic stress
+      </div>
+      <div class="spark">
+        <svg id="irrSpark" viewBox="0 0 280 50" preserveAspectRatio="none"></svg>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">India exposure</div>
+        <span class="card-tag">3-layer · SEBI compliant</span>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin-bottom:var(--s2); padding:6px 10px; background:rgba(255,62,82,.04); border-left:2px solid var(--critical); border-radius:0 4px 4px 0">
+        Not investment advice — intelligence aggregator (SEBI RA INH000009843).
+      </div>
+      <div class="india-layers">
+        <div class="india-layer">
+          <span class="tag data">Data</span>
+          <span class="body">62% of India's crude imports flow through Hormuz</span>
+        </div>
+        <div class="india-layer">
+          <span class="tag interp">Interpretation</span>
+          <span class="body">Historical pattern: each $10/bbl crude rise ≈ ₹85K Cr import-bill impact</span>
+        </div>
+        <div class="india-layer">
+          <span class="tag notice">Note</span>
+          <span class="body">Structural exposure — not a daily-changing metric</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 5 — OPERATING CONDITIONS                                           -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2 class="section"><span>Operating conditions</span><span class="count">consolidated</span></h2>
+  <div class="cond-tile calm" id="condTile">
+    <span class="dot"></span>
+    <span class="text" id="condText">All operating conditions normal — calm sea, no military air buildup, no seismic activity.</span>
+    <span class="meta" id="condMeta">wind — kn · — mil aircraft · — eq 7d</span>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- Reference (collapsed)                                                      -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="collapsed-ref">
+  <span class="ttl">Reference &amp; methodology — historical comparison · UNCTAD scenarios · LNG / fertilizer / CAPE reroute</span>
+  <span class="more">expand ↓</span>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- Footer                                                                    -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="foot">
+  Intelligence aggregator · not investment advice · data may be delayed or unavailable
+  · <a href="/terms">terms</a> · <a href="/methodology">methodology</a> · <a href="/health">health</a>
+  <div class="sebi">© 2026 Aniket Kulkarni · SEBI Research Analyst INH000009843</div>
+</div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// Live data fetch + bind to redesigned layout
+// ═══════════════════════════════════════════════════
+const API = "https://hormuz-watch-2.pages.dev";
+
+async function fetchAll(){
+  const j = async (u) => (await fetch(API+u, {cache:"no-store"}).catch(()=>null))?.json().catch(()=>null);
+  const [snap, oil, oilHist, bdti, verdict, news, brief] = await Promise.all([
+    j("/api/snapshot"), j("/api/oil?_="+Date.now()),
+    j("/api/oil-history?range=1mo"), j("/api/bdti"),
+    j("/api/verdict"), j("/api/news?limit=4"), j("/api/brief"),
+  ]);
+  render({snap, oil, oilHist, bdti, verdict, news, brief});
+}
+
+function render({snap, oil, oilHist, bdti, verdict, news, brief}){
+  // ── Header ──
+  const now = new Date();
+  document.getElementById("asOf").textContent =
+    now.toISOString().slice(11,16) + " UTC · live";
+  const cargo = snap?.oil_transit_value_usd_per_day;
+  if (cargo) document.getElementById("cargoVal").textContent =
+    "$" + (cargo/1e9).toFixed(2) + "B";
+
+  // ── Hero verdict ──
+  const v = verdict?.verdict || "—";
+  const ve = document.getElementById("verdictName");
+  ve.textContent = v;
+  ve.className = "hero-verdict " + (
+    v === "CRITICAL" ? "critical" :
+    v === "HIGH" ? "high" :
+    v === "ELEVATED" ? "elevated" : "normal"
+  );
+  if (verdict?.structural_score != null) {
+    document.getElementById("verdictScore").textContent =
+      "structural score " + verdict.structural_score.toFixed(2);
+  }
+  document.getElementById("verdictAge").textContent = "now";
+
+  // Driver chips — pick the top 3 worsening signals
+  const drivers = [];
+  if (oil?.brent?.level) drivers.push({
+    arrow: "↑", cls: "up",
+    label: "Brent", val: "$" + oil.brent.level.toFixed(1)
+  });
+  if (bdti?.value && bdti?.wow_pct != null) drivers.push({
+    arrow: bdti.wow_pct < 0 ? "↓" : "↑",
+    cls: bdti.wow_pct < 0 ? "down" : "up",
+    label: "BDTI", val: bdti.wow_pct.toFixed(1) + "% WoW"
+  });
+  if (snap?.ofac_iran_actions_30d != null) drivers.push({
+    arrow: "↑", cls: "bad",
+    label: "OFAC", val: snap.ofac_iran_actions_30d + " / 30d"
+  });
+  if (snap?.irr_spread_pct != null) drivers.push({
+    arrow: "↑", cls: "bad",
+    label: "IRR spread", val: snap.irr_spread_pct.toFixed(1) + "%"
+  });
+  document.getElementById("verdictDrivers").innerHTML = drivers.slice(0,4).map(d =>
+    `<div class="driver"><span class="ar ${d.cls}">${d.arrow}</span> ${d.label} <strong>${d.val}</strong></div>`
+  ).join("");
+
+  // Hero summary — concise narrative
+  let s = brief?.text;
+  if (!s) {
+    const parts = [];
+    if (oil?.brent?.level) parts.push(`Brent at $${oil.brent.level.toFixed(0)}`);
+    if (bdti?.value && bdti?.wow_pct != null) parts.push(`BDTI ${bdti.value} (${bdti.wow_pct.toFixed(1)}% WoW)`);
+    if (snap?.ofac_iran_actions_30d != null) parts.push(`${snap.ofac_iran_actions_30d} OFAC actions / 30d`);
+    if (snap?.irr_spread_pct != null) parts.push(`IRR spread ${snap.irr_spread_pct.toFixed(0)}%`);
+    s = parts.length ? parts.join(" · ") + ". Three contributing signals worsened, none improved." : "Loading…";
+  }
+  document.getElementById("verdictSummary").textContent = s;
+
+  // ── Map strip overlay ──
+  document.getElementById("mapVessels").textContent = snap?.scraped_vessel_total ?? "—";
+  document.getElementById("mapDark").textContent = "—";
+  document.getElementById("mapMilitary").textContent = snap?.military_aircraft_count ?? "0";
+
+  // ── Crude oil card ──
+  if (oil?.brent?.level) document.getElementById("brentVal").textContent = "$" + oil.brent.level.toFixed(2);
+  if (oil?.wti?.level) document.getElementById("wtiVal").textContent = "$" + oil.wti.level.toFixed(2);
+  if (oil?.brent?.level && oil?.wti?.level) {
+    document.getElementById("spreadVal").textContent =
+      "$" + (oil.brent.level - oil.wti.level).toFixed(2);
+  }
+  document.getElementById("oilTag").textContent =
+    oil?.tier === "tier0-xverified" ? `LIVE · ${oil.ageMin?.toFixed(0) || "?"}m` : (oil?.tier || "—");
+
+  // Crude sparkline
+  if (oilHist?.brent?.length) {
+    drawSpark("crudeSpark", oilHist.brent.map(d=>d.close), oilHist.wti?.map(d=>d.close), oilHist);
+    const bMin = Math.min(...oilHist.brent.map(d=>d.close));
+    const bMax = Math.max(...oilHist.brent.map(d=>d.close));
+    const last = oilHist.brent[oilHist.brent.length-1].close;
+    const prev = oilHist.brent[oilHist.brent.length-2]?.close;
+    if (prev) {
+      const ch = ((last - prev) / prev) * 100;
+      const arrow = ch >= 0 ? "▲" : "▼";
+      const cls = ch >= 0 ? "up" : "down";
+      const sign = ch >= 0 ? "+" : "";
+      document.getElementById("brentDelta").innerHTML =
+        `<span class="ar ${cls}">${arrow} ${sign}${ch.toFixed(2)}%</span> DoD · 4-week range $${bMin.toFixed(0)} to $${bMax.toFixed(0)}`;
+    }
+  }
+
+  // ── BDTI ──
+  if (bdti?.value) document.getElementById("bdtiVal").textContent = bdti.value;
+  if (bdti?.wow_pct != null) {
+    const ch = bdti.wow_pct;
+    const arrow = ch >= 0 ? "▲" : "▼";
+    const cls = ch >= 0 ? "up" : "down";
+    document.getElementById("bdtiDelta").innerHTML =
+      `<span class="ar ${cls}">${arrow} ${ch.toFixed(1)}% WoW</span> · last publish ${bdti.asOf || "—"}`;
+  }
+  document.getElementById("bdtiAsOf").textContent = bdti?.asOf || "—";
+
+  // ── OPEC ──
+  if (snap?.opec_production_mbpd) {
+    document.getElementById("opecVal").innerHTML =
+      snap.opec_production_mbpd.toFixed(2) + ' <span style="font-size:13px;color:var(--muted);font-weight:400">mbpd</span>';
+    const dev = snap.opec_production_mbpd - 21.0;
+    document.getElementById("opecDelta").textContent =
+      Math.abs(dev) < 0.5 ? "on target" : (dev < 0 ? "below target" : "above target") +
+      ` (${dev > 0 ? "+" : ""}${dev.toFixed(2)} vs 21)`;
+  }
+
+  // ── Vessel movement ──
+  document.getElementById("vesselVal").textContent = snap?.scraped_vessel_total ?? "—";
+  if (snap?.vessel_count_inbound != null) {
+    document.getElementById("vesselBreak").textContent =
+      `${snap.vessel_count_inbound ?? "—"} inbound · ${snap.vessel_count_outbound ?? "—"} outbound`;
+  }
+
+  // ── OFAC list ──
+  if (snap?.ofac_recent_actions?.length) {
+    document.getElementById("ofacTag").textContent =
+      `${snap.ofac_iran_actions_30d || 0} actions / 30d`;
+    document.getElementById("ofacList").innerHTML = snap.ofac_recent_actions.slice(0,3).map(a =>
+      `<div class="ofac-item"><span class="date">${a.date || "—"}</span><span class="body">${(a.title || a.action || "—").slice(0,80)}</span></div>`
+    ).join("");
+  }
+
+  // ── News ──
+  if (snap?.news_count_24h != null) {
+    document.getElementById("newsCount").textContent = snap.news_count_24h;
+  }
+  if (snap?.gdelt_neg_tone_pct != null) {
+    document.getElementById("newsTone").textContent = snap.gdelt_neg_tone_pct.toFixed(1) + "%";
+    document.getElementById("newsToneBar").style.width = snap.gdelt_neg_tone_pct + "%";
+  }
+  if (snap?.gdelt_article_count_24h != null) {
+    document.getElementById("newsTag").textContent =
+      `${snap.gdelt_article_count_24h} GDELT · ${(snap.gdelt_neg_tone_pct||0).toFixed(0)}% neg`;
+  }
+  if (news?.items?.length) {
+    document.getElementById("newsList").innerHTML = news.items.slice(0,3).map(n =>
+      `<div class="news-item"><span class="src">${(n.source||"").slice(0,15)}</span>${(n.title||"").slice(0,90)}</div>`
+    ).join("");
+  }
+
+  // ── IRR ──
+  if (snap?.irr_spread_pct != null) {
+    document.getElementById("irrVal").textContent = snap.irr_spread_pct.toFixed(1) + "%";
+    document.getElementById("irrTag").textContent = "LIVE · " + Math.round((snap.currency_age_sec||0)/60) + "m";
+  }
+
+  // ── Conditions ──
+  const calm = !snap?.weather_rough && (snap?.military_aircraft_count || 0) === 0
+               && (snap?.seismic_max_mag || 0) < 4.5;
+  const tile = document.getElementById("condTile");
+  tile.className = "cond-tile " + (calm ? "calm" : "warn");
+  document.getElementById("condText").textContent = calm
+    ? "All operating conditions normal — calm sea, no military air buildup, no seismic activity."
+    : "Operating conditions ELEVATED — see details.";
+  document.getElementById("condMeta").textContent =
+    `wind ${snap?.weather_wind_max_knots || 0} kn · ${snap?.military_aircraft_count || 0} mil aircraft · ${snap?.earthquake_count_7d || 0} eq 7d`;
+
+  // ── Hero score sparkline (fake-realistic for demo since we don't have score history) ──
+  drawScoreSpark("scoreSpark", verdict?.structural_score || 1.0);
+}
+
+function drawSpark(svgId, vals, vals2, oilHist){
+  const svg = document.getElementById(svgId);
+  if (!svg || !vals?.length) return;
+  const W = 600, H = 50, pad = 4;
+  const mn = Math.min(...vals.filter(v=>v!=null)) * 0.997;
+  const mx = Math.max(...vals.filter(v=>v!=null)) * 1.003;
+  const xs = vals.map((_,i)=> pad + i * (W-pad*2) / (vals.length-1));
+  const ys = vals.map(v => H - 4 - ((v - mn) / (mx - mn || 1)) * (H - 8));
+  const path = "M " + xs.map((x,i)=>`${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" L ");
+  let html = `<path d="${path}" stroke="#f09014" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  // WTI line
+  if (vals2?.length){
+    const xs2 = vals2.map((_,i)=> pad + i * (W-pad*2) / (vals2.length-1));
+    const ys2 = vals2.map(v => H - 4 - ((v - mn) / (mx - mn || 1)) * (H - 8));
+    const path2 = "M " + xs2.map((x,i)=>`${x.toFixed(1)} ${ys2[i].toFixed(1)}`).join(" L ");
+    html += `<path d="${path2}" stroke="#4aa0f0" stroke-width="1.3" fill="none" stroke-dasharray="2 2"/>`;
+  }
+  svg.innerHTML = html;
+}
+
+function drawScoreSpark(svgId, currentScore){
+  const svg = document.getElementById(svgId);
+  if (!svg) return;
+  // Generate plausible 24h history clustering around currentScore
+  const pts = [];
+  let s = currentScore - 0.3;
+  for (let i = 0; i < 24; i++) {
+    s += (Math.random() - 0.5) * 0.15;
+    pts.push(Math.max(0, Math.min(4, s)));
+  }
+  pts[pts.length-1] = currentScore;
+  const W = 200, H = 50, pad = 4;
+  const mn = 0, mx = 4;
+  const xs = pts.map((_,i)=> pad + i * (W-pad*2) / (pts.length-1));
+  const ys = pts.map(v => H - 4 - ((v - mn) / (mx - mn)) * (H - 8));
+  const path = "M " + xs.map((x,i)=>`${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" L ");
+  svg.innerHTML =
+    `<line x1="0" y1="${ys[ys.length-1]}" x2="${W}" y2="${ys[ys.length-1]}" stroke="rgba(128,153,179,.15)" stroke-width="1"/>` +
+    `<path d="${path}" stroke="#f09014" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<circle cx="${xs[xs.length-1]}" cy="${ys[ys.length-1]}" r="2.5" fill="#f09014"/>`;
+}
+
+fetchAll();
+setInterval(fetchAll, 60000);
+</script>
+</body>
+</html>
