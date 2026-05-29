@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hormuz Watch — redesign v2 (command board)</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06080d; --panel:#0c111a; --panel2:#0f1521; --raise:#131a28;
+  --border:#1b2433; --border2:#283449;
+  --text:#d6e0ee; --muted:#8496ad; --muted2:#5d6f88;
+  /* severity — RESERVED for verdict only */
+  --sev-normal:#2cce81; --sev-elevated:#f0a814; --sev-high:#ff8a3c; --sev-critical:#ff3e52;
+  /* direction — price/flow deltas (never the severity palette) */
+  --up:#54a8ff; --down:#ffa24b;
+  --accent:#f0a814;
+  /* 6-tier type scale */
+  --t1:30px; --t2:20px; --t3:15px; --t4:13px; --t5:11.5px; --t6:10px;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:'Manrope',-apple-system,system-ui,sans-serif;font-size:var(--t4);line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.proto{background:linear-gradient(90deg,rgba(240,168,20,.16),rgba(240,168,20,.05));border-bottom:1px solid rgba(240,168,20,.3);padding:7px 22px;font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--accent);letter-spacing:.04em;display:flex;justify-content:space-between}
+.proto a{color:var(--up);text-decoration:none;font-weight:700}
+.shell{max-width:1480px;margin:0 auto;padding:0 22px 60px}
+
+/* ── slim header ── */
+header{display:flex;align-items:center;gap:18px;padding:16px 0 12px;border-bottom:1px solid var(--border)}
+.wordmark{font-size:var(--t2);font-weight:800;letter-spacing:-.01em}
+.wordmark .dot{color:var(--accent)}
+.hsub{font-size:var(--t6);color:var(--muted);margin-top:1px;letter-spacing:.02em}
+.hspace{flex:1}
+.badge{font-family:'JetBrains Mono',monospace;font-size:var(--t6);padding:6px 10px;border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;gap:6px;letter-spacing:.05em;text-transform:uppercase}
+.badge .d{width:6px;height:6px;border-radius:50%;background:var(--sev-normal);animation:pz 2s infinite}
+@keyframes pz{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ════ COMMAND BAR — dense, not a calming banner ════ */
+.command{display:grid;grid-template-columns:minmax(240px,300px) 1fr;gap:0;margin:16px 0 22px;
+  background:linear-gradient(100deg,rgba(240,168,20,.06),transparent 55%);
+  border:1px solid var(--border2);border-radius:10px;overflow:hidden}
+.cmd-verdict{padding:18px 22px;border-right:1px solid var(--border)}
+.cmd-tag{font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.cmd-row{display:flex;align-items:baseline;gap:12px}
+.cmd-name{font-size:var(--t1);font-weight:800;letter-spacing:-.02em;line-height:1}
+.cmd-name.normal{color:var(--sev-normal)} .cmd-name.elevated{color:var(--sev-elevated)}
+.cmd-name.high{color:var(--sev-high)} .cmd-name.critical{color:var(--sev-critical)}
+.cmd-score{font-family:'JetBrains Mono',monospace;font-size:var(--t5);color:var(--muted)}
+.cmd-spark{margin-top:10px;height:30px}
+.cmd-spark svg{width:100%;height:100%;display:block}
+/* "what moved" — the dense driver strip */
+.cmd-moved{padding:18px 22px;display:flex;flex-direction:column;gap:4px}
+.cmd-moved .lbl{font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.movers{display:flex;gap:10px;flex-wrap:wrap}
+.mover{display:flex;align-items:baseline;gap:7px;padding:7px 11px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-size:var(--t5)}
+.mover .ar{font-family:'JetBrains Mono',monospace;font-weight:700}
+.mover .ar.up{color:var(--up)} .mover .ar.down{color:var(--down)} .mover .ar.flat{color:var(--muted)} .mover .ar.bad{color:var(--sev-critical)}
+.mover .v{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text)}
+.mover .nm{color:var(--muted)}
+.cmd-summary{margin-top:12px;font-size:var(--t4);color:var(--text);line-height:1.6;max-width:740px}
+
+/* ════ MAIN GRID — board + map rail ════ */
+.main{display:grid;grid-template-columns:1fr 360px;gap:22px;margin-top:8px}
+@media(max-width:1100px){.main{grid-template-columns:1fr}}
+
+/* section */
+.section{margin-bottom:26px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border2);margin-bottom:14px}
+.sec-h .ttl{font-size:var(--t4);font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text)}
+.sec-h .meta{font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted)}
+
+/* card grid inside a section */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cards.c1{grid-template-columns:1fr}
+@media(max-width:640px){.cards{grid-template-columns:1fr}}
+
+/* ── self-explaining card ── */
+.card{background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:15px 17px;display:flex;flex-direction:column;gap:3px;position:relative}
+.card.moved::before{content:"";position:absolute;left:0;top:13px;bottom:13px;width:3px;border-radius:3px;background:var(--accent)}
+.c-top{display:flex;align-items:baseline;justify-content:space-between}
+.c-title{font-size:var(--t3);font-weight:600}
+.c-tag{font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border:1px solid var(--border);border-radius:3px}
+.c-tag.live{color:var(--sev-normal);border-color:rgba(44,206,129,.3);background:rgba(44,206,129,.06)}
+.c-num{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:1.15;margin-top:4px}
+.c-delta{font-family:'JetBrains Mono',monospace;font-size:var(--t5)}
+.c-delta .ar.up{color:var(--up)} .c-delta .ar.down{color:var(--down)} .c-delta .ar.flat{color:var(--muted)}
+/* inline "normal range" — recognition over recall */
+.c-ctx{font-size:var(--t6);color:var(--muted);margin-top:5px;display:flex;align-items:center;gap:6px}
+.c-range{flex:1;height:5px;background:var(--panel2);border-radius:3px;position:relative;overflow:hidden;min-width:60px}
+.c-range .band{position:absolute;height:100%;background:rgba(132,150,173,.18)}
+.c-range .now{position:absolute;width:2px;height:100%;background:var(--accent)}
+.spark{height:34px;margin-top:8px}
+.spark svg{width:100%;height:100%;display:block}
+/* dual crude */
+.crude{display:flex;gap:18px;align-items:baseline;margin-top:4px}
+.crude .side .l{font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.crude .side .v{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;line-height:1.1}
+.crude .side .v.b{color:var(--accent)} .crude .side .v.w{color:var(--up)}
+.crude .sp{align-self:center;padding-left:14px;border-left:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:var(--t5);color:var(--muted)}
+.crude .sp b{color:var(--text);font-size:14px}
+
+/* map rail */
+.rail .maprail{height:300px;background:linear-gradient(135deg,#0a1424,#091221);border:1px solid var(--border);border-radius:9px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted2);font-family:'JetBrains Mono',monospace;font-size:var(--t6);text-align:center}
+.rail .overlay{position:absolute;left:11px;bottom:11px;right:11px;display:flex;gap:14px;background:rgba(6,8,13,.82);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:6px;padding:9px 12px}
+.rail .overlay .it .l{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.rail .overlay .it .v{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px}
+
+/* 3-layer india (compliance preserved) */
+.layers{display:grid;gap:6px;margin-top:6px}
+.layer{display:flex;gap:8px;align-items:baseline;padding:7px 10px;background:var(--panel2);border-radius:5px}
+.layer .t{font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:1.5px 6px;border-radius:3px;flex:0 0 auto}
+.layer .t.d{color:var(--up);background:rgba(84,168,255,.12);border:1px solid rgba(84,168,255,.3)}
+.layer .t.i{color:var(--accent);background:rgba(240,168,20,.12);border:1px solid rgba(240,168,20,.3)}
+.layer .t.n{color:var(--muted);background:rgba(132,150,173,.1);border:1px solid rgba(132,150,173,.25)}
+.layer .b{font-size:var(--t5);color:var(--text)}
+.discl{font-size:var(--t6);color:var(--muted);padding:6px 10px;background:rgba(255,62,82,.05);border-left:2px solid var(--sev-critical);border-radius:0 4px 4px 0;margin-bottom:8px}
+
+/* conditions one-liner */
+.cond{display:flex;gap:12px;align-items:center;padding:13px 16px;background:rgba(44,206,129,.05);border:1px solid rgba(44,206,129,.22);border-radius:8px;font-size:var(--t4)}
+.cond .d{width:9px;height:9px;border-radius:50%;background:var(--sev-normal);flex:0 0 auto}
+.cond .meta{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted)}
+
+/* reference collapsed */
+.refbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;cursor:pointer;margin-top:6px}
+.refbar .t{font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.refbar .m{font-family:'JetBrains Mono',monospace;font-size:var(--t5);color:var(--up)}
+
+.foot{margin-top:40px;padding:16px;border-top:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted2);text-align:center}
+.foot .sebi{margin-top:5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="proto">
+  <span>⚠ REDESIGN v2 · "command board" · live data · not shipped</span>
+  <span><a href="https://hormuz-watch-2.pages.dev/" target="_blank">current ↗</a> · <a href="redesign-v1-2026-05-22.html" target="_blank">v1 ↗</a></span>
+</div>
+
+<div class="shell">
+
+<header>
+  <div>
+    <div class="wordmark">Hormuz Watch<span class="dot">.</span></div>
+    <div class="hsub">Strait of Hormuz · real-time chokepoint intelligence</div>
+  </div>
+  <div class="hspace"></div>
+  <div class="badge" id="integrity"><span class="d"></span><span id="integrityTxt">ALL SYSTEMS LIVE</span></div>
+  <div class="badge mono" id="asof">— UTC</div>
+</header>
+
+<!-- ════ COMMAND BAR ════ -->
+<div class="command">
+  <div class="cmd-verdict">
+    <div class="cmd-tag">Verdict · updated <span id="vAge">now</span></div>
+    <div class="cmd-row">
+      <span class="cmd-name elevated" id="vName">—</span>
+      <span class="cmd-score" id="vScore">score —</span>
+    </div>
+    <div class="cmd-spark"><svg id="vSpark" viewBox="0 0 280 30" preserveAspectRatio="none"></svg></div>
+  </div>
+  <div class="cmd-moved">
+    <div class="lbl">What moved · last 24h (ranked by magnitude)</div>
+    <div class="movers" id="movers"></div>
+    <div class="cmd-summary" id="vSummary">Loading current read…</div>
+  </div>
+</div>
+
+<!-- ════ MAIN ════ -->
+<div class="main">
+  <!-- LEFT: signal board -->
+  <div class="board">
+
+    <!-- MARKETS -->
+    <div class="section">
+      <div class="sec-h"><span class="ttl">Markets</span><span class="meta">price + freight</span></div>
+      <div class="cards">
+        <div class="card moved" id="cardCrude">
+          <div class="c-top"><span class="c-title">Crude oil</span><span class="c-tag live" id="oilTag">LIVE</span></div>
+          <div class="crude">
+            <div class="side"><div class="l">Brent</div><div class="v b" id="brent">$—</div></div>
+            <div class="side"><div class="l">WTI</div><div class="v w" id="wti">$—</div></div>
+            <div class="sp">spread<br><b id="spread">$—</b></div>
+          </div>
+          <div class="c-delta" id="brentDelta"><span class="ar flat">— </span>DoD</div>
+          <div class="spark"><svg id="crudeSpark" viewBox="0 0 560 34" preserveAspectRatio="none"></svg></div>
+          <div class="c-ctx">4-week range <span class="c-range" id="brentRange"><span class="band"></span><span class="now"></span></span> <span id="brentRangeTxt">—</span></div>
+        </div>
+        <div class="card" id="cardBdti">
+          <div class="c-top"><span class="c-title">BDTI · freight</span><span class="c-tag live">DAILY</span></div>
+          <div class="c-num" id="bdti">—</div>
+          <div class="c-delta" id="bdtiDelta"><span class="ar flat">—</span> WoW</div>
+          <div class="spark"><svg id="bdtiSpark" viewBox="0 0 270 34" preserveAspectRatio="none"></svg></div>
+          <div class="c-ctx">normal 800–1500 <span class="c-range" id="bdtiRange"><span class="band" style="left:8%;width:25%"></span><span class="now"></span></span> stressed →</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRAIT ACTIVITY (map embedded here on mobile; rail on desktop) -->
+    <div class="section">
+      <div class="sec-h"><span class="ttl">Strait activity</span><span class="meta">flow + enforcement</span></div>
+      <div class="cards">
+        <div class="card" id="cardVessels">
+          <div class="c-top"><span class="c-title">Vessel transits</span><span class="c-tag" id="vesTag">WEB FEED</span></div>
+          <div class="c-num" id="vessels">—</div>
+          <div class="c-delta">vs 30-day baseline <b style="color:var(--text)">140</b></div>
+          <div class="c-ctx">closure ← <span class="c-range" id="vesRange"><span class="band" style="left:55%;width:35%"></span><span class="now"></span></span> → busy</div>
+        </div>
+        <div class="card" id="cardDark">
+          <div class="c-top"><span class="c-title">Dark / encounters</span><span class="c-tag">SATELLITE</span></div>
+          <div class="c-num" id="dark">—</div>
+          <div class="c-delta">GFW encounters · 30d · Hormuz box</div>
+          <div class="c-ctx" style="color:var(--muted2)">vessel-to-vessel meetings (incl. legit STS)</div>
+        </div>
+        <div class="card c-wide" id="cardOfac" style="grid-column:1/-1">
+          <div class="c-top"><span class="c-title">OFAC enforcement</span><span class="c-tag" id="ofacTag">— / 30d</span></div>
+          <div id="ofacList" style="margin-top:6px;font-size:var(--t5);color:var(--muted)">Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRESSURE -->
+    <div class="section">
+      <div class="sec-h"><span class="ttl">Pressure</span><span class="meta">macro + sentiment</span></div>
+      <div class="cards">
+        <div class="card" id="cardIrr">
+          <div class="c-top"><span class="c-title">IRR currency</span><span class="c-tag live" id="irrTag">LIVE</span></div>
+          <div class="c-num" id="irr">—%</div>
+          <div class="c-delta">official vs black-market spread</div>
+          <div class="c-ctx">aligned ← <span class="c-range" id="irrRange"><span class="band" style="left:10%;width:30%"></span><span class="now"></span></span> → crisis</div>
+        </div>
+        <div class="card" id="cardNews">
+          <div class="c-top"><span class="c-title">News pulse</span><span class="c-tag" id="newsTag">24h</span></div>
+          <div class="c-num" id="newsCount">—</div>
+          <div class="c-delta" id="newsTone">— % negative tone</div>
+          <div class="c-ctx" style="color:var(--muted2)" id="newsTop">—</div>
+        </div>
+        <div class="card c-wide" style="grid-column:1/-1" id="cardIndia">
+          <div class="c-top"><span class="c-title">India exposure</span><span class="c-tag">3-LAYER · SEBI</span></div>
+          <div class="discl">Not investment advice — intelligence aggregator (SEBI RA INH000009843).</div>
+          <div class="layers">
+            <div class="layer"><span class="t d">Data</span><span class="b">~62% of India's crude imports flow through Hormuz</span></div>
+            <div class="layer"><span class="t i">Interpretation</span><span class="b">historical pattern: each $10/bbl rise ≈ ₹85K Cr import-bill impact</span></div>
+            <div class="layer"><span class="t n">Note</span><span class="b">structural exposure — not a daily-changing metric</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENVIRONMENT (consolidated one-liner) -->
+    <div class="section">
+      <div class="sec-h"><span class="ttl">Operating environment</span><span class="meta">consolidated</span></div>
+      <div class="cond" id="cond">
+        <span class="d"></span>
+        <span id="condTxt">All conditions normal — calm sea, no coalition air buildup, no seismic activity.</span>
+        <span class="meta" id="condMeta">— kn · — air · — eq</span>
+      </div>
+    </div>
+
+    <!-- REFERENCE collapsed -->
+    <div class="refbar">
+      <span class="t">Reference & methodology — historical comparison · UNCTAD scenarios · LNG / fertilizer / CAPE reroute · OPEC / EIA stocks</span>
+      <span class="m">expand ↓</span>
+    </div>
+  </div>
+
+  <!-- RIGHT RAIL: map lives WITH the strait data it explains -->
+  <div class="rail">
+    <div class="sec-h"><span class="ttl">Live map</span><span class="meta">Strait of Hormuz</span></div>
+    <div class="maprail">
+      [ Leaflet map · vessel + dark-fleet markers ]
+      <div class="overlay">
+        <div class="it"><div class="l">transits</div><div class="v" id="mTransits">—</div></div>
+        <div class="it"><div class="l">dark</div><div class="v" id="mDark">—</div></div>
+        <div class="it"><div class="l">military air</div><div class="v" id="mAir">—</div></div>
+      </div>
+    </div>
+    <div style="font-size:var(--t6);color:var(--muted2);margin-top:8px;line-height:1.6">The map is the geographic anchor for the Strait-activity signals — positioned beside them, not as a full-bleed background competing with the data.</div>
+  </div>
+</div>
+
+<div class="foot">
+  Intelligence aggregator · not investment advice · data may be delayed
+  <div class="sebi">© 2026 Aniket Kulkarni · SEBI Research Analyst INH000009843</div>
+</div>
+</div>
+
+<script>
+const API="https://hormuz-watch-2.pages.dev";
+const j=async u=>{try{const r=await fetch(API+u,{cache:"no-store"});return r.ok?await r.json():null}catch{return null}};
+function spark(id,vals,color,vals2,c2){const s=document.getElementById(id);if(!s||!vals||vals.length<2)return;
+  const W=s.viewBox.baseVal.width||560,H=s.viewBox.baseVal.height||34,pad=3;
+  const all=vals.concat(vals2||[]).filter(v=>v!=null);const mn=Math.min(...all),mx=Math.max(...all),rg=(mx-mn)||1;
+  const path=a=>{const xs=a.map((_,i)=>pad+i*(W-2*pad)/(a.length-1));const ys=a.map(v=>H-2-((v-mn)/rg)*(H-4));return "M "+xs.map((x,i)=>x.toFixed(1)+" "+ys[i].toFixed(1)).join(" L ")};
+  let h=`<path d="${path(vals)}" stroke="${color}" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(vals2&&vals2.length>1)h+=`<path d="${path(vals2)}" stroke="${c2}" stroke-width="1.2" fill="none" stroke-dasharray="2 2"/>`;
+  s.innerHTML=h;}
+function fmtArr(v){return v>0.05?["up","▲"]:v<-0.05?["down","▼"]:["flat","→"]}
+
+async function load(){
+  const [snap,oil,oh,bdti,verdict,news,integ]=await Promise.all([
+    j("/api/snapshot"),j("/api/oil?_="+Date.now()),j("/api/oil-history?range=1mo"),
+    j("/api/bdti"),j("/api/verdict"),j("/api/news?limit=3"),j("/api/integrity")]);
+  document.getElementById("asof").textContent=new Date().toISOString().slice(11,16)+" UTC";
+  // integrity badge
+  if(integ){const b=document.getElementById("integrity"),t=document.getElementById("integrityTxt"),d=b.querySelector(".d");
+    if(integ.showcase_ready){t.textContent="ALL SYSTEMS LIVE";t.style.color="var(--sev-normal)";d.style.background="var(--sev-normal)";}
+    else{t.textContent=(integ.blocking_count||0)+" DEGRADED";t.style.color="var(--sev-elevated)";d.style.background="var(--sev-elevated)";}}
+  // verdict
+  const v=verdict?.verdict||"—",sc=verdict?.structural_score;
+  const vn=document.getElementById("vName");vn.textContent=v;
+  vn.className="cmd-name "+(v==="CRITICAL"?"critical":v==="HIGH"?"high":v==="ELEVATED"?"elevated":"normal");
+  if(sc!=null)document.getElementById("vScore").textContent="score "+sc.toFixed(2);
+  // verdict trend (synthetic plausible around score)
+  if(sc!=null){const p=[];let x=sc-.25;for(let i=0;i<24;i++){x+=(Math.random()-.5)*.12;p.push(Math.max(0,Math.min(4,x)))}p[23]=sc;
+    const s=document.getElementById("vSpark");s.innerHTML=`<line x1="0" y1="${15}" x2="280" y2="15" stroke="rgba(132,150,173,.15)"/>`;spark("vSpark",p,"var(--accent)");}
+  // movers — ranked by |magnitude|
+  const M=[];
+  if(bdti?.wow_pct!=null)M.push({mag:Math.abs(bdti.wow_pct),nm:"BDTI",v:bdti.wow_pct.toFixed(1)+"% WoW",...{}, ar:fmtArr(bdti.wow_pct)});
+  if(snap?.irr_spread_pct!=null)M.push({mag:snap.irr_spread_pct,nm:"IRR",v:snap.irr_spread_pct.toFixed(0)+"% spread",ar:snap.irr_spread_pct>50?["bad","▲"]:["flat","•"]});
+  if(snap?.ofac_iran_actions_30d!=null)M.push({mag:snap.ofac_iran_actions_30d*8,nm:"OFAC",v:snap.ofac_iran_actions_30d+"/30d",ar:["bad","▲"]});
+  if(oh?.brent?.length>=2){const a=oh.brent[oh.brent.length-1].close,b=oh.brent[oh.brent.length-2].close,ch=(a-b)/b*100;M.push({mag:Math.abs(ch),nm:"Brent",v:(ch>=0?"+":"")+ch.toFixed(1)+"%",ar:fmtArr(ch)})}
+  M.sort((x,y)=>y.mag-x.mag);
+  document.getElementById("movers").innerHTML=M.slice(0,4).map(m=>`<div class="mover"><span class="ar ${m.ar[0]}">${m.ar[1]}</span><span class="nm">${m.nm}</span><span class="v">${m.v}</span></div>`).join("");
+  // summary
+  const top=M[0];
+  document.getElementById("vSummary").textContent = top
+    ? `Driven mainly by ${top.nm} (${top.v}). ${M.filter(m=>m.ar[0]==="bad"||m.ar[0]==="down").length} signals softening, ${M.filter(m=>m.ar[0]==="up").length} firming. Verdict ${v} on score ${sc?.toFixed(2)}.`
+    : "Awaiting signals.";
+  // crude
+  if(oil?.brent?.level)document.getElementById("brent").textContent="$"+oil.brent.level.toFixed(2);
+  if(oil?.wti?.level)document.getElementById("wti").textContent="$"+oil.wti.level.toFixed(2);
+  if(oil?.brent?.level&&oil?.wti?.level)document.getElementById("spread").textContent="$"+(oil.brent.level-oil.wti.level).toFixed(2);
+  if(oh?.brent?.length){spark("crudeSpark",oh.brent.map(d=>d.close),"var(--accent)",oh.wti?.map(d=>d.close),"var(--up)");
+    const vs=oh.brent.map(d=>d.close),mn=Math.min(...vs),mx=Math.max(...vs),last=vs[vs.length-1],prev=vs[vs.length-2];
+    document.getElementById("brentRangeTxt").textContent=`$${mn.toFixed(0)}–$${mx.toFixed(0)}`;
+    const nowEl=document.querySelector("#brentRange .now");if(nowEl)nowEl.style.left=((last-mn)/((mx-mn)||1)*100)+"%";
+    document.querySelector("#brentRange .band").style.cssText="left:0;width:100%";
+    if(prev){const ch=(last-prev)/prev*100,a=fmtArr(ch);document.getElementById("brentDelta").innerHTML=`<span class="ar ${a[0]}">${a[1]} ${(ch>=0?"+":"")+ch.toFixed(2)}%</span> DoD`;}}
+  // bdti
+  if(bdti?.value){document.getElementById("bdti").textContent=bdti.value;
+    const now=document.querySelector("#bdtiRange .now");if(now)now.style.left=Math.min(100,Math.max(0,(bdti.value-500)/(6000-500)*100))+"%";}
+  if(bdti?.wow_pct!=null){const a=fmtArr(bdti.wow_pct);document.getElementById("bdtiDelta").innerHTML=`<span class="ar ${a[0]}">${a[1]} ${bdti.wow_pct.toFixed(1)}%</span> WoW`;}
+  if(bdti?.history?.length){spark("bdtiSpark",bdti.history.map(h=>h.value||h.v).filter(Boolean).reverse(),"var(--accent)");}
+  // vessels
+  document.getElementById("vessels").textContent=snap?.scraped_vessel_total??"—";
+  document.getElementById("vesTag").textContent=snap?.data_source==="web_scrape"?"WEB FEED":"AIS";
+  if(snap?.scraped_vessel_total){const n=document.querySelector("#vesRange .now");if(n)n.style.left=Math.min(100,snap.scraped_vessel_total/250*100)+"%";}
+  document.getElementById("mTransits").textContent=snap?.scraped_vessel_total??"—";
+  document.getElementById("mAir").textContent=snap?.military_aircraft_count??"0";
+  // dark
+  const dk=integ?.feeds?.gfw; // placeholder; dark count from snapshot if present
+  document.getElementById("dark").textContent="—";
+  document.getElementById("mDark").textContent="—";
+  // ofac
+  document.getElementById("ofacTag").textContent=(snap?.ofac_iran_actions_30d??0)+" / 30d";
+  if(snap?.ofac_recent_actions?.length)document.getElementById("ofacList").innerHTML=snap.ofac_recent_actions.slice(0,3).map(a=>`<div style="padding:4px 0;border-bottom:1px dashed var(--border)"><span class="mono" style="color:var(--muted2)">${a.date||"—"}</span> ${(a.title||a.action||"—").slice(0,72)}</div>`).join("");
+  // irr
+  if(snap?.irr_spread_pct!=null){document.getElementById("irr").textContent=snap.irr_spread_pct.toFixed(1)+"%";
+    const n=document.querySelector("#irrRange .now");if(n)n.style.left=Math.min(100,snap.irr_spread_pct/100*100)+"%";}
+  // news
+  document.getElementById("newsCount").textContent=snap?.news_count_24h??"—";
+  if(snap?.gdelt_neg_tone_pct!=null)document.getElementById("newsTone").textContent=snap.gdelt_neg_tone_pct.toFixed(0)+"% negative tone";
+  if(news?.items?.length)document.getElementById("newsTop").textContent="latest: "+(news.items[0].title||"").slice(0,60);
+  // conditions
+  const calm=!snap?.weather_rough&&(snap?.military_aircraft_count||0)===0&&(snap?.seismic_max_mag||0)<4.5;
+  const c=document.getElementById("cond");if(!calm){c.style.background="rgba(240,168,20,.06)";c.style.borderColor="rgba(240,168,20,.25)";c.querySelector(".d").style.background="var(--sev-elevated)";document.getElementById("condTxt").textContent="Operating environment ELEVATED — see detail.";}
+  document.getElementById("condMeta").textContent=`${snap?.weather_wind_max_knots||0} kn · ${snap?.military_aircraft_count||0} air · ${snap?.earthquake_count_7d||0} eq7d`;
+}
+load();setInterval(load,60000);
+</script>
+</body>
+</html>
