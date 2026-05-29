@@ -51,6 +51,13 @@ PORTS = [
     ("Jebel Ali",   "port-of-jebel-ali-in-ae-united-arab-emirates",      "AEJEA"),
     ("Ras Tanura",  "port-of-ras-tanura-in-sa-saudi-arabia",             "SARTA"),
     ("Bandar Abbas","port-of-bandar-abbas-in-ir-iran",                   "IRBND"),
+    # 2026-05-29 hardening — added 3 strait-proximate ports for coverage +
+    # resilience. With the anomaly guard below, a wrong/404 LOCODE just adds 0
+    # and won't drag the total down (the guard rejects a sudden drop). More
+    # ports = the total survives any single port page breaking.
+    ("Khasab",      "port-of-khasab-in-om-oman",                         "OMKHS"),  # inside the strait
+    ("Sohar",       "port-of-sohar-in-om-oman",                          "OMSOH"),
+    ("Sharjah",     "port-of-sharjah-in-ae-united-arab-emirates",        "AESHJ"),
 ]
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
@@ -62,6 +69,18 @@ def kv_put(key, value):
                      data=value if isinstance(value, str) else json.dumps(value, separators=(",", ":")),
                      timeout=30)
     return r.status_code == 200
+
+
+def kv_get(key):
+    """Read a KV value (for last-good comparison). Returns dict/None."""
+    url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/storage/kv/namespaces/{KV_NS}/values/{key}"
+    try:
+        r = requests.get(url, headers={"Authorization": f"Bearer {CF_API_TOKEN}"}, timeout=15)
+        if r.status_code == 200:
+            return json.loads(r.text)
+    except Exception:
+        pass
+    return None
 
 
 def open_browser_page(url, label):
@@ -452,6 +471,32 @@ def main():
         "confidence": confidence,
         "blocked": sites_succeeded == 0,
     }
+
+    # ── HARDENING (2026-05-29): don't overwrite a good total with a degraded
+    # one. Three guards, in order:
+    #   1. bounds — total must be 0-500 (catches parse garbage)
+    #   2. min-source — if NO site succeeded, never write (keep last-good)
+    #   3. anomaly — if the new total dropped >40% vs the last good value, a
+    #      port page likely broke (added 0) rather than traffic actually
+    #      collapsing. Keep last-good instead of showing a false drop.
+    prev = kv_get("vessel_count_scraped") or {}
+    prev_total = (prev.get("totals") or {}).get("all")
+    reject = None
+    try:
+        from _validate import in_bounds, anomaly_ok
+        if not in_bounds("vessel_total", reconciled_total):
+            reject = f"total {reconciled_total} out of bounds 0-500"
+        elif sites_succeeded == 0:
+            reject = "no site succeeded"
+        elif prev_total and not anomaly_ok(prev_total, reconciled_total, max_pct=40):
+            reject = f"total dropped >40% ({prev_total} -> {reconciled_total}) — likely a broken port, not real"
+    except Exception as e:
+        print(f"  warn: vessel validation skipped: {e}")
+
+    if reject:
+        print(f"\n✗ Rejecting write: {reject}")
+        print(f"  Keeping last-good vessel total ({prev_total}). Integrity ledger flags if persistent.")
+        return
 
     ok = kv_put("vessel_count_scraped", json.dumps(result, separators=(",", ":")))
     print(f"\n{'✓' if ok else '✗'} KV write {'OK' if ok else 'FAILED'}")
