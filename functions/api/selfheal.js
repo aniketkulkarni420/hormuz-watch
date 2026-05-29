@@ -157,7 +157,7 @@ async function handle({ request, env }) {
         method: "POST",
         headers: { "Authorization": `Bearer ${env.RESEND_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: "Hormuz Watch <onboarding@resend.dev>",
+          from: env.RESEND_FROM || "Hormuz Watch <onboarding@resend.dev>",
           to: [env.ALERT_EMAIL],
           subject: `Hormuz Watch — self-heal escalation (${escalations.map(e=>e.feed).join(", ")})`,
           text: body,
@@ -181,7 +181,7 @@ async function handle({ request, env }) {
         method: "POST",
         headers: { "Authorization": `Bearer ${env.RESEND_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: "Hormuz Watch <onboarding@resend.dev>",
+          from: env.RESEND_FROM || "Hormuz Watch <onboarding@resend.dev>",
           to: [env.ALERT_EMAIL],
           subject: `Hormuz Watch — recovered (${recoveries.map(r=>r.feed).join(", ")})`,
           text: body,
