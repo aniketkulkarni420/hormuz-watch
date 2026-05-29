@@ -75,6 +75,7 @@ async function handle({ request, env }) {
   const feeds = integ.feeds || {};
   const actions = [];
   const escalations = [];
+  const recoveries = [];   // 2026-05-28: feeds that recovered AFTER we'd alerted
 
   // 3) Walk every feed
   for (const [feed, v] of Object.entries(feeds)) {
@@ -83,7 +84,13 @@ async function handle({ request, env }) {
     if (!blocking) {
       // Recovered? clear any open incident
       if (state[feed]) {
-        actions.push({ feed, action: "recovered", wasOpenFor: Math.round((now - state[feed].firstSeen) / 60000) + "m" });
+        const openMin = Math.round((now - state[feed].firstSeen) / 60000);
+        actions.push({ feed, action: "recovered", wasOpenFor: openMin + "m" });
+        // Only notify recovery if we'd actually alerted about the down-incident
+        // (lastAlert > 0). Self-healed blips that never escalated stay silent.
+        if ((state[feed].lastAlert || 0) > 0) {
+          recoveries.push({ feed, openFor: openMin, severity: state[feed].severity });
+        }
         delete state[feed];
       }
       continue;
@@ -160,6 +167,30 @@ async function handle({ request, env }) {
     } catch { emailed = false; }
   }
 
+  // 6) Send recovery note(s) — only for incidents we'd previously alerted on,
+  // so a "down" email is always closed by a matching "recovered" email and
+  // nothing else. (2026-05-28)
+  let recoveryEmailed = false;
+  if (recoveries.length && env.RESEND_KEY && env.ALERT_EMAIL && !dryRun) {
+    const body = "These feeds RECOVERED (self-heal or natural):\n\n"
+      + recoveries.map(rc => `  ✓ ${rc.feed} — was down ${rc.openFor} min [${rc.severity}]`).join("\n")
+      + `\n\nNo action needed. Dashboard tiles are live again.\n`
+      + `Validator: ${url.origin}/api/integrity`;
+    try {
+      const rr = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${env.RESEND_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Hormuz Watch <onboarding@resend.dev>",
+          to: [env.ALERT_EMAIL],
+          subject: `Hormuz Watch — recovered (${recoveries.map(r=>r.feed).join(", ")})`,
+          text: body,
+        }),
+      });
+      recoveryEmailed = rr.ok;
+    } catch { recoveryEmailed = false; }
+  }
+
   return json({
     ts: now,
     showcase_ready: integ.showcase_ready,
@@ -167,7 +198,9 @@ async function handle({ request, env }) {
     actions,
     open_incidents: Object.keys(state),
     escalations,
+    recoveries,
     emailed,
+    recoveryEmailed,
     dryRun,
     elapsedMs: Date.now() - t0,
   });
