@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hormuz Watch — full design/UX audit · 2026-05-29</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#07090e;--panel:#11161f;--panel2:#0c1119;--border:#1a2230;--border2:#222d3f;
+--text:#cdd8e8;--muted:#8099b3;--muted2:#627a95;--amber:#f09014;--green:#2cce81;--red:#ff3e52;--blue:#4aa0f0;--purple:#b47aff}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",system-ui,sans-serif;line-height:1.55;padding:32px 20px 90px}
+.wrap{max-width:1080px;margin:0 auto}
+h1{font-size:25px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+h2{font-size:18px;font-weight:700;margin:40px 0 14px;padding-bottom:10px;border-bottom:1px solid var(--border2);display:flex;gap:10px;align-items:baseline}
+h2 .n{color:var(--amber);font-family:"JetBrains Mono",monospace;font-size:14px}
+h3{font-size:15px;font-weight:600;margin:24px 0 8px}
+.pill{font-family:"JetBrains Mono",monospace;font-size:10px;padding:3px 8px;border-radius:3px;font-weight:700;letter-spacing:.04em;display:inline-block}
+.p0{background:rgba(255,62,82,.15);color:var(--red);border:1px solid rgba(255,62,82,.4)}
+.p1{background:rgba(240,144,20,.15);color:var(--amber);border:1px solid rgba(240,144,20,.4)}
+.p2{background:rgba(74,160,240,.12);color:var(--blue);border:1px solid rgba(74,160,240,.4)}
+.ok{background:rgba(44,206,129,.12);color:var(--green);border:1px solid rgba(44,206,129,.4)}
+.bad{color:var(--red)}.good{color:var(--green)}.warn{color:var(--amber)}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12.5px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+td.m{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+.issue{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:14px}
+.issue.crit{border-color:rgba(255,62,82,.3)}
+.ihead{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.ititle{font-size:14px;font-weight:600}
+.evidence{font-family:"JetBrains Mono",monospace;font-size:11px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:8px 12px;color:var(--muted);margin:8px 0;white-space:pre-wrap}
+.fix{font-size:12.5px;background:rgba(44,206,129,.06);border-left:3px solid var(--green);padding:8px 12px;border-radius:0 4px 4px 0;margin-top:8px}
+.fix strong{color:var(--green)}
+.kbd{font-family:"JetBrains Mono",monospace;font-size:11px;background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 6px;color:var(--blue)}
+.tldr{background:linear-gradient(180deg,rgba(240,144,20,.08),transparent 80%);border:1px solid rgba(240,144,20,.3);border-radius:8px;padding:22px 24px;margin:18px 0 30px}
+.tldr h3{color:var(--amber);margin:0 0 10px}
+.tldr ul{margin-left:20px;font-size:13.5px;line-height:1.8}
+.tldr ul li strong{color:var(--text)}
+.shot{width:100%;max-width:480px;border:1px solid var(--border);border-radius:6px;display:block;margin:8px 0}
+.shotrow{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.shotrow figure{flex:1;min-width:300px}
+.shotrow figcaption{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);margin-top:6px}
+.fw{display:flex;align-items:baseline;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)}
+.fw .nm{flex:0 0 130px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted)}
+.fwbar{flex:1;height:9px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.fwbar i{display:block;height:100%;background:var(--blue)}
+.approve{background:var(--panel);border:1px solid var(--amber);border-radius:8px;padding:22px 24px;margin-top:36px}
+.approve h3{color:var(--amber);margin-top:0}
+.approve ul{margin-left:20px;font-size:13px}.approve ul li{margin-bottom:8px}
+ul.f{list-style:none;padding:0;margin:14px 0}
+ul.f li{padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+ul.f li:before{content:"✗ ";color:var(--red);font-weight:700}
+ul.f li.g:before{content:"✓ ";color:var(--green)}
+.frame{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Hormuz Watch — full design / UX audit</h1>
+<p class="sub">2026-05-29 · headless-measured against the <b>current live</b> dashboard · builds on the 2026-05-22 cognitive-load audit + redesign-v1 prototype · no code changed.</p>
+
+<!-- TLDR -->
+<div class="tldr">
+  <h3>TL;DR — measured, not asserted</h3>
+  <ul>
+    <li><strong>The core IA problems from 7 days ago are still 100% present on the live site</strong> — verified with hard DOM metrics, not opinion. <span class="kbd">H1/H2/H3 = 0/0/0</span>, <span class="kbd">30 cards</span> at flat visual weight, <span class="kbd">14 distinct font sizes</span>.</li>
+    <li><strong>The biggest text on screen is "179" (a vessel count) at 30px — NOT the verdict.</strong> The eye is pulled to a secondary number while the dashboard's actual answer (NORMAL) renders smaller. Visual hierarchy points the wrong way. This is the single highest-impact fix.</li>
+    <li><strong>~73% of all visible text is 9–10px</strong> (315 of ~430 elements desktop). The dashboard reads as a dense terminal — fine for the trader persona, hostile to everyone else, and fails WCAG comfort norms.</li>
+    <li>A complete fix already exists and is approved-pending: <span class="kbd">redesign-v1-2026-05-22.html</span>. This audit's recommendation is to <strong>green-light porting it</strong>, section by section, not to design something new.</li>
+  </ul>
+</div>
+
+<!-- VISUAL EVIDENCE -->
+<h2><span class="n">§1</span> Visual evidence (current live)</h2>
+<div class="shotrow">
+  <figure><img class="shot" src="desktop-fold.png" alt="desktop above fold"><figcaption>Desktop · above the fold (1440×900)</figcaption></figure>
+  <figure><img class="shot" src="mobile-fold.png" alt="mobile above fold"><figcaption>Mobile · above the fold (375×812)</figcaption></figure>
+</div>
+<p class="frame" style="margin-top:10px">Full-page desktop capture: <span class="kbd">desktop-full.png</span> (same folder).</p>
+
+<!-- MEASURED METRICS -->
+<h2><span class="n">§2</span> Measured metrics — the hard numbers</h2>
+<table>
+<thead><tr><th>Metric</th><th>Desktop</th><th>Mobile</th><th>Design verdict</th></tr></thead>
+<tbody>
+<tr><td>Heading hierarchy (H1/H2/H3)</td><td class="m bad">0 / 0 / 0</td><td class="m bad">0 / 0 / 0</td><td class="bad">No semantic structure — nothing to skim, bad for SEO + a11y + scan-path</td></tr>
+<tr><td>Cards / tiles</td><td class="m">30 (23 rblock + 5 sig + 2)</td><td class="m">30</td><td class="bad">All ~equal visual weight = no priority signal</td></tr>
+<tr><td>Distinct font sizes</td><td class="m bad">14</td><td class="m warn">10</td><td class="bad">No modular scale; ad-hoc per component</td></tr>
+<tr><td>Text at 8px</td><td class="m warn">6 elements</td><td class="m">1</td><td class="warn">Below legibility floor — stragglers remain after prior fixes</td></tr>
+<tr><td>Text at 9–10px</td><td class="m bad">315 elements (~73%)</td><td class="m">63</td><td class="bad">Overwhelming density; terminal-grade</td></tr>
+<tr><td>Largest above-fold text</td><td class="m bad">"179" @ 30px (a count)</td><td class="m">⚓ icon @ 22px</td><td class="bad">Dominant element is NOT the verdict — hierarchy misdirects</td></tr>
+<tr><td>Verdict visible above fold?</td><td class="m good">Yes (top 175px)</td><td class="m good">Yes</td><td class="warn">Visible but not dominant — out-shouted by "179"</td></tr>
+</tbody>
+</table>
+
+<h3>Font-size distribution (desktop, visible leaf text)</h3>
+<div class="fw"><span class="nm">9px</span><span class="fwbar"><i style="width:100%"></i></span><span class="m">186</span></div>
+<div class="fw"><span class="nm">10px</span><span class="fwbar"><i style="width:69%"></i></span><span class="m">129</span></div>
+<div class="fw"><span class="nm">11px</span><span class="fwbar"><i style="width:32%"></i></span><span class="m">60</span></div>
+<div class="fw"><span class="nm">12px</span><span class="fwbar"><i style="width:11%"></i></span><span class="m">21</span></div>
+<div class="fw"><span class="nm">14px</span><span class="fwbar"><i style="width:4%"></i></span><span class="m">8</span></div>
+<div class="fw"><span class="nm">16px</span><span class="fwbar"><i style="width:3%"></i></span><span class="m">6</span></div>
+<div class="fw"><span class="nm">8 / 22 / 24 / 28 / 30px</span><span class="fwbar"><i style="width:5%"></i></span><span class="m">~12</span></div>
+<p class="frame" style="margin-top:8px">Reading: almost everything is 9–11px. There's a 12px→16px→30px cliff with nothing between. A proper scale would be ~6 tiers; this is 14 sizes clustered at the bottom.</p>
+
+<!-- FRAMEWORK SCORECARD -->
+<h2><span class="n">§3</span> Framework scorecard — are we following the rules?</h2>
+<p class="sub" style="margin-bottom:10px">Measured against established product-design principles + the project's own Design OS.</p>
+<table>
+<thead><tr><th>Principle</th><th>Verdict</th><th>Evidence</th></tr></thead>
+<tbody>
+<tr><td>Visual hierarchy (most-important dominates)</td><td><span class="pill p0">FAIL</span></td><td>Dominant text is "179", not the verdict</td></tr>
+<tr><td>Information architecture (heading structure)</td><td><span class="pill p0">FAIL</span></td><td>0 H-tags; flat 30-card list</td></tr>
+<tr><td>Progressive disclosure (hide detail until asked)</td><td><span class="pill p1">WEAK</span></td><td>All 30 cards fully expanded always; reference data (LNG/fert/CAPE) shown inline</td></tr>
+<tr><td>Gestalt grouping (related items visually clustered)</td><td><span class="pill p1">WEAK</span></td><td>No section dividers; Markets/Geopolitics/Conditions visually identical</td></tr>
+<tr><td>Recognition over recall (self-explaining tiles)</td><td><span class="pill p1">WEAK</span></td><td>Numbers without inline meaning (e.g. "BDTI 2088" — what's good/bad?)</td></tr>
+<tr><td>F-pattern / scan-path (top-left priority)</td><td><span class="pill p1">WEAK</span></td><td>Cargo ticker top-left is decoration; verdict mid-right panel</td></tr>
+<tr><td>Colour semantics (one meaning per colour)</td><td><span class="pill p1">WEAK</span></td><td>Green/red = verdict severity AND price-delta direction (opposite meanings)</td></tr>
+<tr><td>Typographic scale (modular)</td><td><span class="pill p1">WEAK</span></td><td>14 ad-hoc sizes vs ~6-tier scale</td></tr>
+<tr><td>Legibility floor (≥11px body on mobile)</td><td><span class="pill p2">PARTIAL</span></td><td>Mostly fixed; 8px stragglers remain</td></tr>
+<tr><td>Tabular numerals on numbers</td><td><span class="pill ok">PASS</span></td><td>Applied throughout ✓</td></tr>
+<tr><td>Honest data states (no fake values)</td><td><span class="pill ok">PASS</span></td><td>—/STALE/WEB FEED/dim + integrity badge ✓</td></tr>
+<tr><td>SEBI compliance (disclaimer/3-layer/no-recommend)</td><td><span class="pill ok">PASS</span></td><td>Intact ✓</td></tr>
+<tr><td>Mobile responsive (no overflow/overlap)</td><td><span class="pill ok">PASS</span></td><td>6-pass mobile audit clean ✓</td></tr>
+</tbody>
+</table>
+
+<!-- THE 5-SECOND TEST -->
+<h2><span class="n">§4</span> The 5-second test — does it pass?</h2>
+<div class="issue crit">
+  <div class="ihead"><span class="pill p0">FAIL</span><span class="ititle">A trader can't answer "verdict + what's driving it" in 5 seconds</span></div>
+  <div class="evidence">Above-the-fold dominant element: "179" (30px) — a vessel count.
+Verdict "NORMAL" present at top:175px but smaller, competing with the cargo ticker,
+the signal bar (5 tiles), and the map — all at similar weight.
+No single focal point. The eye has to hunt.</div>
+  <div class="fix"><strong>Fix (already prototyped):</strong> verdict-as-hero — a full-width block where the verdict is the largest thing on screen (40px), with a one-line "what changed" summary + 3-4 driver chips. See <span class="kbd">redesign-v1-2026-05-22.html</span> §hero. Pulls the 5-second answer above everything else.</div>
+</div>
+
+<!-- PRIOR FINDINGS RE-VALIDATED -->
+<h2><span class="n">§5</span> Prior findings — still true? (re-validated live)</h2>
+<table>
+<thead><tr><th>2026-05-22 finding</th><th>Status now</th></tr></thead>
+<tbody>
+<tr><td>No H1/H2/H3 system</td><td class="bad">STILL TRUE — measured 0/0/0</td></tr>
+<tr><td>30 tiles at equal weight</td><td class="bad">STILL TRUE — measured 30</td></tr>
+<tr><td>Verdict buried, not hero</td><td class="bad">STILL TRUE — "179" dominates, not verdict</td></tr>
+<tr><td>14 ad-hoc font sizes → need 6-tier scale</td><td class="bad">STILL TRUE — measured 14</td></tr>
+<tr><td>Colour collision (verdict vs price-delta)</td><td class="bad">STILL TRUE</td></tr>
+<tr><td>Conditions card mixes weather+aircraft+seismic</td><td class="bad">STILL TRUE</td></tr>
+<tr><td>8px illegible text</td><td class="warn">MOSTLY FIXED — 6 stragglers remain</td></tr>
+<tr><td>Signal-bar mobile swipe discoverability</td><td class="good">IMPROVED — fade-mask shipped</td></tr>
+<tr><td>Wrong-but-fresh data visible</td><td class="good">FIXED — integrity badge + confidence-gating</td></tr>
+</tbody>
+</table>
+<p class="frame" style="margin-top:8px"><b>Conclusion:</b> the data-integrity layer got fully solved this month. The <b>design/IA layer is essentially untouched</b> — the prototype was built but never ported. That's the gap.</p>
+
+<!-- WHAT'S GOOD -->
+<h2><span class="n">§6</span> What's already good (don't break)</h2>
+<ul class="f">
+  <li class="g">Tabular numerals everywhere — correct for a data product</li>
+  <li class="g">Honest degradation (—/STALE/WEB FEED) + the new integrity badge</li>
+  <li class="g">SEBI compliance pattern intact (disclaimer + 3-layer + no-recommend)</li>
+  <li class="g">Mobile responsive, zero overflow/overlap (6-pass audit)</li>
+  <li class="g">Dark theme + mono numerals = right aesthetic for the trader persona</li>
+  <li class="g">Cargo ticker + Brent Option-A trend chart = strong signature elements</li>
+</ul>
+
+<!-- PRIORITIZED PLAN -->
+<h2><span class="n">§7</span> Prioritized plan — approve by section</h2>
+<p class="sub" style="margin-bottom:10px">All of these are already designed in <span class="kbd">redesign-v1-2026-05-22.html</span>. This is a port-and-verify job, not new design. Each ships with a headless self-test.</p>
+
+<div class="issue">
+  <div class="ihead"><span class="pill p0">1 · P0</span><span class="ititle">Verdict-as-hero + heading hierarchy (H1/H2/H3)</span></div>
+  <p style="font-size:13px;color:var(--text)">Biggest cognitive-load relief. Verdict becomes the dominant element; sections get H2 headers (Markets / Strait activity / Geopolitics / Conditions). ~10× ROI.</p>
+</div>
+<div class="issue">
+  <div class="ihead"><span class="pill p1">2 · P1</span><span class="ititle">Card consolidation 30 → ~12 + section grouping</span></div>
+  <p style="font-size:13px;color:var(--text)">Merge Brent+WTI into one Crude card; fold weather/aircraft/seismic into one Conditions tile; move LNG/fert/CAPE to a collapsed Reference section. Group under the H2s.</p>
+</div>
+<div class="issue">
+  <div class="ihead"><span class="pill p1">3 · P1</span><span class="ititle">Typography scale (14 → 6 tiers) + sans/mono discipline</span></div>
+  <p style="font-size:13px;color:var(--text)">One modular scale; mono reserved for numbers only; kill the 8px stragglers. Lifts the 9–10px density.</p>
+</div>
+<div class="issue">
+  <div class="ihead"><span class="pill p1">4 · P1</span><span class="ititle">Colour semantic cleanup</span></div>
+  <p style="font-size:13px;color:var(--text)">Reserve green/amber/red for verdict severity ONLY; price deltas switch to blue↑/orange↓ so one colour never means two things.</p>
+</div>
+<div class="issue">
+  <div class="ihead"><span class="pill p2">5 · P2</span><span class="ititle">Self-explaining tiles (inline meaning)</span></div>
+  <p style="font-size:13px;color:var(--text)">Each number gets a micro-context ("BDTI 2088 · normal range 800–1500" or a sparkline). Recognition over recall.</p>
+</div>
+<div class="issue">
+  <div class="ihead"><span class="pill p2">6 · P2</span><span class="ititle">Layout — map vs analytics balance</span></div>
+  <p style="font-size:13px;color:var(--text)">Deferred until 1–4 land, then re-measure. Likely: map → header strip, analytics get the dominant surface. Don't resize before the hierarchy fix (more space for noise = more noise).</p>
+</div>
+
+<!-- APPROVAL -->
+<div class="approve">
+  <h3>Awaiting approval — no code changes yet</h3>
+  <p style="font-size:13px;margin-bottom:12px">Pick what to port from the prototype (each independent, ordered by ROI):</p>
+  <ul>
+    <li><strong>1 — verdict-hero + H1/H2/H3</strong>: <span class="kbd">yes</span> / <span class="kbd">no</span></li>
+    <li><strong>2 — card consolidation 30→12 + grouping</strong>: <span class="kbd">yes</span> / <span class="kbd">no</span> / <span class="kbd">partial</span></li>
+    <li><strong>3 — typography scale</strong>: <span class="kbd">yes</span> / <span class="kbd">no</span></li>
+    <li><strong>4 — colour cleanup</strong>: <span class="kbd">yes</span> / <span class="kbd">no</span></li>
+    <li><strong>5 — self-explaining tiles</strong>: <span class="kbd">yes</span> / <span class="kbd">no</span></li>
+    <li><strong>6 — layout/map</strong>: <span class="kbd">defer</span> / <span class="kbd">now</span></li>
+  </ul>
+  <p style="font-size:12px;color:var(--muted);margin-top:14px">Recommendation: <b>approve 1+2+3</b> first (80% of the cognitive-load relief), each ported to <span class="kbd">index.html</span> from the prototype with a headless self-test (desktop + mobile) before you see it live. Then 4+5. Defer 6.</p>
+</div>
+
+<p style="margin-top:36px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2)">audit 2026-05-29 · headless-measured · no code changed · awaiting per-section approval</p>
+
+</div>
+</body>
+</html>
