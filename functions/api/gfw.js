@@ -23,10 +23,14 @@ async function _handleGfwPost({ request, env }) {
     return json({ error: "invalid JSON body" }, 400);
   }
 
-  // Whitelist allowed datasets to prevent abuse of the JWT
+  // Whitelist allowed datasets to prevent abuse of the JWT.
+  // 2026-05-28: the "-carriers" loitering slug 404s on GFW v3. Added the
+  // current non-carriers slug. Keeping the old one whitelisted is harmless
+  // (it just 404s upstream) but the client now requests the working slug.
   const allowed = new Set([
     "public-global-encounters-events:latest",
-    "public-global-loitering-events-carriers:latest"
+    "public-global-loitering-events:latest",
+    "public-global-loitering-events-carriers:latest"  // legacy, may 404
   ]);
   if (!Array.isArray(body.datasets) || !body.datasets.every(d => allowed.has(d))) {
     return json({ error: "dataset not allowed" }, 400);
@@ -67,43 +71,99 @@ async function _handleGfwPost({ request, env }) {
     } catch { /* fall through to live fetch */ }
   }
 
-  // ── Live GFW fetch ────────────────────────────────────────────────────────
+  // ── Live GFW fetch with timeout + stale-cache fallback ─────────────────────
+  // 2026-05-28: GFW upstream sometimes hangs, producing a Cloudflare 524 that
+  // blocks the dark-vessel tile. Now: 20s AbortController timeout; on ANY
+  // failure (timeout, 5xx, network) we serve the last cached payload of any
+  // age rather than erroring. The tile shows slightly-stale data instead of
+  // breaking. Only if there's no cache at all do we return an error.
   const url = "https://gateway.api.globalfishingwatch.org/v3/events?limit=200&offset=0";
-  try {
-    const r = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + env.GFW_TOKEN,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body),
-      cf: { cacheTtl: 1800, cacheEverything: true }
-    });
-    const text = await r.text();
 
-    // Store in KV on success
-    if (r.ok && env.OIL_KV) {
+  const serveStale = async (reason) => {
+    if (env.OIL_KV) {
       try {
-        let parsed;
-        try { parsed = JSON.parse(text); } catch { parsed = text; }
-        await env.OIL_KV.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), data: parsed }),
-          { expirationTtl: 86400 }  // auto-expire after 24h as safety net
-        );
-      } catch { /* non-fatal */ }
+        const cached = await env.OIL_KV.get(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return new Response(JSON.stringify(parsed.data), {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "cache-control": "public, max-age=3600",
+              "access-control-allow-origin": "*",
+              "X-Cache": "STALE",
+              "X-Stale-Reason": reason,
+            }
+          });
+        }
+      } catch { /* fall through to error */ }
     }
+    return json({ error: "gfw unavailable + no cache", reason }, 503);
+  };
 
+  let r, text;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20000);  // 20s hard cap
+    try {
+      r = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + env.GFW_TOKEN,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+        cf: { cacheTtl: 1800, cacheEverything: true }
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+    text = await r.text();
+  } catch (e) {
+    // Timeout or network error — serve stale rather than 524/502
+    return await serveStale("fetch_failed:" + String(e).slice(0, 60));
+  }
+
+  // Upstream returned but with an error status (404 bad slug, 5xx, etc.)
+  if (!r.ok) {
+    // 404 = bad dataset slug → no point serving stale of a different query;
+    // surface it so the client can fall back. Other errors → serve stale.
+    if (r.status >= 500) {
+      const stale = await serveStale("upstream_" + r.status);
+      if (stale.headers.get("X-Cache") === "STALE") return stale;
+    }
     return new Response(text, {
       status: r.status,
       headers: {
         "content-type": "application/json",
-        "cache-control": "public, max-age=14400",
+        "cache-control": "no-store",
         "access-control-allow-origin": "*",
-        "X-Cache": "MISS"
+        "X-Cache": "MISS-ERR"
       }
     });
-  } catch (e) {
-    return json({ error: "upstream fetch failed", detail: String(e) }, 502);
   }
+
+  // Success — store in KV
+  if (env.OIL_KV) {
+    try {
+      let parsed;
+      try { parsed = JSON.parse(text); } catch { parsed = text; }
+      await env.OIL_KV.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), data: parsed }),
+        { expirationTtl: 7 * 86400 }  // keep 7d so stale-fallback has something
+      );
+    } catch { /* non-fatal */ }
+  }
+
+  return new Response(text, {
+    status: r.status,
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "public, max-age=14400",
+      "access-control-allow-origin": "*",
+      "X-Cache": "MISS"
+    }
+  });
 }
 
 function json(obj, status = 200) {

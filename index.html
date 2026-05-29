@@ -3161,24 +3161,29 @@ function updateVesselUI(){
   var west = serverActive ? (_aisServer.westbound24h || 0)
                           : transits24h.filter(function(x){return x.dir==="westbound";}).length;
 
-  // Signal-bar tile
+  // Detect scrape-mode lockout FIRST (moved above the signal-bar render
+  // 2026-05-28). When AIS is dormant the snapshot serves a web-scrape
+  // vessel count; the signal-bar tile must use it instead of the empty
+  // client-side transit log (which renders "--"/"FEED PENDING").
+  var _snap = (typeof _snapshotData === "object") ? _snapshotData : null;
+  var _scrapeOwned = !!(_snap && (_snap.data_source === "web_scrape"
+                       || (_snap.is_static && isFinite(_snap.scraped_vessel_total) && _snap.scraped_vessel_total > 0)));
+  var _scrapeTotal = (_snap && isFinite(_snap.scraped_vessel_total)) ? _snap.scraped_vessel_total : null;
+  var _hdEl = document.getElementById("mvTransit24h");
+  var _scrapeLocked = _scrapeOwned || (_hdEl && _hdEl.dataset.scrapeMode === "1");
+
+  // Signal-bar tile — web-scrape fallback when AIS dormant
   var sigEl = document.getElementById("sigVessels");
   var dirEl = document.getElementById("sigVesselsDir");
-  if (sigEl) sigEl.textContent = total24h;
+  if (sigEl) {
+    sigEl.textContent = (_scrapeOwned && _scrapeTotal != null) ? _scrapeTotal : total24h;
+  }
   if (dirEl) {
-    dirEl.textContent = t+" now";
+    dirEl.textContent = (_scrapeOwned && _scrapeTotal != null) ? "at ports" : (t + " now");
     dirEl.style.color = "var(--muted)"; dirEl.style.fontSize = "9px";
   }
 
   // Vessel Movement card
-  // Detect scrape-mode lockout — applyAisDegradedMode() owns the headline
-  // when the snapshot is in web-scrape mode, so we must not overwrite it
-  // with the 0 we'd compute from the empty transits24h log.
-  var _snap = (typeof _snapshotData === "object") ? _snapshotData : null;
-  var _scrapeOwned = !!(_snap && (_snap.data_source === "web_scrape"
-                       || (_snap.is_static && isFinite(_snap.scraped_vessel_total) && _snap.scraped_vessel_total > 0)));
-  var _hdEl = document.getElementById("mvTransit24h");
-  var _scrapeLocked = _scrapeOwned || (_hdEl && _hdEl.dataset.scrapeMode === "1");
   var setTxt = function(id, v){ var el=document.getElementById(id); if(el) el.textContent = v; };
   if (!_scrapeLocked) setTxt("mvTransit24h", total24h);
   setTxt("mvWest", west);
@@ -3226,9 +3231,16 @@ function updateVesselUI(){
   // state — no more hardcoded "LIVE FEED" (Batch A · 2026-05-14).
   var sigSrcEl = document.getElementById("sigVesselsSrc");
   if (sigSrcEl) {
-    var srcTxt = srcEl ? srcEl.textContent : "FEED PENDING";
-    sigSrcEl.textContent = srcTxt.indexOf("·") >= 0 ? srcTxt.split("·")[0].trim() : srcTxt;
-    sigSrcEl.style.color = (srcEl && srcEl.style.color) || "var(--muted)";
+    if (_scrapeOwned) {
+      // Explicit — don't depend on moveSrc being set yet (timing race with
+      // applyAisDegradedMode). 2026-05-28.
+      sigSrcEl.textContent = "WEB FEED";
+      sigSrcEl.style.color = "var(--blue)";
+    } else {
+      var srcTxt = srcEl ? srcEl.textContent : "FEED PENDING";
+      sigSrcEl.textContent = srcTxt.indexOf("·") >= 0 ? srcTxt.split("·")[0].trim() : srcTxt;
+      sigSrcEl.style.color = (srcEl && srcEl.style.color) || "var(--muted)";
+    }
   }
 }
 // ─── Composite-mode UI reframe · runs when AIS is degraded ──────────────────
@@ -3939,6 +3951,16 @@ function renderEIA() {
       var offPrEl = document.getElementById("brentOfficialPrice");
       var offAsOf = document.getElementById("brentOfficialAsOf");
       if(offPrEl) offPrEl.textContent = "$" + officialBrent.level.toFixed(2);
+      // 2026-05-28: when the EIA official spot diverges materially from the
+      // live headline (>4%), append a "(lagged)" hint so a viewer doesn't read
+      // the two numbers as a contradiction. The official is correctly dated;
+      // this just makes the lag explicit when the gap is eye-catching.
+      if(offPrEl && Number.isFinite(headlineBrent) && officialBrent.level){
+        var gap = Math.abs(headlineBrent - officialBrent.level) / officialBrent.level * 100;
+        offPrEl.title = gap > 4
+          ? ("EIA daily spot — lagged " + gap.toFixed(0) + "% vs live (oil moved since last EIA print)")
+          : "EIA daily official spot reference";
+      }
       // EIA publishes daily spot with a 1-2 business-day lag (no weekend prints).
       // Same labelling pattern as BDTI — communicate "last publish" so the
       // date doesn't read as our staleness.
@@ -4411,11 +4433,17 @@ function gfwDates(){
 function gfwPost(type, cb){
   var dt = gfwDates();
   // GFW v3 (2026): :latest dataset tag + camelCase startDate/endDate
+  // 2026-05-28: tightened from the whole-Persian-Gulf box (52-59.5E, 24-28.5N)
+  // to a Hormuz-proximate bbox. The old box caught 200+ legitimate fishing
+  // encounters Gulf-wide and hit the GFW API's limit:200 cap, so the dark-
+  // vessel tile read "200" — absurd for "dark vessels near Hormuz". This box
+  // covers the strait + its immediate approaches (Bandar Abbas to the Gulf of
+  // Oman mouth) where dark-fleet activity is actually signal.
   var body = {
     datasets:[type],
     startDate:dt.start,
     endDate:dt.end,
-    geometry:{type:"Polygon",coordinates:[[[52,24],[59.5,24],[59.5,28.5],[52,28.5],[52,24]]]}
+    geometry:{type:"Polygon",coordinates:[[[55.0,25.0],[58.2,25.0],[58.2,27.3],[55.0,27.3],[55.0,25.0]]]}
   };
   fetch("/api/gfw",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
     .then(function(r){ if(!r.ok) return r.text().then(function(t){throw new Error("HTTP "+r.status+": "+t.slice(0,80));}); return r.json(); })
@@ -4429,7 +4457,7 @@ function fetchGFW(){
   var done=0;
   function check(){if(++done>=2)renderGFW();}
   gfwPost("public-global-encounters-events:latest",function(err,rows){gfwState.encounters=err?[]:rows;check();});
-  gfwPost("public-global-loitering-events-carriers:latest",function(err,rows){gfwState.loitering=err?[]:rows;check();});
+  gfwPost("public-global-loitering-events:latest",function(err,rows){gfwState.loitering=err?[]:rows;check();}); /* 2026-05-28: -carriers slug 404s on GFW v3 */
 }
 
 function getGFWPos(e){
@@ -4442,8 +4470,19 @@ function getGFWPos(e){
 function renderGFW(){
   var enc=gfwState.encounters.length, lor=gfwState.loitering.length, total=enc+lor;
   var darkEl=document.getElementById("sigDark"), dirEl=document.getElementById("sigDarkDir"), badge=document.getElementById("gfwBadge");
-  if(darkEl) darkEl.textContent=total>0?total:"0";
-  if(dirEl){dirEl.textContent="";} // 4enc/0loi removed — info in hover tooltip instead
+  // 2026-05-28 cap-aware: GFW API caps results at 200/dataset. If either
+  // dataset returns exactly its cap, the true count is unknown (≥cap), so we
+  // label "200+" rather than implying a precise reading. With the tightened
+  // Hormuz bbox this should rarely fire, but the guard prevents a recurrence
+  // of the "200 dark vessels" misread.
+  var capped = (enc >= 200) || (lor >= 200);
+  if(darkEl){
+    darkEl.textContent = total <= 0 ? "0" : (capped ? "200+" : String(total));
+  }
+  if(dirEl){
+    dirEl.textContent = capped ? "Gulf-wide" : "";   // qualifier when capped
+    dirEl.style.color = "var(--muted)";
+  }
   if(badge){badge.textContent="SATELLITE";badge.className="sig-src src-live";}
   gfwMarkers.forEach(function(m){try{map.removeLayer(m);}catch(e){}});
   gfwMarkers=[];
