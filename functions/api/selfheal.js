@@ -144,6 +144,31 @@ async function handle({ request, env }) {
     catch { /* non-fatal */ }
   }
 
+  // 4b) HEALTH LEDGER — the system's memory (2026-05-29). Each run appends a
+  // per-feed status sample so we can compute 7-day uptime + spot chronically
+  // flaky feeds. This is the basis for "improve along the way": the digest
+  // reads this to name the weakest feed to harden. No scraper edits needed —
+  // we derive it from the integrity snapshot we already fetched.
+  if (env.OIL_KV && !dryRun) {
+    try {
+      let hist = [];
+      const raw = await env.OIL_KV.get("feed_health_7d");
+      if (raw) hist = JSON.parse(raw);
+      const sample = { ts: Math.floor(now / 1000) };
+      for (const [k, v] of Object.entries(feeds)) {
+        // 1 = healthy, 0 = blocking, null = known-degraded (excluded from uptime)
+        sample[k] = (v.status === "ok") ? 1 : (v.status === "known-degraded") ? null : 0;
+      }
+      hist.push(sample);
+      // prune older than 7 days
+      const cutoff = Math.floor(now / 1000) - 7 * 86400;
+      hist = hist.filter(s => s.ts >= cutoff);
+      // cap to ~700 samples (7d × ~96/day) to bound KV size
+      if (hist.length > 800) hist = hist.slice(-800);
+      await env.OIL_KV.put("feed_health_7d", JSON.stringify(hist), { expirationTtl: 8 * 86400 });
+    } catch { /* non-fatal — ledger is best-effort */ }
+  }
+
   // 5) Send escalation email(s) — only for critical feeds past threshold, deduped
   let emailed = false;
   if (escalations.length && env.RESEND_KEY && !dryRun) {

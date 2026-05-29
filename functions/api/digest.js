@@ -40,6 +40,44 @@ async function handle({ request, env }) {
     ready = false;
   }
 
+  // 1b) RELIABILITY TRENDS (7-day) — the "improve along the way" intelligence.
+  // Reads the health ledger selfheal builds. Computes per-feed uptime% and
+  // names the weakest feed so hardening is data-driven, not guessed.
+  let weakest = null;
+  try {
+    const raw = await env.OIL_KV.get("feed_health_7d");
+    const hist = raw ? JSON.parse(raw) : [];
+    if (hist.length >= 5) {
+      const tally = {};   // feed -> {up, total}
+      for (const s of hist) {
+        for (const [k, v] of Object.entries(s)) {
+          if (k === "ts" || v === null) continue;
+          tally[k] = tally[k] || { up: 0, total: 0 };
+          tally[k].total += 1; tally[k].up += v;
+        }
+      }
+      lines.push("");
+      lines.push(`reliability (7d · ${hist.length} samples):`);
+      const ranked = Object.entries(tally)
+        .map(([k, t]) => ({ k, pct: t.total ? (t.up / t.total * 100) : 100 }))
+        .sort((a, b) => a.pct - b.pct);
+      for (const r of ranked) {
+        const flag = r.pct < 95 ? "  ⚠ HARDEN" : "";
+        lines.push(`  ${r.k.padEnd(10)} ${r.pct.toFixed(1)}% uptime${flag}`);
+      }
+      if (ranked.length && ranked[0].pct < 95) {
+        weakest = ranked[0];
+        lines.push("");
+        lines.push(`→ weakest feed: ${weakest.k} (${weakest.pct.toFixed(1)}%). Next hardening target — `
+          + (["bdti", "vessel"].includes(weakest.k)
+              ? "single-source; add a fallback source."
+              : "review its scraper / source reliability."));
+      }
+    }
+  } catch (e) {
+    lines.push(`reliability trend unavailable: ${e}`);
+  }
+
   // 2) Independent oil accuracy cross-check vs Yahoo (daily external call OK)
   try {
     const [oilR, yR] = await Promise.all([
@@ -70,8 +108,20 @@ async function handle({ request, env }) {
     + lines.join("\n")
     + `\n\nFull validator: ${url.origin}/api/integrity\nDashboard: ${url.origin}/`;
 
+  // ── EMAIL ONLY WHEN ACTIONABLE (2026-05-29) ───────────────────────────────
+  // The system runs itself; you hear from it only when action helps. Email if:
+  //   - NOT ready (something needs you), OR
+  //   - a feed is trending weak (<95% uptime — proactive hardening), OR
+  //   - it's Monday (one weekly all-clear summary so silence ≠ "is it dead?"), OR
+  //   - ?force=1 (manual test).
+  // Healthy weekday runs send NOTHING — no daily noise.
+  const isMonday = new Date().getUTCDay() === 1;
+  const force = url.searchParams.get("force") === "1";
+  const shouldEmail = !ready || weakest != null || isMonday || force;
+  const emailReason = !ready ? "not_ready" : weakest ? "weak_feed" : isMonday ? "weekly_summary" : force ? "forced" : "suppressed_healthy";
+
   let emailed = false, emailErr = null;
-  if (!dry && env.RESEND_KEY) {
+  if (!dry && shouldEmail && env.RESEND_KEY) {
     try {
       const er = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -91,8 +141,8 @@ async function handle({ request, env }) {
     ready, subject,
     sent_to: env.ALERT_EMAIL || DEFAULT_TO,
     from: env.RESEND_FROM || "(default test sender)",
-    emailed, emailErr, dry,
-    body_preview: body.slice(0, 600),
+    shouldEmail, emailReason, emailed, emailErr, dry,
+    body_preview: body.slice(0, 700),
   }, null, 2), {
     headers: { "content-type": "application/json", "cache-control": "no-store", "access-control-allow-origin": "*" },
   });
