@@ -146,7 +146,7 @@ async function handle({ request, env }) {
 
   // 5) Send escalation email(s) — only for critical feeds past threshold, deduped
   let emailed = false;
-  if (escalations.length && env.RESEND_KEY && env.ALERT_EMAIL && !dryRun) {
+  if (escalations.length && env.RESEND_KEY && !dryRun) {
     const body = "Self-heal could not recover these CRITICAL feeds after "
       + ESCALATE_AFTER_ATTEMPTS + " auto-retries:\n\n"
       + escalations.map(e => `  • ${e.feed} [${e.status}] — ${e.reason} (${e.attempts} attempts)`).join("\n")
@@ -158,7 +158,7 @@ async function handle({ request, env }) {
         headers: { "Authorization": `Bearer ${env.RESEND_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: env.RESEND_FROM || "Hormuz Watch <onboarding@resend.dev>",
-          to: [env.ALERT_EMAIL],
+          to: [env.ALERT_EMAIL || "aniket.kulkarni@unitedbuzzz.com"],
           subject: `Hormuz Watch — self-heal escalation (${escalations.map(e=>e.feed).join(", ")})`,
           text: body,
         }),
@@ -171,7 +171,7 @@ async function handle({ request, env }) {
   // so a "down" email is always closed by a matching "recovered" email and
   // nothing else. (2026-05-28)
   let recoveryEmailed = false;
-  if (recoveries.length && env.RESEND_KEY && env.ALERT_EMAIL && !dryRun) {
+  if (recoveries.length && env.RESEND_KEY && !dryRun) {
     const body = "These feeds RECOVERED (self-heal or natural):\n\n"
       + recoveries.map(rc => `  ✓ ${rc.feed} — was down ${rc.openFor} min [${rc.severity}]`).join("\n")
       + `\n\nNo action needed. Dashboard tiles are live again.\n`
@@ -182,7 +182,7 @@ async function handle({ request, env }) {
         headers: { "Authorization": `Bearer ${env.RESEND_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: env.RESEND_FROM || "Hormuz Watch <onboarding@resend.dev>",
-          to: [env.ALERT_EMAIL],
+          to: [env.ALERT_EMAIL || "aniket.kulkarni@unitedbuzzz.com"],
           subject: `Hormuz Watch — recovered (${recoveries.map(r=>r.feed).join(", ")})`,
           text: body,
         }),
