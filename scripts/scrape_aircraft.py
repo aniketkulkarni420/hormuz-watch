@@ -270,6 +270,19 @@ def main():
                  else {"lamin": 23, "lomin": 51, "lamax": 29, "lomax": 60}),
     }
 
+    # 2026-05-28 (Tier 1A): sanity-bound the count before writing. ADS-B
+    # parse glitches or a bbox change could yield an absurd count; reject
+    # out-of-band (0-300) rather than overwriting a good prior value.
+    try:
+        from _validate import in_bounds
+        if not in_bounds("aircraft_count", count):
+            print(f"  ✗ aircraft count {count} out of bounds — keeping prior KV (no write)")
+            from _status import write_status
+            write_status("aircraft-scraper", ok=False, reason="count_out_of_bounds", count=count)
+            sys.exit(0)
+    except Exception as e:
+        print(f"  warn: validation skipped: {e}")
+
     body = json.dumps(payload, separators=(",", ":"))
     ok = put_kv("aircraft_state", body)
 

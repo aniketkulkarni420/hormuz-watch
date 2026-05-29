@@ -764,6 +764,13 @@ header{
     </div>
   </div>
   <div class="hright">
+    <!-- 2026-05-28 Tier 1C/3F: system-integrity badge. Reads /api/integrity.
+         Green = all feeds validated fresh+sane+accurate; amber = N degraded. -->
+    <div class="live-badge" id="integrityBadge" title="System data-integrity status"
+         style="display:none;gap:5px;cursor:default">
+      <div class="ldot" id="integrityDot" style="background:var(--muted)"></div>
+      <span id="integrityLabel" style="color:var(--muted)">checking…</span>
+    </div>
     <div class="live-badge">
       <div class="ldot connecting" id="aisDot"></div>
       <span id="aisLabel" style="color:var(--amber)">CONNECTING</span>
@@ -4377,6 +4384,64 @@ function fetchOil(){
 }
 fetchOil();
 setInterval(fetchOil, 5*60*1000); // 5-min refresh
+
+// ═══════════════════════════════════════════════════
+// SYSTEM INTEGRITY BADGE (Tier 1C / 3F · 2026-05-28)
+// Reads /api/integrity — a public validator scoring every feed on
+// freshness + sanity + accuracy. Shows a one-glance readiness badge so the
+// operator (and any showcase visitor) knows if the product is fully live.
+// Also confidence-gates: any feed flagged suspect/dead by the validator gets
+// its tile dimmed via a title hint, so a wrong-but-fresh value never reads
+// as authoritative.
+// ═══════════════════════════════════════════════════
+function fetchIntegrity(){
+  fetch("/api/integrity?_=" + Date.now())
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(!d) return;
+      var badge = document.getElementById("integrityBadge");
+      var dot   = document.getElementById("integrityDot");
+      var lbl   = document.getElementById("integrityLabel");
+      if(!badge || !dot || !lbl) return;
+      badge.style.display = "flex";
+      // blocking = feeds that are stale/suspect/dead (AIS known-degraded excluded)
+      var n = d.blocking_count || 0;
+      if(d.showcase_ready){
+        dot.style.background = "var(--green)";
+        lbl.textContent = "ALL SYSTEMS LIVE";
+        lbl.style.color = "var(--green)";
+        badge.title = "All feeds validated fresh + sane + accurate · verified just now";
+      } else {
+        // distinguish "minor degraded" from "real problem"
+        dot.style.background = n >= 3 ? "var(--red)" : "var(--amber)";
+        lbl.textContent = n + " FEED" + (n===1?"":"S") + " DEGRADED";
+        lbl.style.color = n >= 3 ? "var(--red)" : "var(--amber)";
+        badge.title = "Degraded: " + (d.blocking || []).join(" · ");
+      }
+      // Confidence-gate: dim/annotate any tile whose feed is suspect or dead.
+      try {
+        var feeds = d.feeds || {};
+        // map feed -> a representative tile element id
+        var TILE = { oil:"brentPrice", bdti:"sigBDTI", currency:"irrOfficial",
+                     vessel:"sigVessels", aircraft:null, verdict:null };
+        Object.keys(feeds).forEach(function(k){
+          var f = feeds[k], id = TILE[k];
+          if(!id) return;
+          var el = document.getElementById(id);
+          if(!el) return;
+          if(f.status === "suspect" || f.status === "dead"){
+            el.style.opacity = "0.5";
+            el.title = "Integrity: " + f.status + " — " + f.reason;
+          } else {
+            el.style.opacity = "";
+          }
+        });
+      } catch(e){}
+    })
+    .catch(function(){ /* badge stays hidden on error — never block render */ });
+}
+fetchIntegrity();
+setInterval(fetchIntegrity, 3 * 60 * 1000); // every 3 min
 
 // ═══════════════════════════════════════════════════
 // DAILY OIL HISTORY — for the Brent + WTI sparklines

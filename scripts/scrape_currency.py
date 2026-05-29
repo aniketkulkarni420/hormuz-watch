@@ -324,6 +324,19 @@ def main():
         print("\n✗ Zero sources succeeded — keeping existing KV (no write)")
         return 1
 
+    # 2026-05-28 (Tier 1A): validate before overwriting good KV. Reject an
+    # absurd spread (out of 0-150% band). No prior-read helper here, so
+    # bounds-only — still catches the garbage class.
+    try:
+        from _validate import validate
+        if spread_pct is not None:
+            ok_v, why = validate("irr_spread_pct", spread_pct)
+            if not ok_v:
+                print(f"\n✗ Validation failed ({why}) — keeping existing KV (no write)")
+                return 1
+    except Exception as e:
+        print(f"  warn: validation skipped: {e}")
+
     if dry_run:
         print("\nDRY RUN — would write currency_irr to KV")
         return 0
