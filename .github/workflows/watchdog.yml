@@ -1,7 +1,10 @@
 name: watchdog
+# 2026-05-29: schedule REMOVED — superseded by Cloudflare /api/selfheal
+# (auto-remediation + escalation) and /api/digest (daily readiness email),
+# both of which use the Resend key that already lives in Cloudflare. This
+# GitHub watchdog can't email (no Resend key in GitHub secrets) so the hourly
+# cron was burning Actions minutes for nothing. Kept as manual-only fallback.
 on:
-  schedule:
-    - cron: "17 * * * *"  # hourly at :17 — staggered from scrapers
   workflow_dispatch:
 jobs:
   check:

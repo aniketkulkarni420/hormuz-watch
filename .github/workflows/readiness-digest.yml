@@ -6,8 +6,10 @@ name: readiness-digest
 # one-line "SHOWCASE READY" / "NOT READY — fix X" digest via Resend.
 
 on:
-  schedule:
-    - cron: "30 6 * * *"   # 06:30 UTC daily (~12:00 IST) — before a typical viewing window
+  # 2026-05-29: schedule REMOVED — replaced by the Cloudflare /api/digest
+  # endpoint, which sends the same daily readiness email using the Resend key
+  # already in Cloudflare (the key can't be duplicated into GitHub secrets).
+  # Kept as a manual-only fallback / reference.
   workflow_dispatch:        # run on demand any time
 
 jobs:
