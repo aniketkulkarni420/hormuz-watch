@@ -3296,6 +3296,17 @@ function applyAisDegradedMode(snap){
 
   // 2) Vessel Movement card — Port Activity mode when web-scraped data is fresh
   if(portActivityMode){
+    // 2026-05-28: signal-bar #sigVessels fix lives HERE (not in updateVesselUI)
+    // because updateVesselUI only fires on AIS events — which never arrive when
+    // AIS is dormant. This function runs on every snapshot poll, so it's the
+    // reliable place to wire the web-scrape vessel count into the headline tile.
+    var sigV = document.getElementById("sigVessels");
+    var sigVDir = document.getElementById("sigVesselsDir");
+    var sigVSrc = document.getElementById("sigVesselsSrc");
+    if(sigV) sigV.textContent = scrapedTotal != null ? scrapedTotal : "—";
+    if(sigVDir){ sigVDir.textContent = "at ports"; sigVDir.style.color = "var(--muted)"; sigVDir.style.fontSize = "9px"; }
+    if(sigVSrc){ sigVSrc.textContent = "WEB FEED"; sigVSrc.style.color = "var(--blue)"; }
+
     var moveSrc = document.getElementById("moveSrc");
     if(moveSrc){
       moveSrc.textContent = "WEB FEED · 4h";
