@@ -16,6 +16,8 @@
 // feed more than once per 20 min) + a global lock so overlapping pings don't
 // double-dispatch.
 
+import { sendAlert } from "../_lib/notify.js";
+
 const OWNER = "aniketkulkarni420";
 const REPO = "hormuz-watch";
 
@@ -169,51 +171,39 @@ async function handle({ request, env }) {
     } catch { /* non-fatal — ledger is best-effort */ }
   }
 
-  // 5) Send escalation email(s) — only for critical feeds past threshold, deduped
-  let emailed = false;
-  if (escalations.length && env.RESEND_KEY && !dryRun) {
+  // 5) Send escalation alert(s) — only for critical feeds past threshold, deduped
+  //    6h (above). Routes via sendAlert: Telegram first (free, off the Resend
+  //    quota shared with ANSK), Resend only as a daily-capped fallback. (2026-05-29)
+  let emailed = false, escalationChannel = "none";
+  if (escalations.length && !dryRun) {
     const body = "Self-heal could not recover these CRITICAL feeds after "
       + ESCALATE_AFTER_ATTEMPTS + " auto-retries:\n\n"
       + escalations.map(e => `  • ${e.feed} [${e.status}] — ${e.reason} (${e.attempts} attempts)`).join("\n")
       + `\n\nThe dashboard is auto-degrading these tiles (visitors see 'unavailable', not wrong data).\n`
       + `Validator: ${url.origin}/api/integrity\nDashboard: ${url.origin}/`;
-    try {
-      const er = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${env.RESEND_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: env.RESEND_FROM || "Hormuz Watch <onboarding@resend.dev>",
-          to: [env.ALERT_EMAIL || "aniket.kulkarni@unitedbuzzz.com"],
-          subject: `Hormuz Watch — self-heal escalation (${escalations.map(e=>e.feed).join(", ")})`,
-          text: body,
-        }),
-      });
-      emailed = er.ok;
-    } catch { emailed = false; }
+    escalationChannel = await sendAlert(env, {
+      subject: `Hormuz Watch — self-heal escalation (${escalations.map(e=>e.feed).join(", ")})`,
+      text: body,
+      fallbackResend: false,   // Telegram-only — never touch the Resend quota
+    });
+    emailed = escalationChannel === "telegram" || escalationChannel === "resend";
   }
 
   // 6) Send recovery note(s) — only for incidents we'd previously alerted on,
-  // so a "down" email is always closed by a matching "recovered" email and
-  // nothing else. (2026-05-28)
-  let recoveryEmailed = false;
-  if (recoveries.length && env.RESEND_KEY && !dryRun) {
+  // so a "down" alert is always closed by a matching "recovered" alert and
+  // nothing else. (2026-05-28) — same Telegram-first routing. (2026-05-29)
+  let recoveryEmailed = false, recoveryChannel = "none";
+  if (recoveries.length && !dryRun) {
     const body = "These feeds RECOVERED (self-heal or natural):\n\n"
       + recoveries.map(rc => `  ✓ ${rc.feed} — was down ${rc.openFor} min [${rc.severity}]`).join("\n")
       + `\n\nNo action needed. Dashboard tiles are live again.\n`
       + `Validator: ${url.origin}/api/integrity`;
-    try {
-      const rr = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${env.RESEND_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: env.RESEND_FROM || "Hormuz Watch <onboarding@resend.dev>",
-          to: [env.ALERT_EMAIL || "aniket.kulkarni@unitedbuzzz.com"],
-          subject: `Hormuz Watch — recovered (${recoveries.map(r=>r.feed).join(", ")})`,
-          text: body,
-        }),
-      });
-      recoveryEmailed = rr.ok;
-    } catch { recoveryEmailed = false; }
+    recoveryChannel = await sendAlert(env, {
+      subject: `Hormuz Watch — recovered (${recoveries.map(r=>r.feed).join(", ")})`,
+      text: body,
+      fallbackResend: false,   // Telegram-only — never touch the Resend quota
+    });
+    recoveryEmailed = recoveryChannel === "telegram" || recoveryChannel === "resend";
   }
 
   return json({
@@ -226,6 +216,8 @@ async function handle({ request, env }) {
     recoveries,
     emailed,
     recoveryEmailed,
+    escalationChannel,
+    recoveryChannel,
     dryRun,
     elapsedMs: Date.now() - t0,
   });

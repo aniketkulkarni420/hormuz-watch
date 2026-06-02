@@ -6,6 +6,7 @@
 // only if env.RESEND_KEY is set; otherwise subscribers are stored as
 // 'confirmation_pending' and we surface a friendly message.
 import { reportError } from "../_lib/sentry.js";
+import { sendTransactional } from "../_lib/notify.js";
 
 export async function onRequestPost(ctx) {
   try { return await _handleSubscribePost(ctx); }
@@ -65,25 +66,20 @@ async function _handleSubscribePost({ request, env }) {
   let emailSent = false;
   if (env.RESEND_KEY) {
     try {
-      const r = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + env.RESEND_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: env.RESEND_FROM || "Hormuz Watch <hello@hormuz-watch-2.pages.dev>",
-          to: [email],
-          subject: "Confirm your Hormuz Watch subscription",
-          html:
-            '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#222">' +
-            '<h2 style="color:#f09014;margin:0 0 14px">Confirm your subscription</h2>' +
-            '<p>You asked to be notified about Hormuz Watch. Click below to confirm — takes 5 seconds. We\'ll email you when the digest launches; no messages until then.</p>' +
-            '<p style="margin:22px 0"><a href="' + confirmUrl + '" style="background:#f09014;color:#000;padding:12px 22px;text-decoration:none;border-radius:5px;font-weight:700">Confirm subscription</a></p>' +
-            '<p style="font-size:12px;color:#666">If you didn\'t sign up, ignore this email. No further messages will be sent.</p>' +
-            '<p style="font-size:11px;color:#999;margin-top:30px">Hormuz Watch · by Aniket Kulkarni · <a href="https://hormuz-watch-2.pages.dev" style="color:#999">hormuz-watch-2.pages.dev</a></p>' +
-            '</div>',
-        }),
+      // Capped transactional send: a public form, so a daily ceiling stops
+      // bot abuse from exhausting the Resend quota shared with ANSK. (2026-05-29)
+      const r = await sendTransactional(env, {
+        from: env.RESEND_FROM || "Hormuz Watch <hello@hormuz-watch-2.pages.dev>",
+        to: [email],
+        subject: "Confirm your Hormuz Watch subscription",
+        html:
+          '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#222">' +
+          '<h2 style="color:#f09014;margin:0 0 14px">Confirm your subscription</h2>' +
+          '<p>You asked to be notified about Hormuz Watch. Click below to confirm — takes 5 seconds. We\'ll email you when the digest launches; no messages until then.</p>' +
+          '<p style="margin:22px 0"><a href="' + confirmUrl + '" style="background:#f09014;color:#000;padding:12px 22px;text-decoration:none;border-radius:5px;font-weight:700">Confirm subscription</a></p>' +
+          '<p style="font-size:12px;color:#666">If you didn\'t sign up, ignore this email. No further messages will be sent.</p>' +
+          '<p style="font-size:11px;color:#999;margin-top:30px">Hormuz Watch · by Aniket Kulkarni · <a href="https://hormuz-watch-2.pages.dev" style="color:#999">hormuz-watch-2.pages.dev</a></p>' +
+          '</div>',
       });
       emailSent = r.ok;
     } catch (e) { /* swallow */ }

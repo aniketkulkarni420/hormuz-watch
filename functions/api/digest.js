@@ -13,6 +13,8 @@
 // independent Brent-vs-Yahoo accuracy cross-check (a once-a-day external call
 // is fine here). Emails "SHOWCASE READY" / "NOT READY — fix X".
 
+import { sendAlert } from "../_lib/notify.js";
+
 const DEFAULT_TO = "aniket.kulkarni@unitedbuzzz.com";
 
 async function handle({ request, env }) {
@@ -120,28 +122,20 @@ async function handle({ request, env }) {
   const shouldEmail = !ready || weakest != null || isMonday || force;
   const emailReason = !ready ? "not_ready" : weakest ? "weak_feed" : isMonday ? "weekly_summary" : force ? "forced" : "suppressed_healthy";
 
-  let emailed = false, emailErr = null;
-  if (!dry && shouldEmail && env.RESEND_KEY) {
-    try {
-      const er = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${env.RESEND_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: env.RESEND_FROM || "Hormuz Watch <onboarding@resend.dev>",
-          to: [env.ALERT_EMAIL || DEFAULT_TO],
-          subject, text: body,
-        }),
-      });
-      emailed = er.ok;
-      if (!er.ok) emailErr = `resend ${er.status}: ${(await er.text()).slice(0, 120)}`;
-    } catch (e) { emailErr = String(e).slice(0, 120); }
+  // Route via the shared alert helper: Telegram first (free, off the Resend
+  // quota that's shared with ANSK), Resend only as a daily-capped fallback.
+  // (2026-05-29 — was a direct Resend send.)
+  let emailed = false, channel = "none";
+  if (!dry && shouldEmail) {
+    channel = await sendAlert(env, { subject, text: body });
+    emailed = channel === "telegram" || channel === "resend";
   }
 
   return new Response(JSON.stringify({
     ready, subject,
     sent_to: env.ALERT_EMAIL || DEFAULT_TO,
     from: env.RESEND_FROM || "(default test sender)",
-    shouldEmail, emailReason, emailed, emailErr, dry,
+    shouldEmail, emailReason, emailed, channel, dry,
     body_preview: body.slice(0, 700),
   }, null, 2), {
     headers: { "content-type": "application/json", "cache-control": "no-store", "access-control-allow-origin": "*" },
