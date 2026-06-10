@@ -57,13 +57,13 @@ export async function onRequestGet({ request, env }) {
 
   // ─── Composite signals · Path D (May 2026) ────────────────────────────────
   // Read 5 KV keys; surface counts in snapshot for downstream consumers.
-  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null, aisHealth = null;
+  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null, aisHealth = null, ukmto = null;
   if (env.OIL_KV) {
     const safeGet = async (k) => {
       try { const r = await env.OIL_KV.get(k); return r ? JSON.parse(r) : null; }
       catch { return null; }
     };
-    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest, aisHealth] = await Promise.all([
+    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest, aisHealth, ukmto] = await Promise.all([
       safeGet("aircraft_state"),
       safeGet("seismic_state"),
       safeGet("gdelt_state"),
@@ -74,6 +74,7 @@ export async function onRequestGet({ request, env }) {
       safeGet("ofac_state"),
       safeGet("latest"),
       safeGet("ais_health"),
+      safeGet("ukmto_state"),
     ]);
   }
 
@@ -182,10 +183,18 @@ export async function onRequestGet({ request, env }) {
     bdti_as_of: bdti_as_of,
     bdti_stale: bdti_stale,
     oil_transit_value_usd_per_day: 1120000000,
-    // incidents_30d: KILLED 2026-06-10 (was a hardcoded 58 posing as live).
-    // Emit null until the UKMTO incidents feed lands — consumers already
-    // degrade null honestly. Never resurrect a constant here.
-    incidents_30d: null,
+    // incidents_30d: LIVE from UKMTO as of 2026-06-10 (Royal Navy API via
+    // scrape_ukmto.py -> ukmto_state KV). Was a hardcoded 58 — provably a
+    // frozen snapshot of this same dataset — killed earlier today. Null when
+    // the feed is missing; never a constant.
+    incidents_30d:          ukmto?.counts?.incidents_30d ?? null,
+    ukmto_attacks_30d:      ukmto?.counts?.attacks_30d ?? null,
+    ukmto_hormuz_30d:       ukmto?.counts?.hormuz_30d ?? null,
+    ukmto_hormuz_7d:        ukmto?.counts?.hormuz_7d ?? null,
+    ukmto_redsea_30d:       ukmto?.counts?.redsea_30d ?? null,
+    ukmto_latest_attack_ts: ukmto?.latest_attack_ts ?? null,
+    ukmto_recent:           Array.isArray(ukmto?.latest) ? ukmto.latest.slice(0, 5) : [],
+    ukmto_age_sec:          ukmto?.fetchedAt ? Math.floor(Date.now()/1000 - ukmto.fetchedAt) : null,
     india_import_dependency_pct: 58.0,
     // V2 honesty fields · downstream consumers detect static vs live
     // static_fields: keys below are structural constants, NOT live-tracked —
@@ -194,7 +203,6 @@ export async function onRequestGet({ request, env }) {
     // (Batch A · 2026-05-14)
     static_fields: [
       "oil_transit_value_usd_per_day",
-      "incidents_30d",
       "india_import_dependency_pct",
     ],
     // is_static / live_source_count (rewritten 2026-05-18):

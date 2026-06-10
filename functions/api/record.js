@@ -217,6 +217,24 @@ function computeOverrides(snapshot) {
     }
   }
 
+  // UKMTO — the REAL conflict input (2026-06-10, replaces the engine's
+  // conflict blindness). Fires on an attack within 72h anywhere in the AO,
+  // or any Hormuz-region incident within 7 days.
+  const atkTs = snapshot.ukmto_latest_attack_ts;
+  const hormuz7 = snapshot.ukmto_hormuz_7d;
+  if (atkTs != null || hormuz7 != null) {
+    const atkAgeH = atkTs ? (Date.now() / 1000 - atkTs) / 3600 : Infinity;
+    if (atkAgeH <= 72) {
+      triggers.push({ id: "ukmto", reason: "UKMTO-reported ATTACK " + atkAgeH.toFixed(0) + "h ago", fires: true });
+    } else if ((hormuz7 || 0) >= 1) {
+      triggers.push({ id: "ukmto", reason: hormuz7 + " Hormuz-region incident(s) in 7d (UKMTO)", fires: true });
+    } else {
+      triggers.push({ id: "ukmto", reason: "no recent UKMTO attack/Hormuz incident", fires: false });
+    }
+  } else {
+    triggers.push({ id: "ukmto", reason: "UKMTO feed unavailable", fires: false });
+  }
+
   return triggers;
 }
 
@@ -498,6 +516,10 @@ async function _handleRecord({ request, env }) {
     news_count_24h:             snapshotD?.news_count_24h ?? null,
     spr_wow_pct:                snapshotD?.spr_wow_pct ?? null,
     opec_production_mbpd:       snapshotD?.opec_production_mbpd ?? null,
+    // UKMTO conflict feed (2026-06-10) — drives the ukmto override trigger
+    ukmto_latest_attack_ts:     snapshotD?.ukmto_latest_attack_ts ?? null,
+    ukmto_hormuz_7d:            snapshotD?.ukmto_hormuz_7d ?? null,
+    incidents_30d:              snapshotD?.incidents_30d ?? null,
   };
 
   const verdictResult = computeVerdict(verdictInput);

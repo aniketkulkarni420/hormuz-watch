@@ -33,6 +33,7 @@ const FEED_WORKFLOW = {
   gdelt:     "gdelt-scraper.yml",
   ofac:      "ofac-scraper.yml",
   bdti:      "bdti-weekly.yml",
+  ukmto:     "ukmto-scraper.yml",
   verdict:   "oil-scraper.yml",   // data-refresh computes + writes verdict_latest
 };
 
@@ -42,6 +43,7 @@ const SEVERITY = {
   oil: "critical", verdict: "critical", bdti: "critical", vessel: "critical",
   currency: "warning", news: "warning", ofac: "warning", weather: "warning",
   seismic: "warning", gdelt: "warning", aircraft: "warning",
+  ukmto: "critical",   // conflict-event feed drives the verdict — escalate fast
 };
 
 const REMEDIATION_COOLDOWN_MS = 20 * 60 * 1000;  // don't re-dispatch a feed within 20 min

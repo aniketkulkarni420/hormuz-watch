@@ -24,11 +24,12 @@ export async function onRequestGet({ env }) {
   };
 
   const [oil, bdtiLatest, currency, vessel, aircraft, news, ofac, weather,
-         seismic, gdelt, aisState, aisHealth, verdict] = await Promise.all([
+         seismic, gdelt, aisState, aisHealth, verdict, ukmto] = await Promise.all([
     kv("oil_scraped"), kv("bdti_latest"), kv("currency_irr"),
     kv("vessel_count_scraped"), kv("aircraft_state"), kv("news_headlines"),
     kv("ofac_state"), kv("weather_state"), kv("seismic_state"),
     kv("gdelt_state"), kv("ais_state"), kv("ais_health"), kv("verdict_latest"),
+    kv("ukmto_state"),
   ]);
 
   const feeds = {};
@@ -112,6 +113,17 @@ export async function onRequestGet({ env }) {
     const a = ageMin(ofac);
     if (a == null || a > 2880) return feeds.ofac = F("stale", "low", `age ${a}m`);
     feeds.ofac = F("ok", "high", "fresh", { ageMin: a });
+  })();
+
+  // ── UKMTO ── fresh<24h (2h cron, GHA-throttled) · sane count 1-2000 (2026-06-10)
+  (() => {
+    if (!ukmto) return feeds.ukmto = F("dead", "none", "no ukmto_state");
+    const a = ageMin(ukmto);
+    if (a == null || a > 1440) return feeds.ukmto = F("stale", "low", `age ${a}m > 1440`);
+    const n = ukmto.total_reports;
+    if (!(n >= 1 && n <= 2000)) return feeds.ukmto = F("suspect", "low", `count ${n} out of bounds`);
+    const c = ukmto.counts || {};
+    feeds.ukmto = F("ok", "high", `${c.incidents_30d ?? "?"} incidents/30d · ${c.attacks_30d ?? "?"} attacks · hormuz ${c.hormuz_30d ?? "?"}`, { ageMin: a });
   })();
 
   // ── WEATHER ── fresh<360m
