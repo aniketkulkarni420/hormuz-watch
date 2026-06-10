@@ -182,7 +182,10 @@ export async function onRequestGet({ request, env }) {
     bdti_as_of: bdti_as_of,
     bdti_stale: bdti_stale,
     oil_transit_value_usd_per_day: 1120000000,
-    incidents_30d: 58,
+    // incidents_30d: KILLED 2026-06-10 (was a hardcoded 58 posing as live).
+    // Emit null until the UKMTO incidents feed lands — consumers already
+    // degrade null honestly. Never resurrect a constant here.
+    incidents_30d: null,
     india_import_dependency_pct: 58.0,
     // V2 honesty fields · downstream consumers detect static vs live
     // static_fields: keys below are structural constants, NOT live-tracked —
