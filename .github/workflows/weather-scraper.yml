@@ -25,7 +25,10 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
           OPENWEATHER_KEY: ${{ secrets.OPENWEATHER_KEY }}
-        run: python scripts/scrape_weather.py 2>&1 | tee /tmp/weather.log
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/scrape_weather.py 2>&1 | tee /tmp/weather.log
       - name: Upload log
         if: always()
         uses: actions/upload-artifact@v4

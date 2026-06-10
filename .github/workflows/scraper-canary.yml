@@ -21,7 +21,10 @@ jobs:
       - name: Run BDTI scraper (dry-run)
         id: dryrun
         continue-on-error: true
-        run: python scripts/scrape_bdti.py --dry-run 2>&1 | tee /tmp/canary.log
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/scrape_bdti.py --dry-run 2>&1 | tee /tmp/canary.log
       - name: Upload canary log
         if: always()
         uses: actions/upload-artifact@v4

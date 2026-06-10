@@ -1,10 +1,12 @@
 name: oil-stooq
+# 2026-06-10: source migrated Stooq -> Yahoo v8 chart API (Stooq now behind a
+# JS proof-of-work wall; was silently failing for 4.4 days because `| tee`
+# without pipefail masked the script's exit 1). Workflow name kept (selfheal's
+# FEED_WORKFLOW map + cron-job.org fanout reference oil-stooq.yml).
 on:
   schedule:
-    # Every 15 minutes — Stooq publishes intraday Brent/WTI from exchange
-    # feeds, plain CSV (no browser). This is the primary live oil source;
-    # writes `oil_scraped` KV with confidence "high" so /api/oil Tier 0 fires
-    # and the dashboard's Market Pulse stops reading OilPriceAPI demo data.
+    # Every 15 minutes — primary live oil source; writes `oil_scraped` KV so
+    # /api/oil Tier 0 ("tier0-xverified") fires.
     - cron: "*/15 * * * *"
   workflow_dispatch:
 
@@ -19,12 +21,18 @@ jobs:
           python-version: "3.12"
       - name: Install deps
         run: pip install --quiet requests
-      - name: Run Stooq oil scraper
+      - name: Run oil scraper (Yahoo + OPA cross-verify)
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
-        run: python scripts/scrape_oil_stooq.py 2>&1 | tee /tmp/scrape.log
+        # pipefail: without it, `| tee` returns tee's exit 0 and a failing
+        # scraper reports green — exactly how the 4.4-day stale-oil incident
+        # stayed invisible. Never remove.
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/scrape_oil_stooq.py 2>&1 | tee /tmp/scrape.log
       - name: Upload log
         if: always()
         uses: actions/upload-artifact@v4

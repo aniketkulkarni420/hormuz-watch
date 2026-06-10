@@ -24,7 +24,10 @@ jobs:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
-        run: python scripts/scrape_aircraft.py 2>&1 | tee /tmp/aircraft.log
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/scrape_aircraft.py 2>&1 | tee /tmp/aircraft.log
       - name: Upload log
         if: always()
         uses: actions/upload-artifact@v4

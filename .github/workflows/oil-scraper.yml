@@ -38,7 +38,10 @@ jobs:
           SNAPSHOT_TOKEN: ${{ secrets.SNAPSHOT_TOKEN }}
           SITE_URL: ${{ secrets.SITE_URL }}
           FORCE_SNAPSHOT: ${{ inputs.force_snapshot || '' }}
-        run: python scripts/scrape_oil.py 2>&1 | tee /tmp/scrape.log
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/scrape_oil.py 2>&1 | tee /tmp/scrape.log
       - name: Upload log
         if: always()
         uses: actions/upload-artifact@v4

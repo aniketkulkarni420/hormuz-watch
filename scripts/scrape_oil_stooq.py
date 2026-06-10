@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
-"""Brent + WTI oil scraper — Stooq CSV, plain HTTP, no browser.
+"""Brent + WTI oil scraper — Yahoo Finance chart API + OPA cross-verify.
 
-Why this exists (2026-05-15):
-  - The existing /api/oil Tier 1 was serving `oilpriceapi-demo-demodata` (a
-    DEMO endpoint that froze; live tier was "primary-stale" with 220+ min
-    age). The dashboard's Market Pulse was reading demo data labelled as a
-    live commodity feed.
-  - Stooq publishes Brent (CB.F) and WTI (CL.F) front-month futures as plain
-    CSV with intraday timestamps. Verified live on 2026-05-15: CB.F 106.97,
-    CL.F 102.42 — current, parseable, no browser required.
-  - This writes the `oil_scraped` KV key with confidence "high", which
-    triggers /api/oil's Tier 0 ("tier0-xverified") path — bypassing the
-    demo Tier 1 entirely whenever Stooq is fresh.
+History:
+  - 2026-05-15: built on Stooq CSV (CB.F/CL.F), cross-verified vs OPA demo.
+  - 2026-06-10: STOOQ IS DEAD — both the quote-CSV endpoint (404) and the
+    daily-CSV endpoint (JavaScript proof-of-work anti-bot wall) are gone for
+    scripted access. Worse, the failure was INVISIBLE for 4.4 days: the
+    script correctly exited 1, but the workflow piped through `tee` without
+    pipefail, so every run reported success while writing nothing.
+    Replaced Stooq with Yahoo Finance v8 chart API (BZ=F / CL=F) — the same
+    endpoint functions/api/oil-history.js already uses, so one shared
+    upstream, verified live (Brent 91.29 / WTI 88.16 on 2026-06-10).
 
-Notes on confidence:
-  - We mark Stooq "high" despite being single-source. Stooq is a financial
-    data mirror sourcing from exchange settlement feeds (ICE for Brent,
-    NYMEX/CME for WTI) — qualitatively different from a scraped UI page.
-    The cross-verify infrastructure in scrape_oil_web.py (Playwright) keeps
-    running and can co-write the same KV when its sources agree; latest
-    timestamp wins, and Stooq's faster cron means it usually wins.
+Hardening rules adopted from that incident:
+  1. Single-source beats stale: if Yahoo dies but OPA returns sane prices,
+     WRITE ANYWAY at confidence "low" (honestly labelled) instead of letting
+     the KV age out. Only a total (both-source) failure keeps last-good.
+  2. A run that writes nothing must exit non-zero AND the workflow must use
+     pipefail so the red X is actually visible to selfheal.
 
+Writes `oil_scraped` (the /api/oil Tier 0 "tier0-xverified" input).
 Sanity bounds: 30 <= Brent/WTI <= 250.
 """
 import os
@@ -48,49 +47,37 @@ def sanity_ok(v):
         return False
 
 
-def fetch_stooq(symbol, label):
-    """Hit stooq.com CSV for a futures symbol. Returns dict or None.
-    CSV header: Symbol,Date,Time,Open,High,Low,Close,Volume"""
-    url = f"https://stooq.com/q/l/?s={symbol}&f=sd2t2ohlcv&h&e=csv"
+def fetch_yahoo(symbol, label):
+    """Yahoo Finance v8 chart API for a futures symbol (BZ=F / CL=F).
+    Same upstream as functions/api/oil-history.js. Returns dict or None."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
     try:
         r = requests.get(url, headers={"User-Agent": UA}, timeout=20)
         if not r.ok:
             print(f"  {label}: HTTP {r.status_code}")
             return None
-        lines = [ln.strip() for ln in r.text.splitlines() if ln.strip()]
-        if len(lines) < 2:
-            print(f"  {label}: short response")
-            return None
-        header = [h.strip() for h in lines[0].split(",")]
-        row    = [c.strip() for c in lines[1].split(",")]
-        rec = dict(zip(header, row))
-        close = float(rec.get("Close", ""))
+        meta = (r.json().get("chart", {}).get("result") or [{}])[0].get("meta", {})
+        close = meta.get("regularMarketPrice")
         if not sanity_ok(close):
-            print(f"  {label}: close {close} out of sanity bounds")
+            print(f"  {label}: price {close} missing or out of sanity bounds")
             return None
-        # Stooq returns Date YYYY-MM-DD in CET/CEST. Don't try to convert clock
-        # times across timezones — just check the Date field is recent (today
-        # or within the last few UTC days, covering weekend gaps and any
-        # CET-vs-UTC date-boundary edge cases).
-        fresh_dates = set()
-        for ddelta in range(0, 5):  # today + 4 prior days
-            fresh_dates.add(time.strftime("%Y-%m-%d", time.gmtime(time.time() - ddelta * 86400)))
-        if rec.get("Date") not in fresh_dates:
-            print(f"  {label}: stamp date {rec.get('Date')} not in last 5 UTC days — rejecting as stale")
+        close = float(close)
+        # Freshness: marketTime must be within the last 4 days (covers weekends).
+        mkt_ts = meta.get("regularMarketTime")
+        if mkt_ts and (time.time() - mkt_ts) > 4 * 86400:
+            print(f"  {label}: marketTime {mkt_ts} older than 4 days — rejecting as stale")
             return None
-        ts = None  # informational only; not used for staleness
-        open_ = float(rec.get("Open"))  if rec.get("Open")  else None
-        high  = float(rec.get("High"))  if rec.get("High")  else None
-        low   = float(rec.get("Low"))   if rec.get("Low")   else None
-        change    = (close - open_) if (open_ is not None) else None
-        changePct = (change / open_ * 100.0) if (change is not None and open_) else None
-        print(f"  {label}: {close}  (open {open_}, change "
-              f"{('%+.2f' % change) if change is not None else 'n/a'}, "
-              f"stamp {rec['Date']} {rec['Time']})")
+        prev = meta.get("chartPreviousClose")
+        prev = float(prev) if sanity_ok(prev) else None
+        change    = (close - prev) if prev is not None else None
+        changePct = (change / prev * 100.0) if (change is not None and prev) else None
+        stamp = time.strftime("%Y-%m-%d %H:%M", time.gmtime(mkt_ts)) if mkt_ts else None
+        print(f"  {label}: {close}  (prevClose {prev}, change "
+              f"{('%+.2f' % change) if change is not None else 'n/a'}, stamp {stamp} UTC)")
         return {
-            "close": close, "open": open_, "high": high, "low": low,
+            "close": close, "open": prev, "high": None, "low": None,
             "change": change, "changePct": changePct,
-            "stampUtc": ts, "stampStr": (rec.get("Date") + " " + rec.get("Time")).strip(),
+            "stampUtc": mkt_ts, "stampStr": stamp,
         }
     except Exception as e:
         print(f"  {label}: error {str(e)[:160]}")
@@ -140,21 +127,32 @@ def kv_put(key, value):
 def main():
     dry_run = "--dry-run" in sys.argv
     mode = "DRY RUN" if dry_run else "LIVE"
-    print(f"=== Oil scrape · Stooq [{mode}] at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
+    print(f"=== Oil scrape · Yahoo [{mode}] at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
 
-    brent = fetch_stooq("cb.f", "Brent CB.F")
-    wti   = fetch_stooq("cl.f", "WTI   CL.F")
+    brent = fetch_yahoo("BZ=F", "Brent BZ=F")
+    wti   = fetch_yahoo("CL=F", "WTI   CL=F")
     opa   = fetch_opa_demo()
 
+    # ── Degraded path (2026-06-10): Yahoo dead but OPA alive → write OPA at
+    # "low" confidence instead of letting the KV age out. The 4.4-day-stale
+    # incident proved fresh-with-honest-confidence beats stale-and-silent.
     if not (brent and wti):
-        print("\n✗ Stooq did not return usable Brent + WTI — keeping existing KV (no write).")
-        return 1
+        if opa.get("brent") and opa.get("wti"):
+            print("\n⚠ Yahoo unusable — degrading to OPA-only write (confidence=low).")
+            brent = {"close": opa["brent"], "open": None, "high": None, "low": None,
+                     "change": None, "changePct": None, "stampUtc": None, "stampStr": "opa-only"}
+            wti   = {"close": opa["wti"],   "open": None, "high": None, "low": None,
+                     "change": None, "changePct": None, "stampUtc": None, "stampStr": "opa-only"}
+            opa = {"brent": None, "wti": None}  # no self-cross-verification
+        else:
+            print("\n✗ Neither Yahoo nor OPA returned usable Brent + WTI — keeping existing KV (no write).")
+            return 1
 
-    # ── Cross-verify Stooq vs OPA demo ──────────────────────────────────────
+    # ── Cross-verify Yahoo vs OPA demo ──────────────────────────────────────
     # Confidence ladder:
     #   high   = both sources alive AND brent within ~1%
-    #   medium = both alive but disagreement > 1% (still write — Stooq leads)
-    #   low    = only one of the two alive (still write — Stooq leads)
+    #   medium = both alive but disagreement > 1% (still write — Yahoo leads)
+    #   low    = only one of the two alive (still write)
     def _pct_diff(a, b):
         if not (a and b): return None
         return abs(a - b) / ((a + b) / 2.0) * 100.0
@@ -165,7 +163,7 @@ def main():
 
     if sources_alive == 1:
         confidence = "low"
-        agree_note = "opa-dead"
+        agree_note = "single-source"
     elif brent_pct_diff is not None and brent_pct_diff <= 1.0:
         confidence = "high"
         agree_note = f"agree(brent d={brent_pct_diff:.2f}%)"
@@ -180,7 +178,7 @@ def main():
     # authoritative value; OPA is recorded in `sources` + `cross_verify` for
     # transparency.
     def sym(v, opa_val, key):
-        srcs = ["stooq"]
+        srcs = ["yahoo" if v.get("stampStr") != "opa-only" else "oilpriceapi-demo"]
         if opa_val: srcs.append("oilpriceapi-demo")
         mn = min([x for x in [v["close"], opa_val] if x is not None])
         mx = max([x for x in [v["close"], opa_val] if x is not None])

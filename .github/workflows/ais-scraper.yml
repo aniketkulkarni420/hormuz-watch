@@ -27,7 +27,10 @@ jobs:
           AIS_KEY: ${{ secrets.AIS_KEY }}
           RESEND_KEY: ${{ secrets.RESEND_KEY }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
-        run: python scripts/scrape_ais.py 2>&1 | tee /tmp/scrape.log
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/scrape_ais.py 2>&1 | tee /tmp/scrape.log
       - name: Upload log
         if: always()
         uses: actions/upload-artifact@v4

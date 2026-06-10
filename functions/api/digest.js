@@ -80,6 +80,26 @@ async function handle({ request, env }) {
     lines.push(`reliability trend unavailable: ${e}`);
   }
 
+  // 1c) STRUCTURAL-FAILURE detection (2026-06-10). Selfheal can only re-run
+  // workflows; when a feed survives >=3 redispatches it is almost certainly a
+  // CODE-LEVEL break (source markup/endpoint changed — the VesselFinder and
+  // Stooq incidents). Surface that class loudly here, because retrying will
+  // never fix it and the digest is the automatic channel that reaches a human.
+  try {
+    const raw = await env.OIL_KV.get("selfheal_state");
+    const st = raw ? JSON.parse(raw) : {};
+    const structural = Object.entries(st).filter(([, v]) => (v.attempts || 0) >= 3);
+    if (structural.length) {
+      ready = false;
+      lines.push("");
+      lines.push("STRUCTURAL FAILURES — self-heal retries are NOT fixing these (code-level break, needs a human/code fix):");
+      for (const [feed, v] of structural) {
+        const openMin = v.firstSeen ? Math.round((Date.now() - v.firstSeen) / 60000) : null;
+        lines.push(`  ✗ ${feed} — ${v.attempts} failed redispatches, open ${openMin != null ? (openMin / 60).toFixed(1) + "h" : "?"} [${v.reason || v.status || ""}]`.slice(0, 110));
+      }
+    }
+  } catch { /* best-effort */ }
+
   // 2) Independent oil accuracy cross-check vs Yahoo (daily external call OK)
   try {
     const [oilR, yR] = await Promise.all([
