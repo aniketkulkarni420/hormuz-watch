@@ -1,0 +1,38 @@
+name: oilprice-blends
+# Iran Heavy discount + Murban bypass premium from oilprice.com (2026-06-10).
+# Quotes are ~1-day delayed at source; 6h cadence is plenty.
+on:
+  schedule:
+    - cron: "40 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install --quiet requests
+      - name: Run blends scraper
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/scrape_oilprice_blends.py 2>&1 | tee /tmp/scrape.log
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrape-log-blends-${{ github.run_id }}
+          path: /tmp/scrape.log
+          retention-days: 7

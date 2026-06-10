@@ -46,7 +46,7 @@ jobs:
 
             while [ $attempt -le $max_attempts ]; do
               echo "[$path] attempt $attempt/$max_attempts"
-              R=$(curl -sf "$url" || echo "__CURL_FAIL__")
+              R=$(curl -sfL "$url" || echo "__CURL_FAIL__")  # -L: /health 308-redirects (2026-06-10)
 
               if [ "$R" = "__CURL_FAIL__" ]; then
                 echo "  curl failed (non-2xx)"

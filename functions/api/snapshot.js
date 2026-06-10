@@ -57,13 +57,13 @@ export async function onRequestGet({ request, env }) {
 
   // ─── Composite signals · Path D (May 2026) ────────────────────────────────
   // Read 5 KV keys; surface counts in snapshot for downstream consumers.
-  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null, aisHealth = null, ukmto = null;
+  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null, aisHealth = null, ukmto = null, blends = null;
   if (env.OIL_KV) {
     const safeGet = async (k) => {
       try { const r = await env.OIL_KV.get(k); return r ? JSON.parse(r) : null; }
       catch { return null; }
     };
-    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest, aisHealth, ukmto] = await Promise.all([
+    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest, aisHealth, ukmto, blends] = await Promise.all([
       safeGet("aircraft_state"),
       safeGet("seismic_state"),
       safeGet("gdelt_state"),
@@ -75,6 +75,7 @@ export async function onRequestGet({ request, env }) {
       safeGet("latest"),
       safeGet("ais_health"),
       safeGet("ukmto_state"),
+      safeGet("oilprice_blends"),
     ]);
   }
 
@@ -195,7 +196,25 @@ export async function onRequestGet({ request, env }) {
     ukmto_latest_attack_ts: ukmto?.latest_attack_ts ?? null,
     ukmto_recent:           Array.isArray(ukmto?.latest) ? ukmto.latest.slice(0, 5) : [],
     ukmto_age_sec:          ukmto?.fetchedAt ? Math.floor(Date.now()/1000 - ukmto.fetchedAt) : null,
-    india_import_dependency_pct: 58.0,
+    // oilprice.com blends (2026-06-10): spreads vs oilprice's OWN delayed Brent
+    // (same staleness) — never vs our live Brent. Murban may be null when the
+    // source quote is frozen (>7d guard).
+    iran_heavy_usd:         blends?.blends?.iran_heavy?.price ?? null,
+    iran_heavy_discount:    blends?.iran_heavy_discount ?? null,
+    iran_heavy_quote_age_h: blends?.blends?.iran_heavy?.stamp_age_h ?? null,
+    murban_usd:             blends?.blends?.murban?.price ?? null,
+    murban_premium:         blends?.murban_premium ?? null,
+    murban_quote_age_h:     blends?.blends?.murban?.stamp_age_h ?? null,
+    blends_age_sec:         blends?.fetchedAt ? Math.floor(Date.now()/1000 - blends.fetchedAt) : null,
+    // India exposure CORRECTED 2026-06-10 (was a single mislabelled 58):
+    // - import dependency (share of crude consumption imported): ~87.8% (PPAC FY24)
+    // - share of imports transiting Hormuz: ~30% NOW (India rerouted during the
+    //   2026 conflict — Russia share spiked to ~47% in Mar 2026); pre-conflict
+    //   baseline was ~55%. Structural facts with as-of labels, not live-tracked.
+    india_import_dependency_pct: 87.8,
+    india_hormuz_share_pct: 30.0,
+    india_hormuz_share_preconflict_pct: 55.0,
+    india_exposure_as_of: "2026-06",
     // V2 honesty fields · downstream consumers detect static vs live
     // static_fields: keys below are structural constants, NOT live-tracked —
     // they carry the response's fresh `as_of` only because they ship in the
@@ -204,6 +223,8 @@ export async function onRequestGet({ request, env }) {
     static_fields: [
       "oil_transit_value_usd_per_day",
       "india_import_dependency_pct",
+      "india_hormuz_share_pct",
+      "india_hormuz_share_preconflict_pct",
     ],
     // is_static / live_source_count (rewritten 2026-05-18):
     //   AIS-only gating was wrong — many other streams (oil, vessel scrape, bdti, ofac,
