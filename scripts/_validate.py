@@ -20,7 +20,7 @@ BOUNDS = {
     "bdti":             (500.0, 6000.0),
     "irr_spread_pct":   (0.0, 150.0),
     "irr_usd":          (50_000.0, 5_000_000.0),
-    "vessel_total":     (0, 500),
+    "vessel_total":     (0, 1500),   # raised 500->1500 (2026-05-29): parser now reads authoritative "Ships in port: N" per port (was undercounting via linked rows); 8 ports sum far higher
     "aircraft_count":   (0, 300),
     "wind_knots":       (0.0, 120.0),
     "earthquake_mag":   (0.0, 10.0),

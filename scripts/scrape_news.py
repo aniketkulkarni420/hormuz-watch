@@ -10,6 +10,10 @@ Sources (all free RSS, no auth):
   3. Hellenic Shipping News   — https://www.hellenicshippingnews.com/feed/
   4. Times of Israel          — https://www.timesofisrael.com/feed/
   5. Tehran Times             — https://www.tehrantimes.com/rss   (state perspective)
+  6. OilPrice.com + Geopolitics, Reuters Energy, Rigzone
+  7. CNBC Energy + International (added 2026-05-29)
+Also detects carrier advisories (war-risk surcharge / blank sailing / force
+majeure / line names) via keyword scoring — "carrier-advisories-via-news".
 
 Writes KV `news_headlines`:
   {
@@ -53,6 +57,9 @@ FEEDS = [
     ("OilPrice Geopolitics",    "https://oilprice.com/rss/geopolitics"),
     ("Reuters Energy",          "https://www.reuters.com/business/energy/rss"),
     ("Rigzone Top Stories",     "https://www.rigzone.com/news/rss/rigzone_latest.aspx"),
+    # CNBC (added 2026-05-29 · free RSS, no auth)
+    ("CNBC Energy",             "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=19836768"),
+    ("CNBC International",      "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100727362"),
 ]
 
 KEYWORDS = [
@@ -65,6 +72,12 @@ KEYWORDS = [
     "barrel", "per barrel", "$/bbl", "opec+", "opec plus", "saudi aramco",
     "rosneft", "lukoil", "energy market", "refinery", "refining margin",
     "vlcc", "suezmax", "aframax",
+    # Carrier-advisory detection (added 2026-05-29 — "carrier-advisories-via-news"
+    # in lieu of 9 bespoke carrier-site scrapers). Multi-word phrases + line names
+    # kept specific to avoid over-matching generic shipping news.
+    "war risk surcharge", "blank sailing", "force majeure", "cape of good hope",
+    "transit suspension", "suspend transit", "rerouting", "diverting vessels",
+    "maersk", "hapag-lloyd", "cma cgm", "cosco", "evergreen line",
 ]
 
 

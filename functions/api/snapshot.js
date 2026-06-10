@@ -138,6 +138,29 @@ export async function onRequestGet({ request, env }) {
   const totalActive = inbound + outbound;
   const pctOfNormal = +((transits24h / baseline) * 100).toFixed(1);
 
+  // ── Vessel composition derived metrics (2026-05-29) ──────────────────────
+  // (1) Tanker-only count — the oil-relevant slice of the port total (the
+  //     headline "all vessels" number includes tugs/supply boats). byType's
+  //     "Tanker" bucket includes crude+product+LNG/LPG carriers.
+  // (2) Iranian-port activity — Bandar Abbas + Khark Island (Iran's main crude
+  //     terminal) vs the Arab-Gulf ports, an Iran-export proxy.
+  const vfPerPort = vesselScrape?.perSite?.vesselfinder?.perPort || {};
+  const portTotal = (n) => vfPerPort?.[n]?.data?.total ?? null;
+  const IRAN_PORTS = ["Bandar Abbas", "Khark Island"];
+  // tanker_estimate = sampled tanker share scaled to authoritative in-port total
+  // (VF now samples ~10 rows/port). Falls back to raw sample count if absent.
+  const tankerCount = vesselScrape?.tanker_estimate ?? vesselScrape?.byType?.Tanker ?? null;
+  let iranPortVessels = null, arabGulfPortVessels = null;
+  if (vesselScrape && Object.keys(vfPerPort).length) {
+    let iran = 0, hasIran = false;
+    for (const pn of IRAN_PORTS) { const t = portTotal(pn); if (t != null) { iran += t; hasIran = true; } }
+    if (hasIran) {
+      iranPortVessels = iran;
+      const all = vesselScrape?.totals?.all;
+      if (Number.isFinite(all)) arabGulfPortVessels = Math.max(0, all - iran);
+    }
+  }
+
   const payload = {
     as_of: new Date().toISOString(),
     daily_transit_estimate: transits24h,
@@ -147,6 +170,13 @@ export async function onRequestGet({ request, env }) {
     total_active: totalActive,
     baseline_30d: baseline,
     pct_of_normal: pctOfNormal,
+    // Throughput in mb/d (added 2026-05-29). ESTIMATE: linearly scales EIA's
+    // ~21 mb/d "normal" Hormuz oil flow by transits-vs-baseline. Moves with the
+    // live transit count; the 21 mb/d capacity anchor is the only constant.
+    // Surface labelled "est" — it is a transit-proxy, not metered volume.
+    hormuz_capacity_mbd: 21,
+    throughput_mbd_est: +(((pctOfNormal || 0) / 100) * 21).toFixed(1),
+    throughput_pct_of_normal: pctOfNormal,
     dark_vessels: dark,
     bdti: bdti,
     bdti_as_of: bdti_as_of,
@@ -220,6 +250,11 @@ export async function onRequestGet({ request, env }) {
                               ? Object.fromEntries(Object.entries(vesselScrape.perSite.vesselfinder.perPort).map(([k,v]) => [k, v?.data?.total ?? null]))
                               : null,
     scraped_vessel_types:    vesselScrape?.byType && Object.keys(vesselScrape.byType).length ? vesselScrape.byType : null,
+    // Derived composition (2026-05-29): oil-relevant tanker slice + Iran-port proxy
+    tanker_count:            tankerCount,
+    iran_port_vessels:       iranPortVessels,
+    arab_gulf_port_vessels:  arabGulfPortVessels,
+    iran_ports_tracked:      IRAN_PORTS,
     // 2026-05-18: arrivals/departures/expected_24h are NOT extractable from
     // VesselFinder static HTML — those tabs are JS-loaded. Static scrape only
     // sees the "In Port" tab. We surface 0 as null to avoid the false-zero

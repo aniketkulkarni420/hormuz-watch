@@ -51,6 +51,7 @@ PORTS = [
     ("Jebel Ali",   "port-of-jebel-ali-in-ae-united-arab-emirates",      "AEJEA"),
     ("Ras Tanura",  "port-of-ras-tanura-in-sa-saudi-arabia",             "SARTA"),
     ("Bandar Abbas","port-of-bandar-abbas-in-ir-iran",                   "IRBND"),
+    ("Khark Island","port-of-khark-island-in-ir-iran",                   "IRKHK"),  # Iran's main crude export terminal
     # 2026-05-29 hardening — added 3 strait-proximate ports for coverage +
     # resilience. With the anomaly guard below, a wrong/404 LOCODE just adds 0
     # and won't drag the total down (the guard rejects a sudden drop). More
@@ -166,7 +167,7 @@ VESSEL_TYPE_BUCKETS = {
     "Container Ship": re.compile(r"(?:container\s*ship|container)", re.I),
     "Cargo":          re.compile(r"(?:general\s*cargo|cargo\s*ship|ro-?ro|vehicles?\s*carrier|car\s*carrier|reefer|refrigerated|deck\s*cargo)", re.I),
     "Passenger":      re.compile(r"(?:passenger|cruise|ferry)", re.I),
-    "Offshore/Service": re.compile(r"(?:offshore|supply|tug|fishing|patrol|research|sar|crew\s*boat|anchor\s*handling|pilot)", re.I),
+    "Offshore/Service": re.compile(r"(?:offshore|supply|tug|fishing|patrol|research|sar|crew\s*boat|anchor\s*handling|pilot|landing\s*craft|hopper|dredger|dredg)", re.I),
 }
 
 
@@ -182,181 +183,114 @@ def _classify_type(raw):
 
 
 def parse_vf_port(html):
-    """Extract arrivals + departures + vessel types from VesselFinder port page.
+    """Extract in-port / arrivals / expected counts + a vessel-type sample.
 
-    VF port pages render two main tables: 'Arrivals (last 24h)' and
-    'Departures (last 24h)' plus 'Expected Arrivals'. Each row carries a
-    vessel-type column. We pull rows from each table separately and count
-    types across all rows.
+    REWRITTEN 2026-05-29 — VesselFinder migrated to JS-rendered tables whose
+    rows no longer carry `/vessels/details/` links (vessel names are paywalled
+    behind a "Basic/Premium" lock icon). The old link-based parser silently
+    returned 0 rows on the new markup. Two robust signals survive the redesign:
+
+      1. AUTHORITATIVE COUNTS in the page text/meta, independent of row markup:
+           "Ships in port: 59"
+           "26 vessels have arrived within the past 24 hours and 2 ships are
+            expected to arrive"
+         These are the true totals (the rendered tables only sample ~10 rows).
+
+      2. TYPE COMPOSITION from the rendered rows: each row has
+           <div class="named-subtitle">Chemical/Oil Products Tanker</div>
+         inside <table class="...ships-in-range...">, with the section
+         identifiable by its <th> headers (Arrival / Departure / Last report /
+         ETA). NOTE: this is a SAMPLE (<=~10 rows/section), not the full port —
+         flagged via `types_sampled` so downstream can scale, not mislead.
+
+    Falls back to the legacy `/vessels/details/` link parser if the new
+    `ships-in-range` tables are absent (so we degrade gracefully either way).
     """
     if not html:
         return None
 
+    txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
+
+    def _num(pat):
+        m = re.search(pat, txt, re.I)
+        return int(m.group(1)) if m else None
+
+    # ── (1) Authoritative counts from page text ──────────────────────────────
+    inport_auth   = _num(r"Ships in port:\s*(\d+)")
+    arrivals_auth = _num(r"(\d+)\s+vessels?\s+have\s+arrived\s+within\s+the\s+past\s+24\s+hours")
+    expected_auth = _num(r"(\d+)\s+ships?\s+are\s+expected\s+to\s+arrive")
+
+    # ── (2) Type composition from rendered rows (sample) ─────────────────────
     types = {}
+    def bump(b): types[b] = types.get(b, 0) + 1
 
-    def bump(bucket):
-        types[bucket] = types.get(bucket, 0) + 1
-
-    # Vessel link counter (deduped) — keeps the legacy `unique_vessels` field meaningful.
-    vessel_links = re.findall(r'/vessels/details/[^"\']+', html)
-    unique_vessels = set(vessel_links)
-
-    # ---- Section splitter ----
-    # VesselFinder labels sections with h2/h3 (and sometimes a div header). Split
-    # the document into named segments so we can attribute rows to arrivals vs
-    # departures vs expected.
-    # Section detection (2026-05-18 — VesselFinder restructured tabs).
-    # Modern VF uses tab labels like `>Arrivals` / `>Departures` / `>Expected`
-    # / `>In Port` plus legacy "arrivals (last 24h)" / "recent arrivals".
-    # Match either form so we don't miss segments and silently fall back to
-    # the no-section path (which fills `types` but leaves arrivals/dep at 0).
-    section_pat = re.compile(
-        r"(?:"
-        r"arrivals?\s*\(?\s*last\s*24h?\s*\)?"          # "arrivals (last 24h)"
-        r"|recent\s*arrivals?"                            # "recent arrivals"
-        r"|departures?\s*\(?\s*last\s*24h?\s*\)?"        # "departures (last 24h)"
-        r"|recent\s*departures?"                          # "recent departures"
-        r"|expected\s*arrivals?"                          # "expected arrivals"
-        r"|in\s*port"                                     # "in port"
-        r"|>\s*(?P<tab>Arrivals|Departures|Expected|In\s*Port)\s*<"  # modern tab labels
-        r")",
-        re.I,
-    )
-    cursor = 0
-    segments = []
-    for m in section_pat.finditer(html):
-        if segments:
-            segments[-1] = (segments[-1][0], html[segments[-1][1]:m.start()])
-        label = m.group(0).lower()  # full match — covers both legacy + tab forms
-        if "departure" in label:
-            tag = "departures"
-        elif "expected" in label:
-            tag = "expected"
-        elif "in port" in label:
-            tag = "inport"
-        else:
-            tag = "arrivals"
-        segments.append((tag, m.end()))
-    # Close last segment
-    if segments and isinstance(segments[-1][1], int):
-        segments[-1] = (segments[-1][0], html[segments[-1][1]:])
-
-    counts = {"arrivals": 0, "departures": 0, "expected": 0, "inport": 0}
-
-    # ---- Row extractor: split on <tr opens. ----
-    # 2026-05-18: VF's table HTML has open <tr> tags without explicit </tr>
-    # closes (implicit-close, valid HTML5). Old `<tr>...</tr>` greedy match
-    # found only 4 rows out of 24 on Bandar Abbas. Strategy: split on `<tr`
-    # opens, each chunk up to the next `<tr` is the row body.
-    def _iter_rows(text):
-        opens = [m.start() for m in re.finditer(r'<tr\b', text, re.I)]
-        for i, start in enumerate(opens):
-            end = opens[i+1] if i+1 < len(opens) else len(text)
-            yield text[start:end]
-    # Shim so the rest of this function can keep using rm.group("row") API.
-    class _RowMatch:
-        def __init__(self, s): self._s = s
-        def group(self, k): return self._s
-    row_pat = type("P", (), {"finditer": staticmethod(lambda body: (_RowMatch(s) for s in _iter_rows(body)))})()
-    # Common VF type cell patterns (class names have changed over time)
-    type_cell_pats = [
-        re.compile(r'<td[^>]*class="[^"]*(?:aiv-vty|vty|vessel-type|type-col)[^"]*"[^>]*>\s*([^<]+?)\s*<', re.I),
-        re.compile(r'<td[^>]*data-type="([^"]+)"', re.I),
-        re.compile(r'<span[^>]*class="[^"]*(?:vty|vessel-type)[^"]*"[^>]*>\s*([^<]+?)\s*<', re.I),
-    ]
-
-    def extract_row_type(row_html):
-        for pat in type_cell_pats:
-            m = pat.search(row_html)
-            if m:
-                return m.group(1).strip()
-        # Fallback: look for keyword in the row text
-        text = re.sub(r"<[^>]+>", " ", row_html)
-        text = re.sub(r"\s+", " ", text)
-        for bucket, pat in VESSEL_TYPE_BUCKETS.items():
-            if pat.search(text):
-                return bucket
+    def _section_of(thtml):
+        heads = " | ".join(
+            re.sub("<[^>]+>", " ", h).lower()
+            for h in re.findall(r"<th[^>]*>(.*?)</th>", thtml, re.S | re.I)
+        )
+        if "departure" in heads:                     return "departures"
+        if "arrival" in heads:                       return "arrivals"
+        if "last report" in heads:                   return "inport"
+        if "eta" in heads or "time to go" in heads:  return "expected"
         return None
 
-    # Type counts must be deduplicated per UNIQUE vessel — otherwise a vessel
-    # that appears in both 'arrivals' and 'departures' (or expected/inport)
-    # gets counted twice in `types`, which is why types-sum diverged from
-    # the headline vessel total (185 vs 148). One vessel = one type, total. (2026-05-15)
-    seen_typed = set()
-    vessel_row_pat = re.compile(r'/vessels/details/([^"\']+)', re.I)
-    counted_in_section = False
-    for tag, body in segments:
-        if not isinstance(body, str):
-            continue
-        section_rows = 0
-        for rm in row_pat.finditer(body):
-            row = rm.group("row")
-            if "/vessels/details/" not in row and "/vessels/" not in row:
-                continue
-            section_rows += 1
-            counted_in_section = True
-            vmatch = vessel_row_pat.search(row)
-            vkey = vmatch.group(1) if vmatch else None
-            # If we already counted this vessel's type in another section, skip.
-            if vkey and vkey in seen_typed:
-                continue
-            if vkey:
-                seen_typed.add(vkey)
-            raw_type = extract_row_type(row)
-            bump(_classify_type(raw_type))
-        if tag in counts:
-            counts[tag] += section_rows
+    SUB = re.compile(r'class="named-subtitle"[^>]*>\s*([^<]+?)\s*<', re.I)
+    tables = re.findall(
+        r'<table[^>]*class="[^"]*ships-in-range[^"]*"[^>]*>(.*?)</table>',
+        html, re.S | re.I,
+    )
+    section_rows = {"arrivals": 0, "departures": 0, "expected": 0, "inport": 0}
+    inport_sample_types = []
+    for t in tables:
+        sec = _section_of(t)
+        tb = re.search(r"<tbody[^>]*>(.*?)</tbody>", t, re.S | re.I)
+        body = tb.group(1) if tb else t
+        subs = SUB.findall(body)
+        if sec:
+            section_rows[sec] = max(section_rows[sec], len(subs))
+        if sec == "inport":
+            inport_sample_types = subs
+    # Prefer the in-port table for composition; fall back to whatever rows exist.
+    sample = inport_sample_types or SUB.findall(html)
+    for raw in sample:
+        bump(_classify_type(raw))
+    types_sampled = bool(tables)
 
-    # Fallback if section labels missed: count all vessel-link rows once each.
-    if not counted_in_section:
-        for rm in row_pat.finditer(html):
-            row = rm.group("row")
-            if "/vessels/details/" not in row:
-                continue
-            vmatch = vessel_row_pat.search(row)
-            vkey = vmatch.group(1) if vmatch else None
-            if vkey and vkey in seen_typed:
-                continue
-            if vkey:
-                seen_typed.add(vkey)
-            raw_type = extract_row_type(row)
-            bump(_classify_type(raw_type))
+    # ── Resolve counts: authoritative text wins; row counts are the floor ────
+    inport     = inport_auth   if inport_auth   is not None else section_rows["inport"]
+    arrivals   = arrivals_auth if arrivals_auth is not None else section_rows["arrivals"]
+    expected   = expected_auth if expected_auth is not None else section_rows["expected"]
+    departures = section_rows["departures"]   # no text statement; row floor (<=~10)
 
-    # Heuristic explicit-count fallbacks (still useful when tables didn't parse)
-    if counts["arrivals"] == 0:
-        m_arr = re.search(r'(?:recent|last)\s*arrivals?[^0-9]{0,50}(\d+)', html, re.I)
-        if m_arr:
-            counts["arrivals"] = int(m_arr.group(1))
-    if counts["departures"] == 0:
-        m_dep = re.search(r'(?:recent|last)\s*departures?[^0-9]{0,50}(\d+)', html, re.I)
-        if m_dep:
-            counts["departures"] = int(m_dep.group(1))
-    if counts["expected"] == 0:
-        m_exp = re.search(r'expected\s*arrivals?[^0-9]{0,50}(\d+)', html, re.I)
-        if m_exp:
-            counts["expected"] = int(m_exp.group(1))
+    total = inport or arrivals or 0
 
-    # Headline `total` must match sum(types). `unique_vessels` is the de-duped
-    # vessel-link set — same dedup basis as `types` (one type per vessel).
-    # Fall back to arrivals+departures only when no vessel links parsed (e.g.
-    # the page rendered just text counts). The old `max(unique, arr+dep)`
-    # could exceed unique_vessels when a vessel was listed in both sections,
-    # producing the headline-vs-types-sum drift (148 vs 185). (2026-05-15)
-    total = len(unique_vessels) or (counts["arrivals"] + counts["departures"])
+    # ── Legacy fallback: pre-2026-05-29 linked-row markup ────────────────────
+    if total == 0 and not tables:
+        unique_vessels = set(re.findall(r"/vessels/details/[^\"']+", html))
+        if unique_vessels:
+            for rm in re.finditer(r"<tr\b(.*?)(?=<tr\b|$)", html, re.S | re.I):
+                row = rm.group(0)
+                if "/vessels/details/" not in row:
+                    continue
+                text = re.sub(r"\s+", " ", re.sub("<[^>]+>", " ", row))
+                bump(_classify_type(text))
+            total = len(unique_vessels)
+            types_sampled = False
+
     if total == 0 and sum(types.values()) == 0:
         return None
 
     return {
-        "arrivals":       counts["arrivals"],
-        "departures":     counts["departures"],
-        "expected_24h":   counts["expected"],
-        # In-port count = unique vessels visible on the static page. The
-        # arrivals/departures/expected tabs are JS-loaded by VF and not in
-        # the static HTML, so they typically return 0 here. (2026-05-18)
-        "inport":         counts["inport"],
-        "unique_vessels": len(unique_vessels),
-        "total":          total,
-        "types":          types,
+        "arrivals":       arrivals,
+        "departures":     departures,
+        "expected_24h":   expected,
+        "inport":         inport,
+        "unique_vessels": inport,          # legacy field name kept for callers
+        "total":          total,           # authoritative in-port count
+        "types":          types,           # composition SAMPLE (see types_sampled)
+        "types_sampled":  types_sampled,
+        "types_sample_n": sum(types.values()),
     }
 
 
@@ -453,19 +387,35 @@ def main():
     # to unique_vessels but type still bumped). Anchor public total to sum(types)
     # whenever type data is available; fall back to total_all otherwise.
     # (Phase-2 fix, 2026-05-17 — see /audit "types sum vs total" row.)
+    # 2026-05-29 REWORK: in-port `total` is now the authoritative page-text
+    # count ("Ships in port: N") summed across ports. `byType` is only a
+    # ~10-row-per-port SAMPLE, so we must NOT anchor the headline to sum(types)
+    # anymore (that would shrink the real total to the sample size — the old
+    # bug in reverse). Headline = authoritative total; types power a SCALED
+    # composition estimate instead.
     types_sum = sum(by_type.values()) if by_type else 0
-    reconciled_total = types_sum if types_sum > 0 else total_all
+    reconciled_total = total_all
+
+    # Scaled tanker estimate: apply the sampled tanker share to the authoritative
+    # total. Honest approximation, flagged `_est` — the sample (in-port rows) is
+    # assumed roughly representative. Better than reporting the raw sample (which
+    # would read e.g. "4 tankers" against 200 vessels in port).
+    tanker_share = (by_type.get("Tanker", 0) / types_sum) if types_sum else None
+    tanker_estimate = round(reconciled_total * tanker_share) if tanker_share is not None else None
 
     result = {
         "fetchedAt": int(time.time()),
         "totals": {
-            "arrivals": total_arrivals,
-            "departures": total_departures,
-            "all": reconciled_total,
-            "all_legacy_max": total_all,    # kept for audit; not used by UI
+            "arrivals": total_arrivals,      # authoritative 24h arrivals (flow proxy)
+            "departures": total_departures,  # row floor (<=~10/port), not authoritative
+            "all": reconciled_total,         # authoritative in-port count
+            "all_legacy_max": total_all,
             "expected_24h": expected_24h_total,
         },
-        "byType": by_type,
+        "byType": by_type,                   # SAMPLE composition (see byType_sampled)
+        "byType_sampled": True,
+        "byType_sample_n": types_sum,
+        "tanker_estimate": tanker_estimate,  # scaled to authoritative total
         "perSite": per_site,
         "sites_succeeded": sites_succeeded,
         "confidence": confidence,
@@ -488,7 +438,11 @@ def main():
             reject = f"total {reconciled_total} out of bounds 0-500"
         elif sites_succeeded == 0:
             reject = "no site succeeded"
-        elif prev_total and not anomaly_ok(prev_total, reconciled_total, max_pct=40):
+        elif prev_total and reconciled_total < prev_total and not anomaly_ok(prev_total, reconciled_total, max_pct=40):
+            # Guard DROPS only (a port page breaking → adds 0). A RISE is allowed:
+            # it's either real traffic or the 2026-05-29 parser fix stepping the
+            # baseline up to authoritative counts. (Was symmetric — would have
+            # rejected the methodology step-up and frozen the stale undercount.)
             reject = f"total dropped >40% ({prev_total} -> {reconciled_total}) — likely a broken port, not real"
     except Exception as e:
         print(f"  warn: vessel validation skipped: {e}")
