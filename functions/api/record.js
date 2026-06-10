@@ -17,6 +17,11 @@ import { reportError } from "../_lib/sentry.js";
 
 // ─── Per-signal scorers · each returns 0 (calm) → 4 (critical) ──────────────
 const BASELINE_TRANSITS = 22;
+// Pre-war Brent anchor (2026-02-27 close, before the Iran conflict began).
+// Used to score the WAR PREMIUM LEVEL, not just daily spikes — three months
+// into a conflict, prices plateau and a Δ-only scorer decays to NORMAL while
+// the strait is under blockade. (2026-06-10 verdict-engine repair.)
+const PREWAR_BRENT = 72.0;
 
 function scoreTransits(t, baseline) {
   if (t == null || !isFinite(t)) return null;
@@ -29,11 +34,21 @@ function scoreTransits(t, baseline) {
 function scoreOilSpike(price, dp24h) {
   if (!isFinite(price)) return null;
   const dp = isFinite(dp24h) ? Math.abs(dp24h) : 0;
-  if (price > 130 || dp > 8) return 4;
-  if (price > 110 || dp > 5) return 3;
-  if (price > 95 || dp > 3) return 2;
-  if (dp > 1.5) return 1;
-  return 0;
+  let spike = 0;
+  if (price > 130 || dp > 8) spike = 4;
+  else if (price > 110 || dp > 5) spike = 3;
+  else if (price > 95 || dp > 3) spike = 2;
+  else if (dp > 1.5) spike = 1;
+  // War-premium LEVEL vs pre-war anchor (2026-06-10): a sustained +27% level
+  // with calm dailies is NOT calm — it is the market pricing a standing
+  // conflict. Score the premium and take the worse of the two reads.
+  const premPct = (price - PREWAR_BRENT) / PREWAR_BRENT * 100;
+  let prem = 0;
+  if (premPct >= 40) prem = 4;
+  else if (premPct >= 25) prem = 3;
+  else if (premPct >= 15) prem = 2;
+  else if (premPct >= 8) prem = 1;
+  return Math.max(spike, prem);
 }
 function scoreTankerStocks(tankerIndex) {
   if (tankerIndex == null || !isFinite(tankerIndex)) return null;
@@ -181,6 +196,27 @@ function computeOverrides(snapshot) {
     triggers.push({ id: "seismic", reason: "Max mag " + maxMag, fires: false });
   }
 
+  // ── Interim conflict triggers (2026-06-10) — stand-ins until the UKMTO
+  // incidents feed exists. The engine previously had NO conflict-state input.
+  // War-level media tone: GDELT >= 70% negative is wartime coverage, not noise.
+  const tone = snapshot.gdelt_neg_tone || 0;
+  if (tone >= 70) {
+    triggers.push({ id: "war_tone", reason: tone.toFixed(0) + "% negative tone (war-level coverage)", fires: true });
+  } else {
+    triggers.push({ id: "war_tone", reason: tone.toFixed(0) + "% negative tone (threshold 70)", fires: false });
+  }
+  // Standing war premium: Brent >= +20% over the pre-war anchor means the
+  // market is pricing a live conflict regardless of daily calm.
+  const bp = snapshot.brent_price;
+  if (isFinite(bp) && PREWAR_BRENT > 0) {
+    const prem = (bp - PREWAR_BRENT) / PREWAR_BRENT * 100;
+    if (prem >= 20) {
+      triggers.push({ id: "war_premium", reason: "Brent +" + prem.toFixed(0) + "% vs pre-war (standing conflict pricing)", fires: true });
+    } else {
+      triggers.push({ id: "war_premium", reason: "Brent " + (prem >= 0 ? "+" : "") + prem.toFixed(0) + "% vs pre-war (threshold +20%)", fires: false });
+    }
+  }
+
   return triggers;
 }
 
@@ -189,20 +225,25 @@ function applyOverrides(baseVerdict, triggers) {
   const levels = ["NORMAL", "ELEVATED", "HIGH", "CRITICAL"];
   let idx = levels.indexOf(baseVerdict);
   if (idx < 0) idx = 0;
-  idx = Math.min(idx + firedCount, levels.length - 1);
+  // Escalation capped at +2 levels (2026-06-10): with 7 possible triggers,
+  // uncapped stacking pegs the scale at CRITICAL and destroys its meaning.
+  // CRITICAL should require a HIGH structural base plus corroboration.
+  idx = Math.min(idx + Math.min(firedCount, 2), levels.length - 1);
   return levels[idx];
 }
 
 // ─── STAGE 1 · structural weighted average (13 inputs) ──────────────────
 function computeVerdict(snapshot) {
-  // 2026-05-18: when AIS is dormant we fall back to scraped_vessel_total
-  // (5-port VesselFinder count, ~143). It's a different denominator but
-  // ratio-vs-baseline still gives a usable structural signal — strictly
-  // better than emitting null and zero-weighting the input.
+  // 2026-06-10 REPAIR: the 2026-05-18 fallback that fed scraped_vessel_total
+  // (ships IN PORT) into the transits slot was a CATEGORY INVERSION. During a
+  // blockade ships pile up in port because they cannot leave — so the in-port
+  // count RISES, scored against a transit baseline it read as "flow excellent"
+  // (score 0 at 30% weight), making the verdict CALMER precisely because of
+  // the blockade. This is how the engine said NORMAL during active missile
+  // exchanges. In-port counts must NEVER enter the transits slot. When AIS is
+  // dormant, transits = null → W_COMPOSITE mode (transits weight 0).
   const transitsRaw = (snapshot.transits_24h != null && snapshot.transits_24h > 0)
-                        ? snapshot.transits_24h
-                        : (snapshot.scraped_vessel_total != null && snapshot.scraped_vessel_total > 0
-                            ? snapshot.scraped_vessel_total : null);
+                        ? snapshot.transits_24h : null;
   const transitsScore = transitsRaw != null
                           ? scoreTransits(transitsRaw, BASELINE_TRANSITS) : null;
   const oilScore        = scoreOilSpike(snapshot.brent_price, snapshot.brent_dp_24h);
@@ -226,9 +267,13 @@ function computeVerdict(snapshot) {
     ofac: 0.07, currency: 0.04, news: 0.04, inventory: 0.04, production: 0.04
   };
   const W_COMPOSITE = {
+    // events (GDELT neg-tone) raised 0.10 -> 0.18, stocks trimmed (2026-06-10):
+    // with AIS dark, news tone is the most direct conflict signal we hold —
+    // 87.8% negative during missile exchanges was scoring 4 but moving the
+    // weighted average by only 0.10. Normalization handles the sum.
     transits: 0,
-    oil: 0.18, stocks: 0.13, bdti: 0.07,
-    aircraft: 0.13, events: 0.10, seismic: 0.03, weather: 0.03,
+    oil: 0.18, stocks: 0.08, bdti: 0.07,
+    aircraft: 0.13, events: 0.18, seismic: 0.03, weather: 0.03,
     ofac: 0.10, currency: 0.06, news: 0.05, inventory: 0.05, production: 0.02
   };
   const weights = transitsScore !== null ? W_AIS : W_COMPOSITE;
@@ -491,6 +536,12 @@ async function _handleRecord({ request, env }) {
       news_count_24h: verdictInput.news_count_24h,
       spr_wow_pct: verdictInput.spr_wow_pct,
       opec_production_mbpd: verdictInput.opec_production_mbpd,
+      // Vessel composition history (2026-06-10) — persisted hourly so trend
+      // tiles (in-port accumulation = blockade signature) have a series.
+      ships_in_port: snapshotD?.scraped_vessel_total ?? null,
+      arrivals_24h: snapshotD?.scraped_vessel_arrivals ?? null,
+      tanker_count_est: snapshotD?.tanker_count ?? null,
+      iran_port_vessels: snapshotD?.iran_port_vessels ?? null,
     }
   };
 
