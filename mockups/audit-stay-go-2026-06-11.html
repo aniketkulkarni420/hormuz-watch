@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hormuz Watch — STAY / GO audit of the live design · 2026-06-11</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#06080d;--panel:#0c111a;--panel2:#0f1521;--border:#1b2433;--text:#d6e0ee;--muted:#8496ad;--muted2:#5d6f88;
+--stay:#2cce81;--fix:#f0a814;--rep:#54a8ff;--go:#ff3e52;--accent:#f0a814}
+body{background:var(--bg);color:var(--text);font-family:'Manrope',system-ui,sans-serif;font-size:13px;line-height:1.5}
+.mono{font-family:'JetBrains Mono',monospace}
+.proto{background:rgba(240,168,20,.12);border-bottom:1px solid rgba(240,168,20,.3);padding:7px 20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent)}
+.shell{max-width:1480px;margin:0 auto;padding:16px 20px 60px}
+h1{font-size:19px;margin:6px 0 2px}
+.sub{color:var(--muted);font-size:11px;margin-bottom:12px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:8px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:10px}
+.tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:.05em}
+.t-stay{color:var(--stay);border:1px solid rgba(44,206,129,.4);background:rgba(44,206,129,.08)}
+.t-fix{color:var(--fix);border:1px solid rgba(240,168,20,.45);background:rgba(240,168,20,.09)}
+.t-rep{color:var(--rep);border:1px solid rgba(84,168,255,.45);background:rgba(84,168,255,.09)}
+.t-go{color:var(--go);border:1px solid rgba(255,62,82,.5);background:rgba(255,62,82,.09)}
+/* three rails mirroring the live layout */
+.rails{display:grid;grid-template-columns:300px 1fr 320px;gap:14px}
+@media(max-width:1000px){.rails{grid-template-columns:1fr}}
+.rail-h{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;padding:6px 2px;border-bottom:1px solid var(--border);margin-bottom:10px}
+.blk{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:10px;position:relative}
+.blk.v-stay{border-left:3px solid var(--stay)}
+.blk.v-fix{border-left:3px solid var(--fix)}
+.blk.v-rep{border-left:3px solid var(--rep)}
+.blk.v-go{border-left:3px solid var(--go)}
+.blk .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:3px}
+.blk .name{font-weight:700;font-size:13px}
+.blk .now{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:5px}
+.blk .now b{color:var(--text);font-size:14px}
+.blk .why{font-size:11px;color:var(--muted)}
+.blk .act{font-size:11px;color:var(--text);margin-top:5px;padding-top:5px;border-top:1px dashed var(--border)}
+.blk .act b{color:var(--rep)}
+.newpanel{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:16px}
+.newpanel h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;text-align:left;padding:5px 8px;border-bottom:1px solid var(--border)}
+td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+td:first-child{font-weight:600}
+.pri{font-family:'JetBrains Mono',monospace;font-weight:700}
+.p0{color:var(--go)}.p1{color:var(--fix)}.p2{color:var(--muted)}
+.src{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2)}
+</style></head><body>
+<div class="proto">⚠ AUDIT OVERLAY — mirrors the LIVE design's three rails · values = snapshot 2026-06-11 · nothing here is built; awaiting your approval per block</div>
+<div class="shell">
+<h1>Live dashboard — what stays, what goes</h1>
+<div class="sub">Same layout you like. Green = untouched. Amber = same tile, fixed data/label. Blue = same slot, better metric. Red = remove.</div>
+<div class="legend"><span class="tag t-stay">STAY</span> keep as-is &nbsp; <span class="tag t-fix">FIX</span> keep tile, repair data/label &nbsp; <span class="tag t-rep">REPLACE</span> same slot, new metric &nbsp; <span class="tag t-go">GO</span> remove</div>
+
+<div class="rails">
+<!-- LEFT RAIL (verdict + signals) -->
+<div>
+  <div class="rail-h">Left rail — verdict + signal tiles</div>
+  <div class="blk v-stay"><div class="top"><span class="name">Verdict + Tension gauge</span><span class="tag t-stay">STAY</span></div>
+    <div class="now">now: <b>CRITICAL</b> · structural HIGH 2.06</div>
+    <div class="why">Engine repaired 06-10 (inversion removed, war-premium, UKMTO trigger). Accurate.</div>
+    <div class="act"><b>enrich:</b> surface fired triggers in the existing verdictTriggers element — "UKMTO attack 6h ago · Brent +29% pre-war · 88% war tone". Auditability, zero layout change.</div></div>
+  <div class="blk v-fix"><div class="top"><span class="name">"Transits / 24h" tile</span><span class="tag t-fix">FIX</span></div>
+    <div class="now">now: <b>479</b> · WEB FEED</div>
+    <div class="why">FALSE. This is ships-IN-PORT labelled as transits — during a blockade in-port RISES as traffic collapses (~10% of usual per press). The worst lie on the page.</div>
+    <div class="act"><b>rewire:</b> main = <b>port arrivals/24h (226)</b> measured · sub-line "479 in port" · label "Port flow / 24h". Never "transits" until AIS returns.</div></div>
+  <div class="blk v-rep"><div class="top"><span class="name">"Dark / suspect" tile</span><span class="tag t-rep">REPLACE</span></div>
+    <div class="now">now: <b>—</b> · permanent dash</div>
+    <div class="why">GFW API actually WORKS (verified today — POST proxy returns live events; UI wiring broke). But during war the whole zone is AIS-dark, so "dark ships" is noise anyway.</div>
+    <div class="act"><b>slot gets:</b> <b>AIS going-dark events</b> (GFW gaps dataset — "likely disabling", Hormuz bbox). Same satellite source, sharper war signal. Fallback option: Iran Heavy discount −$5.21.</div></div>
+  <div class="blk v-stay"><div class="top"><span class="name">BDTI tile</span><span class="tag t-stay">STAY</span></div>
+    <div class="now">now: <b>2041</b> · yesterday's close</div>
+    <div class="why">Accurate, honestly labelled, fresh.</div></div>
+  <div class="blk v-fix"><div class="top"><span class="name">"Incidents / 30d" tile</span><span class="tag t-fix">FIX</span></div>
+    <div class="now">now: <b>—</b> · EVENTS PENDING</div>
+    <div class="why">Data EXISTS since 06-10: UKMTO (Royal Navy API) live — 10 incidents/30d, 3 attacks, latest attack same-day. Tile simply not wired.</div>
+    <div class="act"><b>wire:</b> "10 · 3 attacks" · badge ROYAL NAVY · tooltip lists latest 3 with place + date.</div></div>
+  <div class="blk v-stay"><div class="top"><span class="name">India via Hormuz</span><span class="tag t-stay">STAY</span></div>
+    <div class="now">now: <b>~30%</b> · was 55% pre-war · REROUTED 2026</div>
+    <div class="why">Corrected + sourced 06-10. The rerouting story is itself signal.</div>
+    <div class="act"><b>add one line:</b> bypass pipelines "≈7 of 21 mb/d can skip the strait → ~14 stranded if closed" (EIA, structural).</div></div>
+  <div class="blk v-stay"><div class="top"><span class="name">AIS status chip</span><span class="tag t-stay">STAY</span></div>
+    <div class="now">now: dormant · honest</div>
+    <div class="why">Honest about the gap. Persistent-listener rebuild stays on the roadmap.</div></div>
+</div>
+
+<!-- CENTER RAIL -->
+<div>
+  <div class="rail-h">Center — map + market pulse + trend</div>
+  <div class="blk v-stay"><div class="top"><span class="name">Live map</span><span class="tag t-stay">STAY</span></div>
+    <div class="why">Keep. Optional later (presentation phase): UKMTO incident pins — we now hold exact lat/lon per incident from the Royal Navy feed. That upgrade costs nothing in layout.</div></div>
+  <div class="blk v-fix"><div class="top"><span class="name">Market Pulse — Brent / WTI / spread</span><span class="tag t-fix">FIX (one span)</span></div>
+    <div class="now">now: <b>$93.05</b> Brent · live, 2-source cross-verified Δ0.1%</div>
+    <div class="why">Accurate. Missing the war framing you asked for: level + DoD exist, Δ-vs-pre-war doesn't.</div>
+    <div class="act"><b>add span:</b> "+29% vs pre-war ($72 · Feb 27)" under the price. One line, no layout change.</div></div>
+  <div class="blk v-stay"><div class="top"><span class="name">Brent 4-week trend (area)</span><span class="tag t-stay">STAY</span></div>
+    <div class="why">Accurate (Yahoo daily). Presentation phase: event markers (UKMTO attacks) on this chart = the Vox-style upgrade.</div></div>
+  <div class="blk v-stay"><div class="top"><span class="name">EIA official cross-check row</span><span class="tag t-stay">STAY</span></div>
+    <div class="why">Authoritative validation vs scraped. Trust feature.</div></div>
+  <div class="blk v-go"><div class="top"><span class="name">Brent volatility row</span><span class="tag t-go">GO (verify first)</span></div>
+    <div class="why">If still the build-time estimate rather than a measured series, it is decoration posing as data. Verify source; remove if estimate.</div></div>
+
+  <div class="newpanel">
+    <h2>New metrics — recap of approved + new finds (for re-approval)</h2>
+    <table>
+      <tr><th>Metric</th><th>Source · accuracy</th><th>Status</th><th>Pri</th></tr>
+      <tr><td>Iran Heavy discount vs Brent</td><td class="src">oilprice.com, per-quote stamp · med</td><td>LIVE since 06-10 (−$5.21) · needs a slot</td><td class="pri p0">P0</td></tr>
+      <tr><td>UKMTO incidents + attacks</td><td class="src">Royal Navy API · high</td><td>LIVE · wire the tile</td><td class="pri p0">P0</td></tr>
+      <tr><td>Δ vs pre-war (Brent, BDTI)</td><td class="src">anchor 2026-02-27 · exact</td><td>approved · one-span add</td><td class="pri p0">P0</td></tr>
+      <tr><td>AIS going-dark events (NEW find)</td><td class="src">GFW gaps dataset · med-high</td><td>API verified working today · build</td><td class="pri p1">P1</td></tr>
+      <tr><td>Bypass pipelines ≈7/21 mb/d</td><td class="src">EIA structural</td><td>approved · one-line add</td><td class="pri p1">P1</td></tr>
+      <tr><td>War-risk band (indicative)</td><td class="src">derived: UKMTO+tone+premium</td><td>approved · logic exists</td><td class="pri p1">P1</td></tr>
+      <tr><td>Henry Hub gas</td><td class="src">Yahoo NG=F keyless · high</td><td>approved · ~30-line build</td><td class="pri p1">P1</td></tr>
+      <tr><td>Press-cited transit estimates (NEW)</td><td class="src">news extraction of Kpler/Reuters figures · est, cited</td><td>think-anew: "Kpler: ~N transits (date)" line — honest stopgap for the AIS gap</td><td class="pri p1">P1</td></tr>
+      <tr><td>Murban bypass premium</td><td class="src">oilprice — source quote FROZEN 41d</td><td>auto-resumes when source thaws</td><td class="pri p2">P2</td></tr>
+      <tr><td>Storage: US (live) · India PPAC · China press-est · EU GIE(key)</td><td class="src">EIA/PPAC/news/GIE</td><td>approved · build queue</td><td class="pri p2">P2</td></tr>
+      <tr><td>Closure prediction-market odds (NEW idea)</td><td class="src">Polymarket public API · market-implied</td><td>unique + free; SEBI framing needed ("market-implied probability, not our forecast") — your call</td><td class="pri p2">P2?</td></tr>
+      <tr><td>Fujairah bunker premium (NEW idea)</td><td class="src">Ship&Bunker page · verify scrapability</td><td>port-cost stress signal — verify before promising</td><td class="pri p2">P2?</td></tr>
+      <tr><td>True transits · laden/ballast</td><td class="src">needs AIS listener</td><td>the structural gap — roadmap</td><td class="pri p2">P2</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- RIGHT RAIL -->
+<div>
+  <div class="rail-h">Right rail — context blocks</div>
+  <div class="blk v-stay"><div class="top"><span class="name">News block + GDELT tone</span><span class="tag t-stay">STAY</span></div>
+    <div class="now">now: 11 sources · 88% neg tone</div>
+    <div class="why">Accurate. GDELT scraper failed 8 runs today — upstream GDELT API outage (their notorious flakiness), self-recovered; visible only thanks to the pipefail fix. Hardening: retry-with-backoff inside the scraper.</div></div>
+  <div class="blk v-stay"><div class="top"><span class="name">OFAC block + timeline</span><span class="tag t-stay">STAY</span></div>
+    <div class="now">official · 6h cadence</div>
+    <div class="why">Accurate and unique among free dashboards.</div></div>
+  <div class="blk v-stay"><div class="top"><span class="name">IRR currency block</span><span class="tag t-stay">STAY</span></div>
+    <div class="now">official / black-market / spread / multiple</div>
+    <div class="why">Accurate, hourly. Four numbers is generous for a supporting signal but harmless — your earlier ruling (supporting, not priority) already reflected in weighting.</div></div>
+  <div class="blk v-stay"><div class="top"><span class="name">Environment (wind / vis / quakes)</span><span class="tag t-stay">STAY</span></div>
+    <div class="why">Accurate confounder filter. No change.</div></div>
+  <div class="blk v-rep"><div class="top"><span class="name">One right-rail slot (your choice)</span><span class="tag t-rep">ADD-IN-PLACE</span></div>
+    <div class="why">If you want ONE new block without layout change: war-risk band (NORMAL/ELEVATED/HIGH, indicative) or US crude buffer (SPR+stocks, 807 Mbbl, EIA weekly — already pulled, barely surfaced).</div></div>
+</div>
+</div>
+</div>
+</body></html>

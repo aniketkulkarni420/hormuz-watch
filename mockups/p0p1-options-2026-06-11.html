@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hormuz Watch — P0/P1 approval board · before → after · 2026-06-11</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#06080d;--panel:#0c111a;--panel2:#0f1521;--border:#1b2433;--text:#d6e0ee;--muted:#8496ad;--muted2:#5d6f88;
+--green:#2cce81;--amber:#f0a814;--blue:#54a8ff;--red:#ff3e52}
+body{background:var(--bg);color:var(--text);font-family:'Manrope',system-ui,sans-serif;font-size:13px;line-height:1.5}
+.mono{font-family:'JetBrains Mono',monospace}
+.proto{background:rgba(240,168,20,.12);border-bottom:1px solid rgba(240,168,20,.3);padding:7px 20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber)}
+.shell{max-width:1200px;margin:0 auto;padding:16px 20px 60px}
+h1{font-size:19px;margin:6px 0 2px}
+.sub{color:var(--muted);font-size:11px;margin-bottom:16px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--border);padding-bottom:6px;margin:22px 0 12px}
+.opt{background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:13px 15px;margin-bottom:12px}
+.opt .head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+.opt .name{font-weight:700;font-size:14px}
+.chk{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--blue);border:1px dashed rgba(84,168,255,.5);padding:3px 10px;border-radius:4px;white-space:nowrap}
+.ba{display:grid;grid-template-columns:1fr 34px 1fr;gap:0;align-items:center}
+@media(max-width:700px){.ba{grid-template-columns:1fr}}
+.arrow{text-align:center;color:var(--muted2);font-size:18px}
+.tile{background:#090d15;border:1px solid var(--border);border-radius:7px;padding:10px 12px;min-height:74px}
+.tile.bad{border-color:rgba(255,62,82,.35)}
+.tile.good{border-color:rgba(44,206,129,.35)}
+.t-val{font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:700}
+.t-val.red{color:var(--red)}.t-val.grn{color:var(--green)}.t-val.amb{color:var(--amber)}
+.t-dir{font-size:10px;color:var(--muted);margin-left:6px}
+.t-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;display:flex;justify-content:space-between}
+.t-src{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--muted2);border:1px solid var(--border);padding:1px 6px;border-radius:3px}
+.t-src.live{color:var(--green);border-color:rgba(44,206,129,.4)}
+.t-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.why{font-size:11px;color:var(--muted);margin-top:8px;padding-top:7px;border-top:1px dashed var(--border)}
+.row{font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 8px;background:#090d15;border:1px solid var(--border);border-radius:5px;display:flex;justify-content:space-between;gap:10px;margin-top:4px}
+.done{background:rgba(44,206,129,.07);border:1px solid rgba(44,206,129,.3);border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px}
+</style></head><body>
+<div class="proto">⚠ APPROVAL BOARD — every P0/P1 as before → after in the live design's own tile style · values = today · tick what ships</div>
+<div class="shell">
+<h1>P0 / P1 — choose what ships</h1>
+<div class="sub">Same layout you like — every change fits an existing slot. Nothing builds until you approve per item.</div>
+
+<div class="done">✓ ALREADY EXECUTED on your order: SEBI registration number removed from the live page footer/disclaimer and current mockups (deploys with next push). "Not investment advice" wording stays.</div>
+
+<h2>P0 — fixes to false or unwired data (recommend all four)</h2>
+
+<div class="opt"><div class="head"><span class="name">P0-1 · The false "Transits" tile → measured port flow</span><span class="chk">[ APPROVE ]</span></div>
+<div class="ba">
+<div class="tile bad"><span class="t-val red">479</span><span class="t-dir">▲ inflating</span><div class="t-label"><span>Transits / 24h</span><span class="t-src">WEB FEED</span></div><div class="t-sub">in-port count mislabelled as transits — rises BECAUSE of the blockade</div></div>
+<div class="arrow">→</div>
+<div class="tile good"><span class="t-val grn">226</span><span class="t-dir">measured</span><div class="t-label"><span>Port arrivals / 24h</span><span class="t-src live">WEB FEED</span></div><div class="t-sub">479 in port · press est: Kpler-cited transits shown here when reported (P1-6)</div></div>
+</div>
+<div class="why">Authoritative page-text counts, never the word "transits" until AIS returns. The single worst lie on the page, fixed in place.</div></div>
+
+<div class="opt"><div class="head"><span class="name">P0-2 · Wire the Incidents tile (data already live)</span><span class="chk">[ APPROVE ]</span></div>
+<div class="ba">
+<div class="tile bad"><span class="t-val red">—</span><div class="t-label"><span>Incidents / 30d</span><span class="t-src">EVENTS PENDING</span></div><div class="t-sub">placeholder since the fake 58 was killed</div></div>
+<div class="arrow">→</div>
+<div class="tile good"><span class="t-val grn">10</span><span class="t-dir">3 attacks</span><div class="t-label"><span>Incidents / 30d</span><span class="t-src live">ROYAL NAVY</span></div><div class="t-sub">latest: Attack · Gulf of Aden · today — tooltip lists last 3 with place+date</div></div>
+</div>
+<div class="why">UKMTO feed live since 06-10. Exact lat/lon also enables map pins later (presentation phase).</div></div>
+
+<div class="opt"><div class="head"><span class="name">P0-3 · Brent gets the war framing (one span)</span><span class="chk">[ APPROVE ]</span></div>
+<div class="ba">
+<div class="tile"><span class="t-val">$93.05</span><span class="t-dir">▲ +1.4% DoD</span><div class="t-label"><span>Brent crude</span><span class="t-src live">X-VERIFIED</span></div></div>
+<div class="arrow">→</div>
+<div class="tile good"><span class="t-val">$93.05</span><span class="t-dir">▲ +1.4% DoD</span><div class="t-label"><span>Brent crude</span><span class="t-src live">X-VERIFIED</span></div><div class="t-sub" style="color:var(--amber)">+29% vs pre-war ($72 · Feb 27)</div></div>
+</div>
+<div class="why">Level + daily + war-premium together — your approved three-number rule. Same for BDTI ("+X% vs pre-war") if you want it there too.</div></div>
+
+<div class="opt"><div class="head"><span class="name">P0-4 · Verdict shows its "why" (existing element)</span><span class="chk">[ APPROVE ]</span></div>
+<div class="ba">
+<div class="tile"><span class="t-val red">CRITICAL</span><div class="t-label"><span>Verdict · structural HIGH 2.06</span></div></div>
+<div class="arrow">→</div>
+<div class="tile good"><span class="t-val red">CRITICAL</span><div class="t-label"><span>Verdict · structural HIGH 2.06</span></div><div class="t-sub">Why: UKMTO attack 6h ago · Brent +29% pre-war · 88% war tone · 48 headlines</div></div>
+</div>
+<div class="why">Auditability — the fired triggers, already computed by the engine, rendered in the verdictTriggers element that exists in the layout.</div></div>
+
+<h2>P1 — additions, each into an existing slot</h2>
+
+<div class="opt"><div class="head"><span class="name">P1-1 · Dark slot → AIS going-dark events (GFW gaps)</span><span class="chk">[ APPROVE ]</span></div>
+<div class="ba">
+<div class="tile bad"><span class="t-val red">—</span><div class="t-label"><span>Dark / suspect</span><span class="t-src">SATELLITE</span></div><div class="t-sub">never populated · "dark ships" is noise when the whole zone is AIS-off</div></div>
+<div class="arrow">→</div>
+<div class="tile good"><span class="t-val amb">live on build</span><div class="t-label"><span>Going-dark events / 7d</span><span class="t-src live">GFW SAT</span></div><div class="t-sub">"likely disabling" events, Hormuz bbox — API verified working today</div></div>
+</div>
+<div class="why">Same satellite source family, sharper war signal: deliberate transponder shut-offs, not a useless dash.</div></div>
+
+<div class="opt"><div class="head"><span class="name">P1-2 · Iran Heavy discount → Market Pulse row (NOT the Dark slot)</span><span class="chk">[ APPROVE ]</span></div>
+<div class="row"><span>BRENT</span><span>$93.05 · +1.4%</span></div>
+<div class="row"><span>WTI</span><span>$88.16 · +1.2%</span></div>
+<div class="row" style="border-color:rgba(84,168,255,.4)"><span style="color:var(--blue)">IRAN HEAVY · sanctions bite</span><span>−$5.21 vs Brent · quote 31.6h</span></div>
+<div class="why">Answer to your question: yes — BOTH live in different places. Going-dark takes the Dark tile (it's a vessel signal); Iran Heavy is a PRICE, so it joins Market Pulse with the other prices. No conflict. Murban row auto-appears here when its source quote thaws.</div></div>
+
+<div class="opt"><div class="head"><span class="name">P1-3 · Bypass pipelines line → inside the India block</span><span class="chk">[ APPROVE ]</span></div>
+<div class="row"><span>INDIA VIA HORMUZ</span><span>~30% · was 55% pre-war</span></div>
+<div class="row" style="border-color:rgba(84,168,255,.4)"><span style="color:var(--blue)">BYPASS PIPELINES</span><span>≈7 of 21 mb/d can skip strait → ~14 stranded if closed (EIA)</span></div>
+<div class="why">The severity anchor — one static, sourced line. Explains why closure gaps Brent while partial disruption is absorbable.</div></div>
+
+<div class="opt"><div class="head"><span class="name">P1-4 · War-risk band → right-rail block</span><span class="chk">[ APPROVE ]</span></div>
+<div class="tile good" style="max-width:420px"><span class="t-val amb">HIGH</span><span class="t-dir">indicative</span><div class="t-label"><span>War-risk insurance band</span><span class="t-src">DERIVED</span></div><div class="t-sub">from UKMTO attacks + war tone + Brent premium · no free live premium feed exists — labelled, never a fake %</div></div>
+<div class="why">Approved earlier; the logic already runs in the verdict engine. One new right-rail block — the only addition that isn't slot-neutral, your call.</div></div>
+
+<div class="opt"><div class="head"><span class="name">P1-5 · Henry Hub gas → Market Pulse row</span><span class="chk">[ APPROVE ]</span></div>
+<div class="row" style="border-color:rgba(84,168,255,.4)"><span style="color:var(--blue)">HENRY HUB GAS</span><span>live on build · Yahoo NG=F · keyless · ~30-line scraper add</span></div>
+<div class="why">Least Hormuz-relevant gas leg but the only free one; row, never hero.</div></div>
+
+<div class="opt"><div class="head"><span class="name">P1-6 · Press-cited transit estimates → sub-line of the flow tile</span><span class="chk">[ APPROVE ]</span></div>
+<div class="row" style="border-color:rgba(84,168,255,.4)"><span style="color:var(--blue)">PRESS EST</span><span>"Kpler: ~N transits/day" + date + source — extracted from news feed when reported</span></div>
+<div class="why">The honest stopgap for the transit gap: cited estimate with attribution beats both silence and a false number.</div></div>
+
+<div class="opt"><div class="head"><span class="name">P1-7 · GDELT retry-with-backoff (backend only, no UI)</span><span class="chk">[ APPROVE ]</span></div>
+<div class="why">GDELT's upstream API flaked 8 runs today then self-recovered. 3 attempts with backoff inside the scraper stops red-run noise; feed already keeps last-good.</div></div>
+
+<h2>Decisions</h2>
+
+<div class="opt"><div class="head"><span class="name">D-1 · Remove civilian/total aircraft count</span><span class="chk">[ APPROVE — recommended ]</span></div>
+<div class="ba">
+<div class="tile"><div class="t-sub">"8 military callsigns in Persian Gulf airspace vs baseline ~2. <span style="color:var(--red)">214 total aircraft tracked.</span> Significant air-power posture."</div></div>
+<div class="arrow">→</div>
+<div class="tile good"><div class="t-sub">"8 military callsigns in Persian Gulf airspace vs baseline ~2. Significant air-power posture."</div></div>
+</div>
+<div class="why">Civilian overflights are noise next to the military count — commercial aviation reroutes tell a story, but raw total doesn't. Military count + baseline stays.</div></div>
+
+</div>
+</body></html>

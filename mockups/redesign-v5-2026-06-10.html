@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hormuz Watch — v5 (port candidate · blends + UKMTO live · 2026-06-10)</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#06080d;--panel:#0c111a;--panel2:#0f1521;--border:#1b2433;--border2:#283449;
+--text:#d6e0ee;--muted:#8496ad;--muted2:#5d6f88;
+--sev-normal:#2cce81;--sev-elevated:#f0a814;--sev-high:#ff8a3c;--sev-critical:#ff3e52;
+--up:#54a8ff;--down:#ffa24b;--accent:#f0a814;
+--t1:30px;--t2:20px;--t3:15px;--t4:13px;--t5:11.5px;--t6:10px}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Manrope',system-ui,sans-serif;font-size:var(--t4);line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.proto{background:linear-gradient(90deg,rgba(240,168,20,.16),rgba(240,168,20,.05));border-bottom:1px solid rgba(240,168,20,.3);padding:7px 22px;font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--accent);display:flex;justify-content:space-between}
+.proto a{color:var(--up);text-decoration:none;font-weight:700}
+.shell{max-width:1480px;margin:0 auto;padding:0 22px 60px}
+header{display:flex;align-items:center;gap:18px;padding:14px 0 10px}
+.wordmark{font-size:var(--t2);font-weight:800;letter-spacing:-.01em}.wordmark .dot{color:var(--accent)}
+.hsub{font-size:var(--t6);color:var(--muted)}.hspace{flex:1}
+.badge{font-family:'JetBrains Mono',monospace;font-size:var(--t6);padding:6px 10px;border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;gap:6px;text-transform:uppercase}
+.badge .d{width:6px;height:6px;border-radius:50%;background:var(--sev-normal);animation:pz 2s infinite}
+@keyframes pz{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── v3 CORE: freshness-aware tiles ─────────────────────────────────────────
+   Every tile carries data-age; load() stamps each with its computed age and
+   the tile DEGRADES VISUALLY when past its freshness budget. Stale data can
+   render, but it cannot pretend to be live. */
+.age{font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1.5px 7px;border-radius:3px;white-space:nowrap}
+.age.fresh{color:var(--sev-normal);border:1px solid rgba(44,206,129,.3);background:rgba(44,206,129,.06)}
+.age.aging{color:var(--accent);border:1px solid rgba(240,168,20,.4);background:rgba(240,168,20,.07)}
+.age.stale{color:var(--sev-critical);border:1px solid rgba(255,62,82,.45);background:rgba(255,62,82,.08)}
+.card.is-stale,.kpi.is-stale{filter:saturate(.35);border-left:3px solid var(--sev-critical)}
+.card.is-stale .c-num,.kpi.is-stale .k-val{color:var(--muted)}
+.card.is-aging,.kpi.is-aging{border-left:3px solid var(--accent)}
+
+/* integrity strip — the QA system rendered on the page */
+.integ{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:8px 14px;margin:10px 0 4px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted)}
+.integ .f{display:flex;align-items:center;gap:5px}
+.integ .dot{width:7px;height:7px;border-radius:50%;background:var(--muted2)}
+.integ .dot.ok{background:var(--sev-normal)}.integ .dot.bad{background:var(--sev-critical)}.integ .dot.deg{background:var(--muted2)}
+.integ .sum{margin-left:auto;color:var(--text)}
+
+.tabnav{position:sticky;top:0;z-index:30;display:flex;gap:4px;padding:8px 0;margin-bottom:14px;border-bottom:1px solid var(--border);background:rgba(6,8,13,.92);backdrop-filter:blur(8px);overflow-x:auto}
+.tabnav a{font-family:'JetBrains Mono',monospace;font-size:var(--t6);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-decoration:none;padding:7px 13px;border-radius:6px;white-space:nowrap;border:1px solid transparent}
+.tabnav a.on{color:var(--text);background:var(--panel2);border-color:var(--border2)}.tabnav a:hover{color:var(--text)}
+.statushead{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.sev-dot{width:11px;height:11px;border-radius:50%;background:var(--sev-normal)}
+.status-line{font-size:var(--t2);font-weight:800;letter-spacing:-.01em}
+.score-pill{font-family:'JetBrains Mono',monospace;font-size:var(--t6);padding:3px 9px;border:1px solid var(--border2);border-radius:20px;color:var(--muted2)}
+.conf-pill{font-family:'JetBrains Mono',monospace;font-size:var(--t6);padding:3px 9px;border-radius:20px;border:1px solid rgba(255,62,82,.4);color:var(--sev-critical);background:rgba(255,62,82,.06);display:none}
+.caveat{font-size:var(--t6);color:var(--muted);margin:0 0 14px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}
+@media(max-width:760px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--panel);padding:15px 18px;display:flex;flex-direction:column;gap:3px}
+.kpi .k-lbl{display:flex;justify-content:space-between;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.kpi .k-val{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;line-height:1.1}
+.kpi .k-sub{font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted2)}
+.kpi .k-sub .up{color:var(--up)}.kpi .k-sub .down{color:var(--down)}
+.bigmap{position:relative;height:430px;background:linear-gradient(135deg,#0a1424,#091221);border:1px solid var(--border);border-radius:11px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted2);font-family:'JetBrains Mono',monospace;font-size:var(--t5);margin-bottom:26px}
+@media(max-width:760px){.bigmap{height:320px}}
+.mapstat{position:absolute;left:12px;bottom:12px;display:flex;gap:16px;background:rgba(6,8,13,.85);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:7px;padding:9px 13px}
+.mapstat .it .l{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--muted);text-transform:uppercase}.mapstat .it .v{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px}
+.legend{position:absolute;bottom:12px;right:12px;background:rgba(6,8,13,.85);border:1px solid var(--border);border-radius:7px;padding:9px 11px;display:flex;flex-direction:column;gap:5px}
+.legend .it{display:flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted)}.legend .ld{width:8px;height:8px;border-radius:50%}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border2);margin-bottom:14px}
+.sec-h .ttl{font-size:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+.sec-h .q{font-size:var(--t6);color:var(--muted2);font-style:italic;font-family:'Manrope',sans-serif;text-transform:none;letter-spacing:0;margin-left:10px}
+.sec-h .meta{font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted)}
+.section{margin-bottom:30px;scroll-margin-top:64px}
+.section.context .card{background:var(--panel2)}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+@media(max-width:900px){.cards{grid-template-columns:1fr 1fr}}@media(max-width:560px){.cards{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:14px 16px;display:flex;flex-direction:column;gap:3px;position:relative}
+.c-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.c-title{font-size:var(--t3);font-weight:600}
+.c-num{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;line-height:1.15;margin-top:4px}
+.c-delta{font-family:'JetBrains Mono',monospace;font-size:var(--t5)}.c-delta .up{color:var(--up)}.c-delta .down{color:var(--down)}.c-delta .flat{color:var(--muted)}
+.c-ctx{font-size:var(--t6);color:var(--muted);margin-top:5px}
+.ptable{width:100%;border-collapse:collapse;font-size:var(--t5)}
+.ptable th{font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:right;padding:8px 12px;border-bottom:1px solid var(--border2)}
+.ptable th:first-child{text-align:left}
+.ptable td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:right;font-family:'JetBrains Mono',monospace}
+.ptable td:first-child{text-align:left;font-family:'Manrope',sans-serif;font-weight:600;font-size:var(--t4)}
+.ptable .cur{font-weight:700;font-size:15px}
+.ptable .up{color:var(--up)}.ptable .down{color:var(--down)}.ptable .flat{color:var(--muted)}
+.ptable .pend{color:var(--muted2);font-style:italic}
+.ptable .tr svg{width:90px;height:24px;vertical-align:middle}
+.basenote{font-size:var(--t6);color:var(--muted2);margin-top:8px}
+.layers{display:grid;gap:6px;margin-top:6px}.layer{display:flex;gap:8px;align-items:baseline;padding:7px 10px;background:var(--panel);border-radius:5px}
+.layer .t{font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;text-transform:uppercase;padding:1.5px 6px;border-radius:3px;flex:0 0 auto}
+.layer .t.d{color:var(--up);background:rgba(84,168,255,.12);border:1px solid rgba(84,168,255,.3)}.layer .t.i{color:var(--accent);background:rgba(240,168,20,.12);border:1px solid rgba(240,168,20,.3)}.layer .t.n{color:var(--muted);background:rgba(132,150,173,.1);border:1px solid rgba(132,150,173,.25)}
+.layer .b{font-size:var(--t5)}
+.discl{font-size:var(--t6);color:var(--muted);padding:6px 10px;background:rgba(255,62,82,.05);border-left:2px solid var(--sev-critical);border-radius:0 4px 4px 0;margin-bottom:8px}
+.cond{display:flex;gap:12px;align-items:center;padding:13px 16px;background:rgba(44,206,129,.05);border:1px solid rgba(44,206,129,.22);border-radius:8px}.cond .d{width:9px;height:9px;border-radius:50%;background:var(--sev-normal)}.cond .meta{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted)}
+.foot{margin-top:30px;padding:15px;border-top:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:var(--t6);color:var(--muted2);text-align:center}.foot .sebi{margin-top:5px;color:var(--muted)}
+</style></head><body>
+<div class="proto"><span>⚠ v5 · PORT CANDIDATE · UKMTO + Iran-Heavy live · India corrected · DoD column · verdict triggers shown</span><span><a href="redesign-v4-2026-06-10.html" target="_blank">v4 ↗</a></span></div>
+<div class="shell">
+<header><div><div class="wordmark">Hormuz Watch<span class="dot">.</span></div><div class="hsub">Strait of Hormuz · chokepoint intelligence</div></div><div class="hspace"></div><div class="badge mono" id="asof">— UTC</div></header>
+
+<!-- v3: the QA system surfaces itself — per-feed integrity strip, always visible -->
+<div class="integ" id="integ"><span>FEEDS</span><span class="sum" id="integSum">checking…</span></div>
+
+<nav class="tabnav" id="tabnav">
+  <a href="#status" class="on">Status</a><a href="#markets">Markets</a><a href="#flow">Physical flow</a><a href="#escalation">Escalation</a><a href="#exposure">Exposure</a><a href="#env">Environment</a>
+</nav>
+
+<section class="section" id="status">
+  <div class="statushead"><span class="sev-dot" id="sevDot"></span><span class="status-line" id="statusLine">—</span><span class="score-pill" id="scorePill">model score —</span><span class="conf-pill" id="confPill"></span></div>
+  <div class="caveat" id="whyLine">Live composite. Stale tiles desaturate — staleness cannot masquerade as live.</div>
+  <div class="kpis">
+    <div class="kpi" id="tileArr"><div class="k-lbl"><span>Tanker arrivals · 24h</span><span class="age" id="ageArr">—</span></div><div class="k-val" id="kArr">—</div><div class="k-sub" id="kArrSub">vessels into Gulf ports · measured</div></div>
+    <div class="kpi" id="tileBrent"><div class="k-lbl"><span>Brent crude</span><span class="age" id="ageBrent">—</span></div><div class="k-val" id="kBrent">$—</div><div class="k-sub" id="kBrentSub">— vs pre-tension</div></div>
+    <div class="kpi" id="tileSpread"><div class="k-lbl"><span>Brent–WTI spread</span><span class="age" id="ageSpread">—</span></div><div class="k-val" id="kSpread">$—</div><div class="k-sub" id="kSpreadSub">supply-stress isolator</div></div>
+    <div class="kpi" id="tileBdti"><div class="k-lbl"><span>Freight · BDTI</span><span class="age" id="ageBdti">—</span></div><div class="k-val" id="kBdti">—</div><div class="k-sub" id="kBdtiSub">— WoW</div></div>
+  </div>
+  <div class="bigmap">[ Leaflet basemap · vessel + dark + military-air markers · Strait of Hormuz ]
+    <div class="mapstat"><div class="it"><div class="l">in port</div><div class="v" id="mTransits">—</div></div><div class="it"><div class="l">dark</div><div class="v" id="mDark">—</div></div><div class="it"><div class="l">mil air</div><div class="v" id="mAir">—</div></div></div>
+    <div class="legend"><div class="it"><span class="ld" style="background:var(--up)"></span>Active</div><div class="it"><span class="ld" style="background:var(--sev-critical)"></span>Dark</div><div class="it"><span class="ld" style="background:var(--muted)"></span>Other</div></div>
+  </div>
+</section>
+
+<section class="section" id="markets">
+  <div class="sec-h"><span class="ttl">Markets<span class="q">— what is the market pricing?</span></span><span class="meta">vs pre-tension · 2026-02-27</span></div>
+  <table class="ptable"><thead><tr><th>Asset</th><th>Current</th><th>DoD</th><th>Pre-war</th><th>Δ pre-war</th><th>Trend</th></tr></thead>
+  <tbody>
+    <tr><td>Brent crude</td><td class="cur" id="pBrentCur">$—</td><td id="pBrentDod">—</td><td>$72.00</td><td id="pBrentChg">—</td><td class="tr"><svg id="pBrentSpark" viewBox="0 0 90 24" preserveAspectRatio="none"></svg></td></tr>
+    <tr><td>WTI crude</td><td class="cur" id="pWtiCur">$—</td><td id="pWtiDod">—</td><td>$65.00</td><td id="pWtiChg">—</td><td class="tr"><svg id="pWtiSpark" viewBox="0 0 90 24" preserveAspectRatio="none"></svg></td></tr>
+    <tr><td>Brent–WTI spread</td><td class="cur" id="pSprCur">$—</td><td class="pend">—</td><td>$7.00</td><td id="pSprChg">—</td><td class="tr pend">↓ spread = less seaborne stress</td></tr>
+    <tr><td>BDTI freight</td><td class="cur" id="pBdtiCur">—</td><td id="pBdtiDod">—</td><td class="pend">structural</td><td id="pBdtiChg">—</td><td class="tr"><svg id="pBdtiSpark" viewBox="0 0 90 24" preserveAspectRatio="none"></svg></td></tr>
+    <tr><td>Iran Heavy discount <span class="age" id="ageIranH">—</span></td><td class="cur" id="pIhCur">—</td><td id="pIhDod">—</td><td class="pend">sanctions bite</td><td id="pIhChg">vs delayed Brent</td><td class="tr pend">wider = sanctions bite harder</td></tr>
+    <tr><td>Murban premium <span class="age" id="ageMurban">—</span></td><td class="cur" id="pMbCur">—</td><td class="pend">—</td><td class="pend">bypass proxy</td><td id="pMbChg">—</td><td class="tr pend">loads OUTSIDE strait (Fujairah)</td></tr>
+    <tr><td>Henry Hub gas <span class="age aging">BUILDING</span></td><td class="cur pend" id="pHhCur">—</td><td class="pend">—</td><td class="pend">—</td><td class="pend">approved · Yahoo NG=F</td><td class="tr pend">—</td></tr>
+  </tbody></table>
+  <div class="basenote">Baseline anchored to 2026-02-27 closes. Blend spreads computed vs oilprice.com's own delayed Brent (same staleness — never vs our live Brent). A blend whose source quote is frozen >7d is SUPPRESSED, not displayed. Pre-war anchor 2026-02-27.</div>
+</section>
+
+<section class="section" id="flow">
+  <div class="sec-h"><span class="ttl">Physical flow<span class="q">— is oil actually moving?</span></span><span class="meta" id="flowMeta">throughput + shipping</span></div>
+  <div class="cards">
+    <div class="card" id="tileVes"><div class="c-top"><span class="c-title">Ships in port</span><span class="age" id="ageVes">—</span></div><div class="c-num" id="inport">—</div><div class="c-delta flat" id="vesPorts">9 Gulf ports</div><div class="c-ctx">authoritative page-text counts · throughput estimate retired until arrivals baseline accumulates (~30d)</div></div>
+    <div class="card" id="tileArrF"><div class="c-top"><span class="c-title">Arrivals / 24h</span><span class="age" id="ageArrF">—</span></div><div class="c-num" id="arrivalsF">—</div><div class="c-delta flat">measured flow · closest crossing proxy without AIS</div><div class="c-ctx" id="expCtx">expected next: —</div></div>
+    <div class="card" id="tileTank"><div class="c-top"><span class="c-title">Tankers</span><span class="age" id="ageTank">—</span></div><div class="c-num" id="tankers">—</div><div class="c-delta" id="tankerCtx">— % of fleet in port</div><div class="c-ctx">scaled from sampled type mix · est</div></div>
+    <div class="card" id="tileIran"><div class="c-top"><span class="c-title">Iran vs Arab-Gulf ports</span><span class="age" id="ageIran">—</span></div><div class="c-num" id="iranPorts">—</div><div class="c-delta" id="iranCtx">Bandar Abbas + Khark</div><div class="c-ctx">Iran-export activity proxy</div></div>
+  </div>
+</section>
+
+<section class="section" id="escalation">
+  <div class="sec-h"><span class="ttl">Escalation &amp; enforcement<span class="q">— what's pushing it?</span></span><span class="meta">drivers</span></div>
+  <div class="cards">
+    <div class="card" id="tileUkmto"><div class="c-top"><span class="c-title">Maritime incidents</span><span class="age" id="ageUkmto">—</span></div><div class="c-num" id="ukmtoN">—</div><div class="c-delta" id="ukmtoDelta">— attacks · — Hormuz-region / 30d</div><div class="c-ctx" id="ukmtoLatest">UKMTO (Royal Navy feed)</div></div>
+    <div class="card" id="tileAir"><div class="c-top"><span class="c-title">Military air</span><span class="age" id="ageAir">—</span></div><div class="c-num" id="milAir">—</div><div class="c-delta flat">coalition / Iranian buildup</div><div class="c-ctx">military aircraft over the strait now</div></div>
+    <div class="card" id="tileOfac"><div class="c-top"><span class="c-title">OFAC enforcement</span><span class="age" id="ageOfac">—</span></div><div class="c-num" id="ofacN">—</div><div class="c-delta flat">Iran actions · 30d</div><div class="c-ctx" id="ofacLatest">—</div></div>
+    <div class="card" id="tileNews"><div class="c-top"><span class="c-title">News pulse</span><span class="age" id="ageNews">—</span></div><div class="c-num" id="newsCount">—</div><div class="c-delta" id="newsTone">—% neg tone</div><div class="c-ctx" id="newsTop">—</div></div>
+  </div>
+</section>
+
+<section class="section context" id="exposure">
+  <div class="sec-h"><span class="ttl">Exposure &amp; second-order<span class="q">— who gets hurt?</span></span><span class="meta">context · slower-moving</span></div>
+  <div class="cards">
+    <div class="card" style="grid-column:span 2"><div class="c-top"><span class="c-title">India exposure</span><span class="age fresh">STRUCTURAL</span></div><div class="discl">Not investment advice — intelligence aggregator.</div><div class="layers"><div class="layer"><span class="t d">Data</span><span class="b">~30% of India's crude imports now transit Hormuz — rerouted from ~55% pre-war (Russia peaked ~47% Mar 2026)</span></div><div class="layer"><span class="t i">Interpretation</span><span class="b">each $10/bbl rise ≈ ₹85K Cr import-bill impact (historical)</span></div><div class="layer"><span class="t n">Note</span><span class="b">structural exposure — not daily-changing</span></div></div></div>
+    <div class="card"><div class="c-top"><span class="c-title">Bypass pipelines</span><span class="age fresh">STRUCTURAL</span></div><div class="c-num">≈ 7 mb/d</div><div class="c-delta flat">capacity able to skip the strait</div><div class="c-ctx">Petroline ~5 · ADCOP ~1.5 · Kirkuk–Ceyhan ~0.5 (EIA). Closure math: ~21 − 7 ≈ <span style="color:var(--sev-critical);font-weight:700">14 mb/d stranded</span> — why closure gaps Brent while partial (&lt;7) is absorbable</div></div>
+    <div class="card" id="tileIrr"><div class="c-top"><span class="c-title">IRR currency</span><span class="age" id="ageIrr">—</span></div><div class="c-num" id="irr">—%</div><div class="c-delta flat">official vs black-market</div><div class="c-ctx">Iran econ-stress proxy · slow</div></div>
+  </div>
+</section>
+
+<section class="section" id="env">
+  <div class="sec-h"><span class="ttl">Operating environment<span class="q">— any non-geopolitical confounder?</span></span><span class="meta">filters</span></div>
+  <div class="cond" id="cond"><span class="d"></span><span id="condTxt">All conditions normal.</span><span class="meta" id="condMeta">— kn · — air · — eq</span></div>
+</section>
+
+<div class="foot">Intelligence aggregator · not investment advice<div class="sebi">© 2026 Aniket Kulkarni</div></div>
+</div>
+<script>
+const API="https://hormuz-watch-2.pages.dev";
+const ANCHOR={brent:72.00,wti:65.00,spread:7.00};
+const j=async u=>{try{const r=await fetch(API+u,{cache:"no-store"});return r.ok?await r.json():null}catch{return null}};
+function spark(id,vals,color){const s=document.getElementById(id);if(!s||!vals||vals.length<2)return;
+  const W=90,H=24,pad=2,a=vals.filter(v=>v!=null),mn=Math.min(...a),mx=Math.max(...a),rg=(mx-mn)||1;
+  const xs=a.map((_,i)=>pad+i*(W-2*pad)/(a.length-1)),ys=a.map(v=>H-2-((v-mn)/rg)*(H-4));
+  s.innerHTML=`<path d="M ${xs.map((x,i)=>x.toFixed(1)+' '+ys[i].toFixed(1)).join(' L ')}" stroke="${color}" stroke-width="1.5" fill="none" stroke-linecap="round"/>`;}
+function arr(v){return v>0.05?["up","▲"]:v<-0.05?["down","▼"]:["flat","→"]}
+
+/* v3 core: stamp a tile with its computed age. budgetMin = freshness budget.
+   fresh: < budget. aging: < 4x budget. stale: beyond — tile visually degrades. */
+function stampAge(tileId,chipId,ageSec,budgetMin){
+  const tile=document.getElementById(tileId),chip=document.getElementById(chipId);
+  if(!chip)return;
+  if(ageSec==null){chip.textContent="NO DATA";chip.className="age stale";tile?.classList.add("is-stale");return;}
+  const m=ageSec/60;
+  const label=m<90?Math.round(m)+"m":m<48*60?(m/60).toFixed(1)+"h":(m/1440).toFixed(1)+"d";
+  if(m<budgetMin){chip.textContent=label;chip.className="age fresh";}
+  else if(m<4*budgetMin){chip.textContent=label;chip.className="age aging";tile?.classList.add("is-aging");}
+  else{chip.textContent="STALE "+label;chip.className="age stale";tile?.classList.add("is-stale");}
+}
+
+const navLinks=[...document.querySelectorAll('.tabnav a')];
+const secs=navLinks.map(a=>document.querySelector(a.getAttribute('href')));
+function onScroll(){let i2=0;secs.forEach((s,i)=>{if(s&&s.getBoundingClientRect().top<120)i2=i;});navLinks.forEach((a,i)=>a.classList.toggle('on',i===i2));}
+window.addEventListener('scroll',onScroll,{passive:true});
+
+async function load(){
+  const [snap,oil,oh,bdti,verdict,news,integ]=await Promise.all([
+    j("/api/snapshot"),j("/api/oil?_="+Date.now()),j("/api/oil-history?range=1mo"),
+    j("/api/bdti"),j("/api/verdict"),j("/api/news?limit=3"),j("/api/integrity")]);
+  document.getElementById("asof").textContent=new Date().toISOString().slice(11,16)+" UTC";
+
+  // integrity strip — per-feed dots + verdict-confidence downgrade
+  let staleCount=0,total=0;
+  if(integ?.feeds){
+    const el=document.getElementById("integ");
+    el.innerHTML="<span>FEEDS</span>";
+    for(const [k,v] of Object.entries(integ.feeds)){
+      total++;
+      const ok=v.status==="ok",deg=v.status==="known-degraded";
+      if(!ok&&!deg)staleCount++;
+      el.innerHTML+=`<span class="f"><span class="dot ${ok?"ok":deg?"deg":"bad"}"></span>${k}</span>`;
+    }
+    el.innerHTML+=`<span class="sum" id="integSum">${integ.showcase_ready?"ALL LIVE":staleCount+" STALE — verdict confidence reduced"}</span>`;
+  }
+  // verdict + confidence honesty
+  const v=verdict?.verdict||"—",sc=verdict?.structural_score;
+  const sev=v==="CRITICAL"?"critical":v==="HIGH"?"high":v==="ELEVATED"?"elevated":"normal";
+  document.getElementById("sevDot").style.background=`var(--sev-${sev})`;
+  const human={NORMAL:"Strait operating normally",ELEVATED:"Strait under elevated pressure",HIGH:"Strait disruption risk HIGH",CRITICAL:"Strait crisis — flow at risk"}[v]||v;
+  const sl=document.getElementById("statusLine");sl.textContent=human;sl.style.color=`var(--sev-${sev})`;
+  if(sc!=null)document.getElementById("scorePill").textContent="model score "+sc.toFixed(2);
+  const fired=(verdict?.stage2_triggers||[]).filter(t=>t.fires);
+  if(fired.length)document.getElementById("whyLine").innerHTML="Why: "+fired.map(t=>`<span style="color:var(--sev-elevated)">${t.reason}</span>`).join(" · ");
+  if(staleCount>0){const cp=document.getElementById("confPill");cp.style.display="inline-block";cp.textContent=`reduced confidence — ${staleCount}/${total} feeds stale`;}
+
+  // ages: oil from live API ageMin; vessel from scraped_age_sec; bdti from asOf
+  const oilAgeSec=oil?.ageMin!=null?oil.ageMin*60:null;
+  stampAge("tileBrent","ageBrent",oilAgeSec,360);
+  stampAge("tileSpread","ageSpread",oilAgeSec,360);
+  const vesAge=snap?.scraped_age_sec;
+  stampAge("tileArr","ageArr",vesAge,24*60);stampAge("tileArrF","ageArrF",vesAge,24*60);
+  stampAge("tileVes","ageVes",vesAge,24*60);
+  stampAge("tileTank","ageTank",vesAge,24*60);
+  stampAge("tileIran","ageIran",vesAge,24*60);
+  let bdtiAge=null;
+  if(bdti?.asOf){const t=Date.parse(bdti.asOf);if(!isNaN(t))bdtiAge=(Date.now()-t)/1000;}
+  stampAge("tileBdti","ageBdti",bdtiAge,9*24*60);
+  stampAge("tileIrr","ageIrr",snap?.currency_age_sec,24*60);
+  stampAge("tileNews","ageNews",snap?.news_age_sec,24*60);
+  stampAge("tileOfac","ageOfac",snap?.ofac_age_sec,48*60);
+  stampAge("tileAir","ageAir",0,24*60); // aircraft age not in snapshot; integrity says ok
+
+  // values
+  const types=snap?.scraped_vessel_types||{}, perPort=snap?.scraped_vessel_perport||{};
+  const totalVes=snap?.scraped_vessel_total ?? null;
+  const arrivals24=snap?.scraped_vessel_arrivals ?? null;
+  document.getElementById("kArr").textContent=arrivals24??"—";
+  document.getElementById("arrivalsF").textContent=arrivals24??"—";
+  if(snap?.scraped_vessel_expected_24h!=null)document.getElementById("expCtx").textContent="expected next: "+snap.scraped_vessel_expected_24h;
+  document.getElementById("vesPorts").textContent=Object.keys(perPort).length+" Gulf ports";
+  document.getElementById("inport").textContent=totalVes??"—";
+  document.getElementById("mTransits").textContent=totalVes??"—";
+  const tk=snap?.tanker_count ?? types.Tanker ?? null;
+  document.getElementById("tankers").textContent=tk!=null?("≈"+tk+" (est)"):"—";
+  if(tk!=null&&totalVes)document.getElementById("tankerCtx").textContent=Math.round(tk/totalVes*100)+"% of "+totalVes+" in port";
+  const iran=snap?.iran_port_vessels ?? (((perPort["Bandar Abbas"]||0)+(perPort["Khark Island"]||0))||null);
+  document.getElementById("iranPorts").textContent=iran??"—";
+  document.getElementById("iranCtx").textContent=`vs ${totalVes!=null&&iran!=null?totalVes-iran:"—"} Arab-Gulf`;
+  document.getElementById("milAir").textContent=snap?.military_aircraft_count??"0";
+  document.getElementById("mAir").textContent=snap?.military_aircraft_count??"0";
+  document.getElementById("mDark").textContent="—";
+  const bCur=oil?.brent?.level,wCur=oil?.wti?.level;
+  const bh=oh?.brent?.map(d=>d.close)||[],wh=oh?.wti?.map(d=>d.close)||[];
+  if(oil?.brent?.changePct!=null){const a=arr(oil.brent.changePct);document.getElementById("pBrentDod").innerHTML=`<span class="${a[0]}">${a[1]} ${oil.brent.changePct.toFixed(1)}%</span>`;}
+  if(oil?.wti?.changePct!=null){const a=arr(oil.wti.changePct);document.getElementById("pWtiDod").innerHTML=`<span class="${a[0]}">${a[1]} ${oil.wti.changePct.toFixed(1)}%</span>`;}
+  if(bdti?.wow_pct!=null){const a=arr(bdti.wow_pct);document.getElementById("pBdtiDod").innerHTML=`<span class="${a[0]}">${a[1]} ${bdti.wow_pct.toFixed(1)}% WoW</span>`;}
+  if(snap?.iran_heavy_discount!=null){document.getElementById("pIhCur").textContent="−$"+snap.iran_heavy_discount.toFixed(2);
+    document.getElementById("pIhDod").textContent="$"+(snap.iran_heavy_usd??0).toFixed(2);
+    stampAge(null,"ageIranH",(snap.iran_heavy_quote_age_h??0)*3600,36*60);}
+  else{document.getElementById("pIhCur").textContent="—";const c=document.getElementById("ageIranH");c.textContent="NO DATA";c.className="age stale";}
+  if(snap?.murban_premium!=null){document.getElementById("pMbCur").textContent=(snap.murban_premium>=0?"+$":"−$")+Math.abs(snap.murban_premium).toFixed(2);
+    stampAge(null,"ageMurban",(snap.murban_quote_age_h??0)*3600,36*60);}
+  else{document.getElementById("pMbCur").innerHTML='<span class="pend">suppressed</span>';document.getElementById("pMbChg").innerHTML='<span class="pend">source quote frozen &gt;7d</span>';const m=document.getElementById("ageMurban");m.textContent="FROZEN";m.className="age stale";}
+  if(snap?.incidents_30d!=null){document.getElementById("ukmtoN").textContent=snap.incidents_30d;
+    document.getElementById("ukmtoDelta").textContent=`${snap.ukmto_attacks_30d??"—"} attacks · ${snap.ukmto_hormuz_30d??"—"} Hormuz-region / 30d`;
+    if(snap.ukmto_recent?.length){const e=snap.ukmto_recent[0];document.getElementById("ukmtoLatest").textContent=`latest: ${e.type} · ${e.place||""} · ${e.date}`;}
+    stampAge("tileUkmto","ageUkmto",snap.ukmto_age_sec,24*60);}
+  else{document.getElementById("ukmtoN").textContent="—";stampAge("tileUkmto","ageUkmto",null,24*60);}
+  if(bCur!=null){document.getElementById("kBrent").textContent="$"+bCur.toFixed(2);document.getElementById("pBrentCur").textContent="$"+bCur.toFixed(2);
+    const d=bCur-ANCHOR.brent,a=arr(d);
+    document.getElementById("kBrentSub").innerHTML=`<span class="${a[0]}">${a[1]} ${(d>=0?"+$":"-$")+Math.abs(d).toFixed(1)}</span> vs pre-tension`;
+    document.getElementById("pBrentChg").innerHTML=`<span class="${a[0]}">${a[1]} ${(d>=0?"+":"")+d.toFixed(2)}</span>`;}
+  if(wCur!=null){document.getElementById("pWtiCur").textContent="$"+wCur.toFixed(2);
+    const d=wCur-ANCHOR.wti,a=arr(d);document.getElementById("pWtiChg").innerHTML=`<span class="${a[0]}">${a[1]} ${(d>=0?"+":"")+d.toFixed(2)}</span>`;}
+  if(bCur!=null&&wCur!=null){const sp=bCur-wCur,d=sp-ANCHOR.spread,a=arr(d);
+    document.getElementById("kSpread").textContent="$"+sp.toFixed(2);document.getElementById("pSprCur").textContent="$"+sp.toFixed(2);
+    document.getElementById("kSpreadSub").innerHTML=`<span class="${a[0]}">${a[1]} ${(d>=0?"+":"")+d.toFixed(2)}</span> vs pre-tension`;
+    document.getElementById("pSprChg").innerHTML=`<span class="${a[0]}">${a[1]} ${(d>=0?"+":"")+d.toFixed(2)}</span>`;}
+  spark("pBrentSpark",bh,"var(--accent)");spark("pWtiSpark",wh,"var(--up)");
+  if(bdti?.value){document.getElementById("kBdti").textContent=bdti.value;document.getElementById("pBdtiCur").textContent=bdti.value;}
+  if(bdti?.wow_pct!=null){const a=arr(bdti.wow_pct),h=`<span class="${a[0]}">${a[1]} ${bdti.wow_pct.toFixed(1)}%</span>`;
+    document.getElementById("kBdtiSub").innerHTML=h+" WoW";document.getElementById("pBdtiChg").innerHTML=h;}
+  if(bdti?.history?.length)spark("pBdtiSpark",bdti.history.map(h=>h.value||h.v).filter(Boolean).reverse(),"var(--accent)");
+  document.getElementById("ofacN").textContent=snap?.ofac_iran_actions_30d??"—";
+  if(snap?.ofac_recent_actions?.length)document.getElementById("ofacLatest").textContent=(snap.ofac_recent_actions[0].title||"").slice(0,64);
+  if(snap?.irr_spread_pct!=null)document.getElementById("irr").textContent=snap.irr_spread_pct.toFixed(1)+"%";
+  document.getElementById("newsCount").textContent=snap?.news_count_24h??"—";
+  if(snap?.gdelt_neg_tone_pct!=null)document.getElementById("newsTone").textContent=snap.gdelt_neg_tone_pct.toFixed(0)+"% neg tone";
+  if(news?.items?.length)document.getElementById("newsTop").textContent="latest: "+(news.items[0].title||"").slice(0,64);
+  const calm=!snap?.weather_rough&&(snap?.military_aircraft_count||0)===0&&(snap?.seismic_max_mag||0)<4.5;
+  const c=document.getElementById("cond");
+  if(!calm){c.style.background="rgba(240,168,20,.06)";c.style.borderColor="rgba(240,168,20,.25)";c.querySelector(".d").style.background="var(--sev-elevated)";document.getElementById("condTxt").textContent="Operating environment ELEVATED — see detail.";}
+  document.getElementById("condMeta").textContent=`${snap?.weather_wind_max_knots||0} kn · ${snap?.military_aircraft_count||0} air · ${snap?.earthquake_count_7d||0} eq7d`;
+  onScroll();
+}
+load();setInterval(load,60000);
+</script>
+</body></html>
