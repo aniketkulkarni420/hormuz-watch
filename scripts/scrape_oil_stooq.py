@@ -139,6 +139,11 @@ def main():
     # only free one. Bounds 1-40 $/MMBtu. Optional — its failure never blocks
     # the oil write.
     hh    = fetch_yahoo("NG=F", "HenryHub NG=F", lo=1.0, hi=40.0)
+    # Volatility indices (approved 2026-06-12): OVX = oil-vol "fear gauge"
+    # (the options market pricing Hormuz chaos; calm ~25-35), India VIX for
+    # the India-audience divergence read. Optional legs — never block oil.
+    ovx   = fetch_yahoo("^OVX", "OVX oil-vol", lo=5.0, hi=250.0)
+    ivix  = fetch_yahoo("^INDIAVIX", "India VIX", lo=5.0, hi=120.0)
     opa   = fetch_opa_demo()
 
     # ── Degraded path (2026-06-10): Yahoo dead but OPA alive → write OPA at
@@ -215,6 +220,10 @@ def main():
             "note": agree_note,
         },
         "scraper": "scrape_oil_stooq",
+        "vol": {
+            "ovx": ({"value": round(ovx["close"], 2), "changePct": round(ovx["changePct"], 2) if ovx.get("changePct") is not None else None} if ovx else None),
+            "india_vix": ({"value": round(ivix["close"], 2), "changePct": round(ivix["changePct"], 2) if ivix.get("changePct") is not None else None} if ivix else None),
+        },
         # Henry Hub gas (optional leg) — UI renders only when present
         "henry_hub": ({
             "value": round(hh["close"], 3),

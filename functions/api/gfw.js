@@ -127,7 +127,7 @@ async function _handleGfwPost({ request, env }) {
   let r, text;
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 20000);  // 20s hard cap
+    const timer = setTimeout(() => ctrl.abort(), isSar ? 28000 : 20000);  // SAR report aggregation is slow upstream
     try {
       r = await fetch(url, {
         method: "POST",

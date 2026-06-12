@@ -211,6 +211,11 @@ export async function onRequestGet({ request, env }) {
     // Henry Hub gas (P1-5) — optional leg of the oil scraper; null until deployed scraper runs
     henry_hub_usd:          oilScraped?.henry_hub?.value ?? null,
     henry_hub_change_pct:   oilScraped?.henry_hub?.changePct ?? null,
+    // Volatility indices (2026-06-12): OVX oil-vol + India VIX (Yahoo keyless)
+    ovx:                    oilScraped?.vol?.ovx?.value ?? null,
+    ovx_change_pct:         oilScraped?.vol?.ovx?.changePct ?? null,
+    india_vix:              oilScraped?.vol?.india_vix?.value ?? null,
+    india_vix_change_pct:   oilScraped?.vol?.india_vix?.changePct ?? null,
     // Press-cited transit estimate (P1-6) — extracted from news feed, attributed
     press_transit_estimate: news?.press_transit_estimate ?? null,
     // IMF PortWatch (2026-06-12): TRUE daily strait transits, lagged ~5-10d.

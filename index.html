@@ -3720,6 +3720,17 @@ function renderBlendRows(snap){
       pwEl.style.color = prem >= 15 ? "var(--red)" : prem >= 8 ? "var(--amber)" : "var(--muted)";
     }
   }
+  if(snap.ovx != null){
+    var o = ensureRow("mpOvx", 'OVX <span style="color:var(--muted2)" title="CBOE crude-oil volatility index — the options market pricing oil chaos. Calm ~25-35; war-level 50+">· oil fear gauge</span>');
+    if(o){var oc = snap.ovx >= 45 ? "var(--red)" : snap.ovx >= 35 ? "var(--amber)" : "var(--green)";
+      o.innerHTML = '<span style="color:'+oc+'">'+snap.ovx.toFixed(1)+'</span>'
+        + (snap.ovx_change_pct != null ? ' <span style="font-weight:400;font-size:9px;color:var(--muted)">' + (snap.ovx_change_pct>=0?'+':'') + snap.ovx_change_pct.toFixed(1) + '%</span>' : '');}
+  }
+  if(snap.india_vix != null){
+    var iv = ensureRow("mpIndiaVix", 'India VIX <span style="color:var(--muted2)" title="NSE volatility index — is the Indian market pricing Hormuz risk? Divergence vs OVX is the story">· NSE</span>');
+    if(iv) iv.innerHTML = snap.india_vix.toFixed(1)
+      + (snap.india_vix_change_pct != null ? ' <span style="font-weight:400;font-size:9px;color:var(--muted)">' + (snap.india_vix_change_pct>=0?'+':'') + snap.india_vix_change_pct.toFixed(1) + '%</span>' : '');
+  }
   if(snap.henry_hub_usd != null){
     var h = ensureRow("mpHenryHub", 'Henry Hub gas');
     if(h) h.innerHTML = '$' + snap.henry_hub_usd.toFixed(2)
@@ -4650,7 +4661,7 @@ setInterval(fetchStooq, 30*60*1000); // 30-minute refresh
 // GFW JWT held server-side in /api/gfw Pages Function
 
 var gfwMarkers = [];
-var gfwState = { encounters:[], loitering:[], gaps:[], loaded:false };
+var gfwState = { encounters:[], loitering:[], gaps:[], sar:null, loaded:false };
 
 function gfwDates(days){
   return {
@@ -4684,12 +4695,24 @@ function fetchGFW(){
   var badge=document.getElementById("gfwBadge");
   if(badge){badge.textContent="SATELLITE...";badge.className="sig-src src-est";}
   var done=0;
-  function check(){if(++done>=3)renderGFW();}
+  function check(){if(++done>=4)renderGFW();}
   gfwPost("public-global-encounters-events:latest",function(err,rows){gfwState.encounters=err?[]:rows;check();});
   gfwPost("public-global-loitering-events:latest",function(err,rows){gfwState.loitering=err?[]:rows;check();}); /* 2026-05-28: -carriers slug 404s on GFW v3 */
   // P1-1 (2026-06-11): AIS gap events ("likely disabling"), 7-day window —
   // deliberate transponder shut-offs replace the never-populated Dark headline.
   gfwPost("public-global-gaps-events:latest",function(err,rows){gfwState.gaps=err?[]:rows;check();},7);
+  // SAR radar presence (2026-06-12): AIS-independent detections, 7d window.
+  // Response shape differs (4wings report) — count entries server-side shape.
+  gfwPost("public-global-sar-presence:latest",function(err,rows){
+    if(err){gfwState.sar=null;}
+    else{
+      var n=0;
+      try{ rows.forEach(function(e){ var k=Object.keys(e)[0]; n += (e[k]||[]).reduce(function(a,d){return a+(d.detections||1);},0); }); }
+      catch(ex){ n=null; }
+      gfwState.sar=n;
+    }
+    check();
+  },7);
 }
 
 function getGFWPos(e){
@@ -4714,7 +4737,8 @@ function renderGFW(){
     darkEl.textContent = capped ? "200+" : String(gaps);
   }
   if(dirEl){
-    dirEl.textContent = enc + " enc · " + lor + " loiter /30d";
+    dirEl.textContent = enc + " enc · " + lor + " loiter /30d"
+      + (gfwState.sar != null ? " · " + gfwState.sar + " SAR/7d" : "");
     dirEl.style.color = "var(--muted)";
     dirEl.style.fontSize = "9px";
   }
