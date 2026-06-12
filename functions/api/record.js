@@ -494,8 +494,18 @@ async function _handleRecord({ request, env }) {
   };
 
   // Build verdict input bundle — includes NEW signals
+  // PortWatch (2026-06-12): when live AIS is dead, the transits slot gets the
+  // IMF daily transit count — REAL strait crossings, lagged ~5-10d (only used
+  // when the data as-of is < 12 days old). scoreTransits(2, 22) = 3: the
+  // blockade finally scores in the slot built for it.
+  let pwTransits = null;
+  const pwAsOf = snapshotD?.portwatch_as_of ? Date.parse(snapshotD.portwatch_as_of) : null;
+  if (vTransit24h == null && snapshotD?.portwatch_transits_daily != null
+      && pwAsOf && (Date.now() - pwAsOf) < 12 * 86400000) {
+    pwTransits = snapshotD.portwatch_transits_daily;
+  }
   const verdictInput = {
-    transits_24h:               vTransit24h,
+    transits_24h:               vTransit24h != null ? vTransit24h : pwTransits,
     // 2026-05-18: pass scraped_vessel_total so computeVerdict can fall back
     // to it when AIS is dormant (vTransit24h is null in that case).
     scraped_vessel_total:       snapshotD?.scraped_vessel_total ?? null,
@@ -520,6 +530,7 @@ async function _handleRecord({ request, env }) {
     ukmto_latest_attack_ts:     snapshotD?.ukmto_latest_attack_ts ?? null,
     ukmto_hormuz_7d:            snapshotD?.ukmto_hormuz_7d ?? null,
     incidents_30d:              snapshotD?.incidents_30d ?? null,
+    transits_source:            vTransit24h != null ? "ais" : (pwTransits != null ? "portwatch_lagged" : null),
   };
 
   const verdictResult = computeVerdict(verdictInput);

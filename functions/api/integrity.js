@@ -24,12 +24,12 @@ export async function onRequestGet({ env }) {
   };
 
   const [oil, bdtiLatest, currency, vessel, aircraft, news, ofac, weather,
-         seismic, gdelt, aisState, aisHealth, verdict, ukmto] = await Promise.all([
+         seismic, gdelt, aisState, aisHealth, verdict, ukmto, portwatch] = await Promise.all([
     kv("oil_scraped"), kv("bdti_latest"), kv("currency_irr"),
     kv("vessel_count_scraped"), kv("aircraft_state"), kv("news_headlines"),
     kv("ofac_state"), kv("weather_state"), kv("seismic_state"),
     kv("gdelt_state"), kv("ais_state"), kv("ais_health"), kv("verdict_latest"),
-    kv("ukmto_state"),
+    kv("ukmto_state"), kv("portwatch_state"),
   ]);
 
   const feeds = {};
@@ -124,6 +124,17 @@ export async function onRequestGet({ env }) {
     if (!(n >= 1 && n <= 2000)) return feeds.ukmto = F("suspect", "low", `count ${n} out of bounds`);
     const c = ukmto.counts || {};
     feeds.ukmto = F("ok", "high", `${c.incidents_30d ?? "?"} incidents/30d · ${c.attacks_30d ?? "?"} attacks · hormuz ${c.hormuz_30d ?? "?"}`, { ageMin: a });
+  })();
+
+  // ── PORTWATCH ── source updates weekly; budget 12 days on the data as-of (2026-06-12)
+  (() => {
+    if (!portwatch) return feeds.portwatch = F("dead", "none", "no portwatch_state");
+    const asOf = portwatch.as_of ? Date.parse(portwatch.as_of) : null;
+    const dataAgeD = asOf ? Math.round((now - asOf) / 86400000) : null;
+    if (dataAgeD == null || dataAgeD > 12) return feeds.portwatch = F("stale", "low", `data as-of ${portwatch.as_of} (${dataAgeD}d)`);
+    const t = portwatch.latest?.total;
+    if (!(t >= 0 && t <= 500)) return feeds.portwatch = F("suspect", "low", `count ${t} out of bounds`);
+    feeds.portwatch = F("ok", "high", `${t} transits/d as-of ${portwatch.as_of} · ${portwatch.pct_of_prewar}% of pre-war`, { ageMin: Math.round((now - (portwatch.fetchedAt*1000||now))/60000) });
   })();
 
   // ── WEATHER ── fresh<360m

@@ -34,6 +34,7 @@ const FEED_WORKFLOW = {
   ofac:      "ofac-scraper.yml",
   bdti:      "bdti-weekly.yml",
   ukmto:     "ukmto-scraper.yml",
+  portwatch: "portwatch-scraper.yml",
   verdict:   "oil-scraper.yml",   // data-refresh computes + writes verdict_latest
 };
 
@@ -44,6 +45,7 @@ const SEVERITY = {
   currency: "warning", news: "warning", ofac: "warning", weather: "warning",
   seismic: "warning", gdelt: "warning", aircraft: "warning",
   ukmto: "critical",   // conflict-event feed drives the verdict — escalate fast
+  portwatch: "warning", // lagged weekly source; verdict degrades gracefully without it
 };
 
 const REMEDIATION_COOLDOWN_MS = 20 * 60 * 1000;  // don't re-dispatch a feed within 20 min

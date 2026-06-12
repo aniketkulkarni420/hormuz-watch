@@ -33,7 +33,10 @@ async function _handleGfwPost({ request, env }) {
     "public-global-loitering-events-carriers:latest", // legacy, may 404
     // 2026-06-11 (P1-1): AIS gap events — "likely disabling". Powers the
     // going-dark tile that replaces the dead Dark/suspect dash.
-    "public-global-gaps-events:latest"
+    "public-global-gaps-events:latest",
+    // 2026-06-12: SAR presence — satellite RADAR detections, AIS-independent
+    // (sees dark ships). Served via the 4wings report passthrough below.
+    "public-global-sar-presence:latest"
   ]);
   if (!Array.isArray(body.datasets) || !body.datasets.every(d => allowed.has(d))) {
     return json({ error: "dataset not allowed" }, 400);
@@ -80,7 +83,24 @@ async function _handleGfwPost({ request, env }) {
   // failure (timeout, 5xx, network) we serve the last cached payload of any
   // age rather than erroring. The tile shows slightly-stale data instead of
   // breaking. Only if there's no cache at all do we return an error.
-  const url = "https://gateway.api.globalfishingwatch.org/v3/events?limit=200&offset=0";
+  // 2026-06-12: SAR presence is a 4wings dataset, not an events dataset —
+  // route it to the report endpoint (radar detections, AIS-independent).
+  const isSar = body.datasets[0] === "public-global-sar-presence:latest";
+  let url, upstreamBody;
+  if (isSar) {
+    const qs = new URLSearchParams({
+      "spatial-resolution": "LOW",
+      "temporal-resolution": "ENTIRE",
+      "datasets[0]": body.datasets[0],
+      "date-range": `${body.startDate},${body.endDate}`,
+      "format": "JSON",
+    });
+    url = "https://gateway.api.globalfishingwatch.org/v3/4wings/report?" + qs.toString();
+    upstreamBody = JSON.stringify({ geojson: body.geometry });
+  } else {
+    url = "https://gateway.api.globalfishingwatch.org/v3/events?limit=200&offset=0";
+    upstreamBody = JSON.stringify(body);
+  }
 
   const serveStale = async (reason) => {
     if (env.OIL_KV) {
@@ -115,7 +135,7 @@ async function _handleGfwPost({ request, env }) {
           "Authorization": "Bearer " + env.GFW_TOKEN,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(body),
+        body: upstreamBody,
         signal: ctrl.signal,
         cf: { cacheTtl: 1800, cacheEverything: true }
       });

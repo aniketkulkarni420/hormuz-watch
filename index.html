@@ -796,6 +796,19 @@ header{
     </div>
     <div class="sig-tooltip" id="ttipVessels"></div>
   </div>
+  <!-- IMF PortWatch (2026-06-12): TRUE strait transits/day — the measurement
+       this product lacked. Lagged ~5-10d (weekly source); labelled. -->
+  <div class="sig">
+    <div class="sig-top">
+      <span class="sig-val" id="sigPortwatch" style="color:var(--red)">—</span>
+      <span class="sig-dir" id="sigPortwatchDir" style="color:var(--muted)"></span>
+    </div>
+    <div class="sig-bot">
+      <span class="sig-label" title="True daily strait transits from IMF PortWatch (UN Global Platform AIS). Updated weekly — lagged 5-10 days. Pre-war baseline ~84/day.">True transits / d</span>
+      <span class="sig-src src-est" id="sigPortwatchSrc">IMF · LAGGED</span>
+    </div>
+    <div class="sig-tooltip" id="ttipPortwatch"></div>
+  </div>
   <div class="sig">
     <div class="sig-top">
       <span class="sig-val" id="sigDark" style="color:var(--amber)">—</span>
@@ -3616,9 +3629,33 @@ function pollSnapshotForDegradedMode(){
       try { renderPortPressure(); } catch(e){}
       try { renderOfacTimeline(d); } catch(e){}
       try { renderUkmtoIncidents(d); } catch(e){}   // P0-2 (2026-06-11)
+      try { renderPortwatch(d); } catch(e){}        // IMF transits (2026-06-12)
       try { renderBlendRows(d); } catch(e){}        // P1-2/P1-5 (2026-06-11)
     })
     .catch(function(){});
+}
+
+// IMF PortWatch tile (2026-06-12): true daily strait transits, lagged.
+function renderPortwatch(snap){
+  var el = document.getElementById("sigPortwatch");
+  if(!el) return;
+  if(snap.portwatch_transits_daily == null){ el.textContent = "—"; return; }
+  el.textContent = snap.portwatch_transits_daily;
+  var dir = document.getElementById("sigPortwatchDir");
+  if(dir && snap.portwatch_pct_prewar != null){
+    dir.textContent = snap.portwatch_pct_prewar + "% of pre-war";
+    dir.style.fontSize = "9px";
+    dir.style.color = snap.portwatch_pct_prewar < 50 ? "var(--red)" : "var(--muted)";
+  }
+  var src = document.getElementById("sigPortwatchSrc");
+  if(src && snap.portwatch_as_of) src.textContent = "IMF · " + snap.portwatch_as_of.slice(5);
+  var tip = document.getElementById("ttipPortwatch");
+  if(tip){
+    tip.innerHTML = '<div><b>' + (snap.portwatch_transits_daily) + '</b> transits on ' + (snap.portwatch_as_of || '?')
+      + ' (' + (snap.portwatch_tankers_daily ?? '—') + ' tankers) · 7d avg <b>' + (snap.portwatch_avg7 ?? '—')
+      + '</b> vs pre-war <b>' + (snap.portwatch_prewar ?? '~84') + '</b>/day'
+      + '<div style="color:var(--muted2);margin-top:3px">IMF PortWatch · UN Global Platform AIS · weekly update (lagged)</div></div>';
+  }
 }
 
 // P0-2 (2026-06-11): Incidents tile — UKMTO Royal Navy feed via snapshot.

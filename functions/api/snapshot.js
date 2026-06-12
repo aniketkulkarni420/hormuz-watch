@@ -57,13 +57,13 @@ export async function onRequestGet({ request, env }) {
 
   // ─── Composite signals · Path D (May 2026) ────────────────────────────────
   // Read 5 KV keys; surface counts in snapshot for downstream consumers.
-  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null, aisHealth = null, ukmto = null, blends = null, oilScraped = null;
+  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null, aisHealth = null, ukmto = null, blends = null, oilScraped = null, portwatch = null;
   if (env.OIL_KV) {
     const safeGet = async (k) => {
       try { const r = await env.OIL_KV.get(k); return r ? JSON.parse(r) : null; }
       catch { return null; }
     };
-    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest, aisHealth, ukmto, blends, oilScraped] = await Promise.all([
+    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest, aisHealth, ukmto, blends, oilScraped, portwatch] = await Promise.all([
       safeGet("aircraft_state"),
       safeGet("seismic_state"),
       safeGet("gdelt_state"),
@@ -77,6 +77,7 @@ export async function onRequestGet({ request, env }) {
       safeGet("ukmto_state"),
       safeGet("oilprice_blends"),
       safeGet("oil_scraped"),
+      safeGet("portwatch_state"),
     ]);
   }
 
@@ -212,6 +213,14 @@ export async function onRequestGet({ request, env }) {
     henry_hub_change_pct:   oilScraped?.henry_hub?.changePct ?? null,
     // Press-cited transit estimate (P1-6) — extracted from news feed, attributed
     press_transit_estimate: news?.press_transit_estimate ?? null,
+    // IMF PortWatch (2026-06-12): TRUE daily strait transits, lagged ~5-10d.
+    portwatch_transits_daily: portwatch?.latest?.total ?? null,
+    portwatch_tankers_daily:  portwatch?.latest?.tanker ?? null,
+    portwatch_avg7:           portwatch?.avg7?.total ?? null,
+    portwatch_prewar:         portwatch?.prewar_baseline?.total ?? null,
+    portwatch_pct_prewar:     portwatch?.pct_of_prewar ?? null,
+    portwatch_as_of:          portwatch?.as_of ?? null,
+    portwatch_series:         portwatch?.series ?? null,
     // India exposure CORRECTED 2026-06-10 (was a single mislabelled 58):
     // - import dependency (share of crude consumption imported): ~87.8% (PPAC FY24)
     // - share of imports transiting Hormuz: ~30% NOW (India rerouted during the
