@@ -30,7 +30,10 @@ async function _handleGfwPost({ request, env }) {
   const allowed = new Set([
     "public-global-encounters-events:latest",
     "public-global-loitering-events:latest",
-    "public-global-loitering-events-carriers:latest"  // legacy, may 404
+    "public-global-loitering-events-carriers:latest", // legacy, may 404
+    // 2026-06-11 (P1-1): AIS gap events — "likely disabling". Powers the
+    // going-dark tile that replaces the dead Dark/suspect dash.
+    "public-global-gaps-events:latest"
   ]);
   if (!Array.isArray(body.datasets) || !body.datasets.every(d => allowed.has(d))) {
     return json({ error: "dataset not allowed" }, 400);

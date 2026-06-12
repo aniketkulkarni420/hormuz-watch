@@ -54,24 +54,39 @@ def main():
         except Exception: pass
         sys.exit(1)
 
-    try:
-        r = requests.get(URL, timeout=25,
-                         headers={"User-Agent": "HormuzWatch-GDELT/1.0"})
-    except Exception as e:
-        print(f"GDELT request failed: {e}")
-        _fail("request_exception")
-    if r.status_code != 200:
-        print(f"GDELT HTTP {r.status_code}: {r.text[:200]}")
-        _fail(f"http_{r.status_code}")
-
-    try:
-        data = r.json()
-    except Exception:
-        # Empty/garbage body — GDELT's doc API returns this on transient
-        # errors AND (per its docs) sometimes on genuine zero-results, so the
-        # two are indistinguishable. Treat as failure: preserve previous KV.
-        print("GDELT JSON parse failed — preserving previous KV, flagging failure")
-        _fail("json_parse_failed")
+    # Retry-with-backoff (P1-7 · 2026-06-11): GDELT's doc API flakes for
+    # hours at a time (8 consecutive red runs on 06-11, self-recovered).
+    # 3 attempts at 0/20/40s absorbs the short wobbles; a real outage still
+    # fails loudly after attempt 3 (feed keeps last-good either way).
+    data = None
+    last_err = "unknown"
+    for attempt in range(1, 4):
+        if attempt > 1:
+            wait = 20 * (attempt - 1)
+            print(f"  retry {attempt}/3 after {wait}s ...")
+            time.sleep(wait)
+        try:
+            r = requests.get(URL, timeout=25,
+                             headers={"User-Agent": "HormuzWatch-GDELT/1.0"})
+        except Exception as e:
+            print(f"GDELT request failed (attempt {attempt}): {e}")
+            last_err = "request_exception"
+            continue
+        if r.status_code != 200:
+            print(f"GDELT HTTP {r.status_code} (attempt {attempt}): {r.text[:200]}")
+            last_err = f"http_{r.status_code}"
+            continue
+        try:
+            data = r.json()
+            break
+        except Exception:
+            # Empty/garbage body — transient error or genuine zero-results;
+            # indistinguishable per GDELT docs. Retry, then fail loudly.
+            print(f"GDELT JSON parse failed (attempt {attempt})")
+            last_err = "json_parse_failed"
+    if data is None:
+        print("GDELT unusable after 3 attempts — preserving previous KV, flagging failure")
+        _fail(last_err)
 
     articles = data.get("articles") or []
     count = len(articles)

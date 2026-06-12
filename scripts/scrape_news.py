@@ -261,6 +261,25 @@ def main():
         for h in top20[:5]:
             print(f"    [{h['source']} · score={h['score']}] {h['title'][:90]}")
 
+    # ── Press-cited transit estimate (P1-6 · 2026-06-11) ────────────────────
+    # When articles cite tanker-tracking figures ("Kpler: transits down to 12
+    # a day"), surface the NUMBER with attribution. Conservative: requires
+    # hormuz/strait context AND a transit verb near a small number (1-200).
+    press_transit = None
+    _tp = re.compile(r"(?:transits?|crossings?|passages?|tankers?\s+(?:passed|crossed|transited))[^0-9]{0,30}(\d{1,3})(?:\s*(?:a|per)\s*day)?", re.I)
+    for it in filtered[:60]:
+        blob = (it.get("title") or "")
+        if not re.search(r"hormuz|strait", blob, re.I):
+            continue
+        m = _tp.search(blob)
+        if m:
+            n = int(m.group(1))
+            if 1 <= n <= 200:
+                press_transit = {"value": n, "source": it.get("source"),
+                                 "title": blob[:120], "published": it.get("published")}
+                print(f"  press transit estimate: ~{n}/day · {it.get('source')}")
+                break
+
     out = {
         "fetchedAt": now_ts,
         "headlines": [{
@@ -276,6 +295,7 @@ def main():
         "sources_total": len(FEEDS),
         "top_keywords": [[k, v] for k, v in top_keywords],
         "per_source_raw": per_source_count,
+        "press_transit_estimate": press_transit,
     }
 
     ok = kv_put("news_headlines", json.dumps(out, separators=(",", ":")))

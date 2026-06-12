@@ -47,9 +47,10 @@ def sanity_ok(v):
         return False
 
 
-def fetch_yahoo(symbol, label):
-    """Yahoo Finance v8 chart API for a futures symbol (BZ=F / CL=F).
-    Same upstream as functions/api/oil-history.js. Returns dict or None."""
+def fetch_yahoo(symbol, label, lo=OIL_MIN, hi=OIL_MAX):
+    """Yahoo Finance v8 chart API for a futures symbol (BZ=F / CL=F / NG=F).
+    Same upstream as functions/api/oil-history.js. Returns dict or None.
+    lo/hi: per-symbol sanity bounds (oil 30-250; Henry Hub gas 1-40)."""
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
     try:
         r = requests.get(url, headers={"User-Agent": UA}, timeout=20)
@@ -58,7 +59,10 @@ def fetch_yahoo(symbol, label):
             return None
         meta = (r.json().get("chart", {}).get("result") or [{}])[0].get("meta", {})
         close = meta.get("regularMarketPrice")
-        if not sanity_ok(close):
+        def sane(v):
+            try: return v is not None and lo <= float(v) <= hi
+            except Exception: return False
+        if not sane(close):
             print(f"  {label}: price {close} missing or out of sanity bounds")
             return None
         close = float(close)
@@ -68,7 +72,7 @@ def fetch_yahoo(symbol, label):
             print(f"  {label}: marketTime {mkt_ts} older than 4 days — rejecting as stale")
             return None
         prev = meta.get("chartPreviousClose")
-        prev = float(prev) if sanity_ok(prev) else None
+        prev = float(prev) if sane(prev) else None
         change    = (close - prev) if prev is not None else None
         changePct = (change / prev * 100.0) if (change is not None and prev) else None
         stamp = time.strftime("%Y-%m-%d %H:%M", time.gmtime(mkt_ts)) if mkt_ts else None
@@ -131,6 +135,10 @@ def main():
 
     brent = fetch_yahoo("BZ=F", "Brent BZ=F")
     wti   = fetch_yahoo("CL=F", "WTI   CL=F")
+    # Henry Hub gas (P1-5, 2026-06-11): least Hormuz-relevant gas leg but the
+    # only free one. Bounds 1-40 $/MMBtu. Optional — its failure never blocks
+    # the oil write.
+    hh    = fetch_yahoo("NG=F", "HenryHub NG=F", lo=1.0, hi=40.0)
     opa   = fetch_opa_demo()
 
     # ── Degraded path (2026-06-10): Yahoo dead but OPA alive → write OPA at
@@ -207,6 +215,13 @@ def main():
             "note": agree_note,
         },
         "scraper": "scrape_oil_stooq",
+        # Henry Hub gas (optional leg) — UI renders only when present
+        "henry_hub": ({
+            "value": round(hh["close"], 3),
+            "change": round(hh["change"], 3) if hh.get("change") is not None else None,
+            "changePct": round(hh["changePct"], 2) if hh.get("changePct") is not None else None,
+            "stamp": hh.get("stampStr"),
+        } if hh else None),
     }
 
     if dry_run:

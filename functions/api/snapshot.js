@@ -57,13 +57,13 @@ export async function onRequestGet({ request, env }) {
 
   // ─── Composite signals · Path D (May 2026) ────────────────────────────────
   // Read 5 KV keys; surface counts in snapshot for downstream consumers.
-  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null, aisHealth = null, ukmto = null, blends = null;
+  let aircraft = null, seismic = null, gdelt = null, weather = null, vesselScrape = null, news = null, currency = null, ofac = null, oilLatest = null, aisHealth = null, ukmto = null, blends = null, oilScraped = null;
   if (env.OIL_KV) {
     const safeGet = async (k) => {
       try { const r = await env.OIL_KV.get(k); return r ? JSON.parse(r) : null; }
       catch { return null; }
     };
-    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest, aisHealth, ukmto, blends] = await Promise.all([
+    [aircraft, seismic, gdelt, weather, vesselScrape, news, currency, ofac, oilLatest, aisHealth, ukmto, blends, oilScraped] = await Promise.all([
       safeGet("aircraft_state"),
       safeGet("seismic_state"),
       safeGet("gdelt_state"),
@@ -76,6 +76,7 @@ export async function onRequestGet({ request, env }) {
       safeGet("ais_health"),
       safeGet("ukmto_state"),
       safeGet("oilprice_blends"),
+      safeGet("oil_scraped"),
     ]);
   }
 
@@ -206,6 +207,11 @@ export async function onRequestGet({ request, env }) {
     murban_premium:         blends?.murban_premium ?? null,
     murban_quote_age_h:     blends?.blends?.murban?.stamp_age_h ?? null,
     blends_age_sec:         blends?.fetchedAt ? Math.floor(Date.now()/1000 - blends.fetchedAt) : null,
+    // Henry Hub gas (P1-5) — optional leg of the oil scraper; null until deployed scraper runs
+    henry_hub_usd:          oilScraped?.henry_hub?.value ?? null,
+    henry_hub_change_pct:   oilScraped?.henry_hub?.changePct ?? null,
+    // Press-cited transit estimate (P1-6) — extracted from news feed, attributed
+    press_transit_estimate: news?.press_transit_estimate ?? null,
     // India exposure CORRECTED 2026-06-10 (was a single mislabelled 58):
     // - import dependency (share of crude consumption imported): ~87.8% (PPAC FY24)
     // - share of imports transiting Hormuz: ~30% NOW (India rerouted during the
