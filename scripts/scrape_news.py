@@ -173,6 +173,76 @@ def score_item(item):
     return len(hits), hits
 
 
+# ── Direction-aware sentiment (2026-06-23) ──────────────────────────────────
+# The verdict engine was reading NEWS VOLUME + conflict-VOCABULARY as risk, with
+# no sense of DIRECTION. During a US-Iran rapprochement (sanctions waivers, funds
+# unfrozen, successful talks) the volume spikes and the vocabulary ("sanctions",
+# "nuclear", "Iran") still reads as conflict — so a de-escalation lit the board
+# up exactly like an escalation. These lexicons give each headline a direction.
+ESCALATION_TERMS = [
+    "attack", "strike", "missile", "drone strike", "seize", "seizure", "seized",
+    "boarded", "blockade", "close the strait", "closure of", "shut the strait",
+    "mine", "mining", "fired on", "fired upon", "open fire", "opened fire",
+    "retaliat", "escalat", "warfare", "at war", "conflict", "casualt", "killed",
+    "explosion", "explos", "threaten", "threat to", "downed", "shot down",
+    "mobiliz", "deploy", "warship", "ultimatum", "ballistic", "airstrike",
+    "incursion", "hostilit", "provocation", "stand-off", "standoff",
+    "seizing", "hijack", "ambush", "rocket", "uss ", "carrier strike",
+]
+DEESCALATION_TERMS = [
+    "ceasefire", "cease-fire", "truce", "de-escalat", "deescalat", "de escalat",
+    "agreement", "accord", "peace", "detente", "détente", "talks", "negotiat",
+    "diplomat", "diplomacy", "waiver", "waive", "waives", "waived",
+    "sanctions relief", "lift sanctions", "lifts sanctions", "ease sanctions",
+    "easing sanctions", "unblock", "unfreeze", "unfroze", "released", "release of",
+    "resume", "restore", "restoring", "normaliz", "concession", "compromise",
+    "inspectors", "framework", "deal", "swap", "thaw", "rapprochement",
+    "breakthrough", "de-escalation", "stand down", "withdraw",
+]
+
+
+def classify_direction(item):
+    """Return (esc_hits, deesc_hits) for one headline+description blob."""
+    blob = ((item.get("title") or "") + " " + (item.get("description") or "")).lower()
+    esc = sum(1 for t in ESCALATION_TERMS if t in blob)
+    deesc = sum(1 for t in DEESCALATION_TERMS if t in blob)
+    return esc, deesc
+
+
+def window_sentiment(items):
+    """Aggregate per-item direction into a window-level sentiment.
+
+    Returns dict: escalation_items, deescalation_items, neutral_items,
+    net_sentiment (-1..+1; negative = de-escalating), label.
+    Each item votes by the SIGN of (esc - deesc) hits; magnitude ignored so
+    one keyword-stuffed article can't dominate.
+    """
+    esc_n = deesc_n = neu_n = 0
+    for it in items:
+        e, d = classify_direction(it)
+        if e > d:
+            esc_n += 1
+        elif d > e:
+            deesc_n += 1
+        else:
+            neu_n += 1
+    directional = esc_n + deesc_n
+    net = round((esc_n - deesc_n) / directional, 3) if directional else 0.0
+    if net <= -0.33:
+        label = "de-escalating"
+    elif net >= 0.33:
+        label = "escalating"
+    else:
+        label = "neutral"
+    return {
+        "escalation_items": esc_n,
+        "deescalation_items": deesc_n,
+        "neutral_items": neu_n,
+        "net_sentiment": net,
+        "label": label,
+    }
+
+
 def kv_put(key, value):
     if not (CF_ACCOUNT_ID and CF_API_TOKEN and KV_NS):
         print("  CF_* env missing — cannot write KV")
@@ -246,7 +316,16 @@ def main():
     # 24h count
     now_ts = int(time.time())
     cutoff = now_ts - 24 * 3600
-    count_24h = sum(1 for x in filtered if (x["published_ts"] or 0) >= cutoff)
+    items_24h = [x for x in filtered if (x["published_ts"] or 0) >= cutoff]
+    count_24h = len(items_24h)
+
+    # Direction-aware sentiment (2026-06-23). Compute over the 24h window; if
+    # too few items carry usable timestamps, fall back to the full filtered set
+    # so the signal isn't starved by feeds that omit pubDate.
+    sentiment = window_sentiment(items_24h if count_24h >= 5 else filtered)
+    print(f"  sentiment: {sentiment['label']} (net {sentiment['net_sentiment']:+.2f} · "
+          f"{sentiment['escalation_items']} esc / {sentiment['deescalation_items']} de-esc / "
+          f"{sentiment['neutral_items']} neutral)")
 
     # Top 3 keywords overall
     top_keywords = sorted(keyword_counter.items(), key=lambda kv: -kv[1])[:3]
@@ -296,6 +375,12 @@ def main():
         "top_keywords": [[k, v] for k, v in top_keywords],
         "per_source_raw": per_source_count,
         "press_transit_estimate": press_transit,
+        # Direction-aware sentiment (2026-06-23) — drives the verdict's
+        # news scoring + volume trigger so de-escalation no longer reads as risk.
+        "sentiment": sentiment["label"],            # escalating | neutral | de-escalating
+        "net_sentiment": sentiment["net_sentiment"],  # -1..+1 (negative = de-escalating)
+        "escalation_items_24h": sentiment["escalation_items"],
+        "deescalation_items_24h": sentiment["deescalation_items"],
     }
 
     ok = kv_put("news_headlines", json.dumps(out, separators=(",", ":")))

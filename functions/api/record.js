@@ -95,13 +95,20 @@ function scoreBdti(bdti, wow) {
 }
 
 // ─── NEW SCORERS (2026-05-14) ────────────────────────────────────────────
-function scoreOfac(actions) {
-  if (actions == null || !isFinite(actions)) return null;
-  if (actions >= 10) return 4;
-  if (actions >= 6) return 3;
-  if (actions >= 3) return 2;
-  if (actions >= 1) return 1;
-  return 0;
+function scoreOfac(netDesignations, totalActions) {
+  // 2026-06-23: score NET designations (designations − waivers), not raw
+  // action volume. A wave of sanctions WAIVERS used to score as rising
+  // pressure — inverting the signal during a thaw. When the direction split
+  // is unavailable (older payloads), fall back to total actions.
+  const v = (netDesignations != null && isFinite(netDesignations))
+    ? netDesignations
+    : (isFinite(totalActions) ? totalActions : null);
+  if (v == null) return null;
+  if (v <= 0) return 0;       // net de-escalatory or neutral
+  if (v >= 10) return 4;
+  if (v >= 6) return 3;
+  if (v >= 3) return 2;
+  return 1;
 }
 function scoreCurrency(spread) {
   if (spread == null || !isFinite(spread)) return null;
@@ -111,13 +118,32 @@ function scoreCurrency(spread) {
   if (spread >= 50) return 1;
   return 0;
 }
-function scoreNews(count24h) {
+function scoreNews(count24h, netSentiment) {
+  // 2026-06-23 DIRECTION-AWARE rewrite. The old scorer was pure VOLUME: 59
+  // headlines scored 3 whether they were about a tanker war or a peace deal.
+  // News volume spikes during de-escalation too — so a US-Iran rapprochement
+  // (sanctions waivers, funds unfrozen, talks) lit this up like an escalation.
+  // Now: volume sets the ceiling (a quiet news day can't be a crisis), but
+  // DIRECTION sets the actual level.
   if (count24h == null || !isFinite(count24h)) return null;
-  if (count24h >= 100) return 4;
-  if (count24h >= 50) return 3;
-  if (count24h >= 25) return 2;
-  if (count24h >= 10) return 1;
-  return 0;
+  // Volume ceiling — how much news attention the strait is getting.
+  let ceiling;
+  if (count24h >= 50) ceiling = 4;
+  else if (count24h >= 25) ceiling = 3;
+  else if (count24h >= 10) ceiling = 2;
+  else if (count24h >= 3) ceiling = 1;
+  else ceiling = 0;
+  // No direction data → fall back to the old volume-only behaviour.
+  if (netSentiment == null || !isFinite(netSentiment)) return ceiling;
+  // Direction maps the [-1,+1] net sentiment onto the [0, ceiling] range.
+  //   strongly de-escalating (≤ -0.33) → 0 (a peace surge is NOT risk)
+  //   neutral                          → ~half ceiling (background tension)
+  //   strongly escalating  (≥ +0.33)   → full ceiling
+  let frac;
+  if (netSentiment <= -0.33) frac = 0;
+  else if (netSentiment >= 0.33) frac = 1;
+  else frac = 0.5 + (netSentiment / 0.33) * 0.5;   // -0.33..0.33 → 0..1 around 0.5
+  return Math.round(ceiling * frac);
 }
 function scoreInventory(sprWow) {
   if (sprWow == null || !isFinite(sprWow)) return null;
@@ -146,18 +172,20 @@ function scoreProduction(mbpd, momPct) {
 function computeOverrides(snapshot) {
   const triggers = [];
 
-  // OFAC: new Iran action in last 48h
-  const ofacLatest = snapshot.ofac_latest_action_date;
-  if (ofacLatest) {
-    const t = new Date(ofacLatest + "T00:00:00Z").getTime();
+  // OFAC: new Iran DESIGNATION in last 48h (2026-06-23: was latest_action_date,
+  // which fired on waivers too — a sanctions waiver is de-escalation, it must
+  // not raise the verdict). Falls back to latest_action_date for old payloads.
+  const ofacDesig = snapshot.ofac_latest_designation_date || snapshot.ofac_latest_action_date;
+  if (ofacDesig) {
+    const t = new Date(ofacDesig + "T00:00:00Z").getTime();
     const ageSec = isFinite(t) ? (Date.now() - t) / 1000 : Infinity;
     if (ageSec < 48 * 3600) {
-      triggers.push({ id: "ofac", reason: "OFAC Iran-related designation in last 48h", fires: true });
+      triggers.push({ id: "ofac", reason: "OFAC Iran designation in last 48h", fires: true });
     } else {
-      triggers.push({ id: "ofac", reason: "OFAC last action: " + ofacLatest, fires: false });
+      triggers.push({ id: "ofac", reason: "Last OFAC designation: " + ofacDesig, fires: false });
     }
   } else {
-    triggers.push({ id: "ofac", reason: "No OFAC date available", fires: false });
+    triggers.push({ id: "ofac", reason: "No OFAC designation date available", fires: false });
   }
 
   // Currency: absolute spread > 150%
@@ -172,10 +200,19 @@ function computeOverrides(snapshot) {
     triggers.push({ id: "currency", reason: "IRR spread unavailable", fires: false });
   }
 
-  // News volume: 40+ headlines in 24h ≈ 10+ in 6h
+  // News volume — gated by DIRECTION (2026-06-23). 40+ headlines in 24h fires
+  // an escalation override ONLY if the coverage is not de-escalatory. The old
+  // volume-only trigger fired during a US-Iran rapprochement (59 headlines about
+  // sanctions waivers + talks) and single-handedly pushed ELEVATED → HIGH.
   const news24 = snapshot.news_count_24h || 0;
-  if (news24 >= 40) {
-    triggers.push({ id: "news", reason: news24 + " headlines in 24h", fires: true });
+  const newsNet = snapshot.news_net_sentiment;
+  const newsDeescalating = (newsNet != null && isFinite(newsNet) && newsNet <= -0.33)
+                            || snapshot.news_sentiment === "de-escalating";
+  if (news24 >= 40 && !newsDeescalating) {
+    const dir = (newsNet != null && newsNet >= 0.33) ? "escalatory" : "mixed";
+    triggers.push({ id: "news", reason: news24 + " headlines in 24h (" + dir + ")", fires: true });
+  } else if (news24 >= 40 && newsDeescalating) {
+    triggers.push({ id: "news", reason: news24 + " headlines in 24h but DE-ESCALATORY — not fired", fires: false });
   } else {
     triggers.push({ id: "news", reason: news24 + " headlines in 24h (threshold 40)", fires: false });
   }
@@ -198,10 +235,16 @@ function computeOverrides(snapshot) {
 
   // ── Interim conflict triggers (2026-06-10) — stand-ins until the UKMTO
   // incidents feed exists. The engine previously had NO conflict-state input.
-  // War-level media tone: GDELT >= 70% negative is wartime coverage, not noise.
+  // War-level media tone: GDELT >= 70% negative is wartime coverage — BUT
+  // gated by news direction (2026-06-23). GDELT tone is conflict-vocabulary,
+  // not direction: a sanctions-relief story reads as negative tone because the
+  // words "sanctions/Iran/strike" are negative. Don't let it fire when the
+  // human-readable news is clearly de-escalating.
   const tone = snapshot.gdelt_neg_tone || 0;
-  if (tone >= 70) {
+  if (tone >= 70 && !newsDeescalating) {
     triggers.push({ id: "war_tone", reason: tone.toFixed(0) + "% negative tone (war-level coverage)", fires: true });
+  } else if (tone >= 70 && newsDeescalating) {
+    triggers.push({ id: "war_tone", reason: tone.toFixed(0) + "% negative tone but news DE-ESCALATORY — not fired", fires: false });
   } else {
     triggers.push({ id: "war_tone", reason: tone.toFixed(0) + "% negative tone (threshold 70)", fires: false });
   }
@@ -235,18 +278,47 @@ function computeOverrides(snapshot) {
     triggers.push({ id: "ukmto", reason: "UKMTO feed unavailable", fires: false });
   }
 
+  // ── De-escalation DE-TRIGGER (2026-06-23) — the symmetric counterpart ──────
+  // Every trigger above can only push the verdict UP. That asymmetry is how a
+  // clear thaw (sanctions waivers, $12B unfrozen, successful talks) still read
+  // as HIGH: nothing could pull it down. This trigger pulls the verdict DOWN
+  // one level when news is decisively de-escalating AND no hard conflict signal
+  // contradicts it (no UKMTO attack in 72h, war premium not extreme). A real
+  // attack always wins — de-escalation chatter must never mask live hostilities.
+  const ukmtoFired = triggers.some(t => t.id === "ukmto" && t.fires);
+  const bpDe = snapshot.brent_price;
+  const premDe = (isFinite(bpDe) && PREWAR_BRENT > 0) ? (bpDe - PREWAR_BRENT) / PREWAR_BRENT * 100 : 0;
+  if (newsDeescalating && !ukmtoFired && premDe < 25) {
+    triggers.push({
+      id: "deescalation",
+      reason: "News decisively de-escalating + no active UKMTO attack + war premium contained → -1 level",
+      fires: true, delevel: true,
+    });
+  } else if (newsDeescalating && (ukmtoFired || premDe >= 25)) {
+    triggers.push({
+      id: "deescalation",
+      reason: "News de-escalating but a hard conflict signal contradicts it — not applied",
+      fires: false, delevel: true,
+    });
+  }
+
   return triggers;
 }
 
 function applyOverrides(baseVerdict, triggers) {
-  const firedCount = triggers.filter(t => t.fires).length;
+  // Escalation triggers add levels; the de-escalation de-trigger subtracts one.
+  const firedCount = triggers.filter(t => t.fires && !t.delevel).length;
+  const delevelCount = triggers.filter(t => t.fires && t.delevel).length;
   const levels = ["NORMAL", "ELEVATED", "HIGH", "CRITICAL"];
   let idx = levels.indexOf(baseVerdict);
   if (idx < 0) idx = 0;
   // Escalation capped at +2 levels (2026-06-10): with 7 possible triggers,
   // uncapped stacking pegs the scale at CRITICAL and destroys its meaning.
   // CRITICAL should require a HIGH structural base plus corroboration.
-  idx = Math.min(idx + Math.min(firedCount, 2), levels.length - 1);
+  idx = idx + Math.min(firedCount, 2);
+  // De-escalation pulls down one level (2026-06-23), floored at NORMAL.
+  idx = idx - Math.min(delevelCount, 1);
+  idx = Math.max(0, Math.min(idx, levels.length - 1));
   return levels[idx];
 }
 
@@ -271,9 +343,9 @@ function computeVerdict(snapshot) {
   const seismicScore    = scoreSeismic(snapshot.earthquake_count_7d, snapshot.max_mag);
   const weatherScore    = scoreWeather(snapshot.rough_conditions);
   const bdtiScore       = scoreBdti(snapshot.bdti, snapshot.bdti_wow);
-  const ofacScore       = scoreOfac(snapshot.ofac_iran_actions_30d);
+  const ofacScore       = scoreOfac(snapshot.ofac_net_designations_30d, snapshot.ofac_iran_actions_30d);
   const currencyScore   = scoreCurrency(snapshot.irr_spread_pct);
-  const newsScore       = scoreNews(snapshot.news_count_24h);
+  const newsScore       = scoreNews(snapshot.news_count_24h, snapshot.news_net_sentiment);
   const inventoryScore  = scoreInventory(snapshot.spr_wow_pct);
   const productionScore = scoreProduction(snapshot.opec_production_mbpd, snapshot.opec_production_mom_pct);
 
@@ -285,14 +357,18 @@ function computeVerdict(snapshot) {
     ofac: 0.07, currency: 0.04, news: 0.04, inventory: 0.04, production: 0.04
   };
   const W_COMPOSITE = {
-    // events (GDELT neg-tone) raised 0.10 -> 0.18, stocks trimmed (2026-06-10):
-    // with AIS dark, news tone is the most direct conflict signal we hold —
-    // 87.8% negative during missile exchanges was scoring 4 but moving the
-    // weighted average by only 0.10. Normalization handles the sum.
+    // 2026-06-23 REBALANCE: GDELT neg-tone ("events") cut 0.18 → 0.07. Its tone
+    // is conflict-VOCABULARY, not direction — "U.S. waives Iran oil sanctions"
+    // scores as negative tone because "sanctions/Iran/oil" are conflict words,
+    // so it read a de-escalation as a crisis. The freed weight goes to the now
+    // direction-aware `news` signal (0.05 → 0.14), which is the most direct
+    // read of escalation-vs-de-escalation we hold while AIS is dark.
+    // (2026-06-10 had raised events to 0.18 during the active war; the war has
+    // since de-escalated and tone-without-direction became the top false driver.)
     transits: 0,
     oil: 0.18, stocks: 0.08, bdti: 0.07,
-    aircraft: 0.13, events: 0.18, seismic: 0.03, weather: 0.03,
-    ofac: 0.10, currency: 0.06, news: 0.05, inventory: 0.05, production: 0.02
+    aircraft: 0.13, events: 0.07, seismic: 0.03, weather: 0.03,
+    ofac: 0.10, currency: 0.06, news: 0.14, inventory: 0.05, production: 0.02
   };
   const weights = transitsScore !== null ? W_AIS : W_COMPOSITE;
 
@@ -334,10 +410,25 @@ function computeVerdict(snapshot) {
 
   const triggers = computeOverrides(snapshot);
   const firedCount = triggers.filter(t => t.fires).length;
-  const final = applyOverrides(structural, triggers);
+  let final = applyOverrides(structural, triggers);
+
+  // ── "Calmer but not all-clear" floor (2026-06-23) ────────────────────────
+  // A de-escalation can pull the verdict toward NORMAL, but while the market
+  // still carries a standing war premium (Brent ≥ +8% over the pre-war anchor)
+  // OR tanker freight is still elevated (BDTI > 1800), the strait is not
+  // all-clear. Floor the verdict at ELEVATED in that residual-risk state so a
+  // thaw reads as "winding down, watch it" — never a premature NORMAL.
+  const bpFloor = snapshot.brent_price;
+  const premFloor = (isFinite(bpFloor) && PREWAR_BRENT > 0) ? (bpFloor - PREWAR_BRENT) / PREWAR_BRENT * 100 : 0;
+  const residualRisk = (premFloor >= 8) || (isFinite(snapshot.bdti) && snapshot.bdti > 1800);
+  const levelsF = ["NORMAL", "ELEVATED", "HIGH", "CRITICAL"];
+  if (residualRisk && levelsF.indexOf(final) < 1) {
+    final = "ELEVATED";
+  }
 
   return {
     verdict: final,
+    residual_risk_floor: residualRisk,
     structural_verdict: structural,
     structural_score: Math.round(weighted * 100) / 100,
     score: Math.round(weighted * 100) / 100,
@@ -521,9 +612,18 @@ async function _handleRecord({ request, env }) {
     bdti:                       bdtiValue, bdti_wow: bdtiWow,
     // NEW
     ofac_iran_actions_30d:      snapshotD?.ofac_iran_actions_30d ?? null,
+    // Direction-split OFAC (2026-06-23): net designations (designations −
+    // waivers) is what the verdict scores; the 48h trigger fires on a new
+    // DESIGNATION only, never on a waiver (a waiver is de-escalation).
+    ofac_net_designations_30d:  snapshotD?.ofac_iran_net_designations_30d ?? null,
     ofac_latest_action_date:    snapshotD?.ofac_latest_action_date ?? null,
+    ofac_latest_designation_date: snapshotD?.ofac_latest_designation_date ?? null,
     irr_spread_pct:             snapshotD?.irr_spread_pct ?? null,
     news_count_24h:             snapshotD?.news_count_24h ?? null,
+    // Direction-aware news sentiment (2026-06-23): the fix for "de-escalation
+    // news read as escalation". net < 0 = de-escalating.
+    news_sentiment:             snapshotD?.news_sentiment ?? null,
+    news_net_sentiment:         snapshotD?.news_net_sentiment ?? null,
     spr_wow_pct:                snapshotD?.spr_wow_pct ?? null,
     opec_production_mbpd:       snapshotD?.opec_production_mbpd ?? null,
     // UKMTO conflict feed (2026-06-10) — drives the ukmto override trigger
@@ -564,9 +664,13 @@ async function _handleRecord({ request, env }) {
       max_mag: maxMag,
       weather_rough: roughWeather,
       ofac_iran_actions_30d: verdictInput.ofac_iran_actions_30d,
+      ofac_net_designations_30d: verdictInput.ofac_net_designations_30d,
       ofac_latest_action_date: verdictInput.ofac_latest_action_date,
+      ofac_latest_designation_date: verdictInput.ofac_latest_designation_date,
       irr_spread_pct: verdictInput.irr_spread_pct,
       news_count_24h: verdictInput.news_count_24h,
+      news_sentiment: verdictInput.news_sentiment,
+      news_net_sentiment: verdictInput.news_net_sentiment,
       spr_wow_pct: verdictInput.spr_wow_pct,
       opec_production_mbpd: verdictInput.opec_production_mbpd,
       // Vessel composition history (2026-06-10) — persisted hourly so trend

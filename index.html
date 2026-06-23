@@ -5505,9 +5505,9 @@ var GAUGE_PATHS = {
 };
 function _renderTrigger(t){
   var fired = t.fires;
-  var dot = fired ? "🔴" : "⚪";
+  var dot = fired ? (t.delevel ? "🟢" : "🔴") : "⚪";
   var label = (t.id || "").toUpperCase();
-  var firedTxt = fired ? " <b>+1 level</b>" : "";
+  var firedTxt = fired ? (t.delevel ? " <b>−1 level</b>" : " <b>+1 level</b>") : "";
   var html = '<div class="verdict-override" style="' + (fired ? "" : "opacity:0.5") + '">' +
              '<div class="verdict-override-title">' + dot + " " + label + (fired ? " trigger fired" : " trigger (idle)") + '</div>' +
              '<div class="verdict-trigger">' + (t.reason || "—") + firedTxt + '</div></div>';
@@ -5541,6 +5541,27 @@ function renderVerdictBlock(v){
   var sumEl   = document.getElementById("v2Summary");
   if(bandEl){ bandEl.textContent = lvl; bandEl.style.color = hex; }
   if(scoreEl){ scoreEl.textContent = (score != null ? score.toFixed(1) : "—") + " / 4.0"; }
+
+  // ── Tension gauge — single source of truth (2026-06-23) ──────────────────
+  // Previously the gauge SVG was left to the old _wireTensionGauge() path,
+  // which was disabled, so the dial could show a stale/independent level that
+  // disagreed with this authoritative server verdict (e.g. CRITICAL dial while
+  // the verdict was HIGH). Drive it directly from `lvl` here.
+  var gMap = {
+    "NORMAL":   { desc:"Routine baseline.<br>No escalation signal." },
+    "ELEVATED": { desc:"Above baseline risk.<br>One signal flagged." },
+    "HIGH":     { desc:"Multiple signals stressed.<br>Equity catalyst risk live." },
+    "CRITICAL": { desc:"Severe disruption signal.<br>Closure / war premium active." }
+  };
+  var gp = GAUGE_PATHS[lvl] || GAUGE_PATHS["ELEVATED"];
+  var gLevelEl = document.getElementById("gaugeLevel");
+  var gArcEl   = document.getElementById("gaugeArc");
+  var gDotEl   = document.getElementById("gaugeDot");
+  var gDescEl  = document.getElementById("gaugeDesc");
+  if(gLevelEl){ gLevelEl.textContent = lvl; gLevelEl.style.color = hex; }
+  if(gArcEl){ gArcEl.setAttribute("d", gp.path); gArcEl.setAttribute("stroke", hex); }
+  if(gDotEl){ gDotEl.setAttribute("cx", gp.dot[0]); gDotEl.setAttribute("cy", gp.dot[1]); gDotEl.setAttribute("fill", hex); }
+  if(gDescEl && gMap[lvl]){ gDescEl.innerHTML = gMap[lvl].desc; }
   if(sumEl){
     var structColor = VERDICT_HEX[struct] || hex;
     var line = "Structural <b style=\"color:"+structColor+"\">"+struct+"</b>";

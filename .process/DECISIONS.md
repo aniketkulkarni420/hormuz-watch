@@ -110,6 +110,47 @@ auto-feed; sourcing decision still open. The 185-vs-148 scraper reconciliation
 
 ---
 
+## 2026-06-23 — Verdict direction-awareness (de-escalation false-positive fix)
+
+**Problem:** Verdict read HIGH/CRITICAL during a clear US-Iran *de-escalation*
+(sanctions waivers, $12B unfrozen, successful talks, Brent only +8%). Root
+cause: the engine measured news VOLUME and conflict-VOCABULARY, not DIRECTION.
+59 headlines about a peace deal fired the same escalation paths as 59 about a
+tanker war. Every trigger could only push UP — nothing could pull down.
+
+**Six fixes (all shipped together):**
+1. **Direction-aware news** — `scrape_news.py` now classifies each headline via
+   escalation/de-escalation lexicons → window `sentiment`/`net_sentiment`
+   (−1..+1). `record.js scoreNews(count, netSentiment)`: volume sets the
+   ceiling, direction sets the level (de-escalating → 0 even at high volume).
+2. **News-volume trigger gated** — fires only if volume ≥40 AND not
+   de-escalating (was volume-only; was the ELEVATED→HIGH bump).
+3. **GDELT tone de-weighted** — `events` weight 0.18→0.07 (it's vocabulary not
+   direction; "U.S. waives Iran sanctions" reads as negative tone). Freed
+   weight → `news` 0.05→0.14. `war_tone` trigger gated by news direction.
+4. **OFAC designations vs waivers** — `scrape_ofac.py` classifies each action;
+   `scoreOfac` scores NET designations (a waiver is de-escalation, not
+   pressure); 48h trigger fires on a designation date, never a waiver.
+5. **772-transit miscount killed** — `snapshot.js` was shoving scraped
+   ships-IN-PORT (778) into the transits slot → "551% of normal". Now transits
+   = null when AIS dark (honest); port count surfaced as its own `ships_in_port`.
+6. **UI gauge reconciled** — `renderVerdictBlock` now drives the tension-gauge
+   SVG from the authoritative `/api/verdict`, ending the stale-dial disagreement.
+
+**Plus symmetric de-trigger:** `deescalation` override pulls verdict −1 level
+when news decisively de-escalating AND no UKMTO attack in 72h AND war premium
+< 25% (a real attack always wins).
+
+**Verified (unit tests):** today's data → NORMAL (was HIGH); structural 1.51→
+0.77; news score 3→0; ofac 2→0; de-trigger fires. Same 59-headline volume but
+ESCALATING + UKMTO attack → CRITICAL (still screams during a real war).
+Classifier on today's 10 real headlines → net −1.0 (8 de-esc / 0 esc).
+
+**Files:** `scrape_news.py`, `scrape_ofac.py`, `snapshot.js`, `record.js`,
+`index.html`. All pass node --check / py_compile.
+
+---
+
 ## 2026-05-14 — Batch D (crisis-time accuracy + recalibration) + Batch G opened
 
 **Batch D — done (crisis-time accuracy + honesty fixes):**

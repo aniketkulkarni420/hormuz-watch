@@ -86,29 +86,34 @@ export async function onRequestGet({ request, env }) {
   // Used only when (1) AIS not flowing AND (2) scraped data is fresh (< 24h) AND (3) not blocked.
   // Window widened 6h→24h (2026-05-18): GHA cron is throttled to ~10h actual cadence;
   // 6h window kept tripping us into full-static fallback even when vessel scrape was valid.
+  // 2026-06-23 CATEGORY-INVERSION FIX: the web-scrape fallback below USED to
+  // shove the scraped port total (ships sitting IN PORT) into transits24h —
+  // so the dashboard rendered "772 transits/day · 551% of normal" off a count
+  // of vessels that, by definition, are NOT transiting. Ships-in-port and
+  // gate-crossings are different metrics; conflating them inverts the signal
+  // during a blockade (ships pile up → "transits" rise). The scraped port
+  // total now populates its OWN field (ships_in_port); it never enters the
+  // transit slot. When AIS is dark we have NO transit count → null (honest),
+  // not a fabricated number.
+  let shipsInPort = null;
+  let shipsInPortAgeSec = null;
+  let shipsInPortSource = null;
   if (!aisLive && vesselScrape && !vesselScrape.blocked) {
     const scrapeAgeSec = vesselScrape.fetchedAt ? Math.floor(Date.now() / 1000 - vesselScrape.fetchedAt) : null;
     const scrapeTotal = vesselScrape?.totals?.all ?? null;
     if (scrapeAgeSec != null && scrapeAgeSec < 24 * 3600 && Number.isFinite(scrapeTotal) && scrapeTotal > 0) {
-      aisLive = {
-        transits24h: scrapeTotal,
-        inbound: 0, outbound: 0,
-        vesselCount: scrapeTotal,
-        eastbound: 0, westbound: 0,
-        uniqueImos: scrapeTotal,
-        typeBreakdown: null, categories: null,
-        ageSec: scrapeAgeSec,
-        source: `Web scrape · VesselFinder Gulf ports (${vesselScrape.sites_succeeded}/2 sites · confidence ${vesselScrape.confidence})`,
-        dataSource: "web_scrape",
-      };
+      shipsInPort = scrapeTotal;
+      shipsInPortAgeSec = scrapeAgeSec;
+      shipsInPortSource = `Web scrape · VesselFinder Gulf ports (${vesselScrape.sites_succeeded}/2 sites · confidence ${vesselScrape.confidence})`;
     }
   }
 
-  // Resolve final values · live (AIS or scraped) wins when available
-  const transits24h = aisLive ? aisLive.transits24h : numFromEnv(env.HORMUZ_TRANSITS_24H, 84);
+  // Resolve final values. transits24h is ONLY real AIS gate-crossings; null
+  // when AIS is dark (no fabricated fallback — see fix note above).
+  const transits24h = aisLive ? aisLive.transits24h : null;
   const baseline = numFromEnv(env.HORMUZ_BASELINE_30D, 140);
-  const inbound = aisLive ? aisLive.inbound : numFromEnv(env.HORMUZ_INBOUND, 38);
-  const outbound = aisLive ? aisLive.outbound : numFromEnv(env.HORMUZ_OUTBOUND, 42);
+  const inbound = aisLive ? aisLive.inbound : null;
+  const outbound = aisLive ? aisLive.outbound : null;
   // Dark-vessel count: we have NO real source for this. The old
   // numFromEnv(env.HORMUZ_DARK, 947) shipped a frozen constant that the UI
   // then divided by the live vessel count to render a "Dark vessel share"
@@ -139,8 +144,11 @@ export async function onRequestGet({ request, env }) {
     } catch { /* fall back to env default */ }
   }
 
-  const totalActive = inbound + outbound;
-  const pctOfNormal = +((transits24h / baseline) * 100).toFixed(1);
+  // Null-safe now that inbound/outbound/transits can be null when AIS is dark.
+  const totalActive = (inbound != null && outbound != null) ? inbound + outbound : null;
+  const pctOfNormal = (transits24h != null && isFinite(transits24h))
+    ? +((transits24h / baseline) * 100).toFixed(1)
+    : null;
 
   // ── Vessel composition derived metrics (2026-05-29) ──────────────────────
   // (1) Tanker-only count — the oil-relevant slice of the port total (the
@@ -179,8 +187,15 @@ export async function onRequestGet({ request, env }) {
     // live transit count; the 21 mb/d capacity anchor is the only constant.
     // Surface labelled "est" — it is a transit-proxy, not metered volume.
     hormuz_capacity_mbd: 21,
-    throughput_mbd_est: +(((pctOfNormal || 0) / 100) * 21).toFixed(1),
+    throughput_mbd_est: (pctOfNormal != null) ? +((pctOfNormal / 100) * 21).toFixed(1) : null,
     throughput_pct_of_normal: pctOfNormal,
+    // Ships currently IN PORT across the 5 scraped Gulf ports — a port-activity
+    // proxy, NOT a transit count. Separated from transits to end the category
+    // inversion that rendered port counts as "551% of normal transits". (2026-06-23)
+    ships_in_port: shipsInPort,
+    ships_in_port_age_sec: shipsInPortAgeSec,
+    ships_in_port_source: shipsInPortSource,
+    transits_available: transits24h != null,
     dark_vessels: dark,
     bdti: bdti,
     bdti_as_of: bdti_as_of,
@@ -334,6 +349,12 @@ export async function onRequestGet({ request, env }) {
     news_top_keywords:       Array.isArray(news?.top_keywords) ? news.top_keywords.slice(0, 3).map(x => Array.isArray(x) ? x[0] : x) : null,
     news_sources_succeeded:  news?.sources_succeeded ?? null,
     news_age_sec:            news?.fetchedAt ? Math.floor(Date.now()/1000 - news.fetchedAt) : null,
+    // Direction-aware news sentiment (2026-06-23) — drives the verdict's news
+    // scoring + volume trigger so a de-escalation no longer reads as risk.
+    news_sentiment:          news?.sentiment ?? null,          // escalating | neutral | de-escalating
+    news_net_sentiment:      news?.net_sentiment ?? null,      // -1..+1 (negative = de-escalating)
+    news_escalation_24h:     news?.escalation_items_24h ?? null,
+    news_deescalation_24h:   news?.deescalation_items_24h ?? null,
     // Iranian Rial FX (capital-flight / sanction-pressure proxy, hourly)
     irr_usd_official:        currency?.official?.usd_irr ?? null,
     irr_usd_blackmarket:     currency?.blackMarket?.usd_irr ?? null,
@@ -347,7 +368,14 @@ export async function onRequestGet({ request, env }) {
     // (Phase 2 #2, 2026-05-17 — full vessel-level SDN match deferred to a
     // later phase pending OFAC SDN.csv scraper + AIS recovery.)
     ofac_iran_actions_30d:   ofac?.iran_related_actions_30d ?? null,
+    // Direction-split (2026-06-23): designations are escalatory, waivers are
+    // de-escalatory. The verdict scores NET designations, and its 48h trigger
+    // fires on a new designation only — never on a waiver.
+    ofac_iran_designations_30d:     ofac?.iran_designations_30d ?? null,
+    ofac_iran_waivers_30d:          ofac?.iran_waivers_30d ?? null,
+    ofac_iran_net_designations_30d: ofac?.iran_net_designations_30d ?? null,
     ofac_latest_action_date: ofac?.latest_action_date ?? null,
+    ofac_latest_designation_date: ofac?.latest_designation_date ?? null,
     ofac_recent_actions:     Array.isArray(ofac?.recent_actions) ? ofac.recent_actions.slice(0, 5) : [],
     ofac_age_sec:            ofac?.fetchedAt ? Math.floor(Date.now()/1000 - ofac.fetchedAt) : null,
     // EIA weekly inventory + SPR (written by scrape_oil.py weekly_stocks block)
