@@ -645,6 +645,7 @@ async function _handleRecord({ request, env }) {
     stage1_weights:     verdictResult.weights,
     stage2_triggers:    verdictResult.stage2_triggers,
     stage2_fired_count: verdictResult.stage2_fired_count,
+    residual_risk_floor: verdictResult.residual_risk_floor,
     mode:               verdictResult.mode,
     confidence:         verdictResult.confidence,
     inputs_used_count:  verdictResult.inputs_used_count,
