@@ -18,9 +18,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"        # 22 LTS: stable node:test auto-discovery (20 lacks ** glob)
       # No dependencies — pure node:test + node:assert. Golden-fixture
       # regression suite for the verdict engine (Batch H1). Any weight/threshold
       # change that re-breaks a labelled scenario (e.g. de-escalation reading as
       # HIGH) fails here before it can ship. See .process/VERDICT_ENGINE_V2.md.
-      - run: node --test "tests/**/*.test.mjs"
+      # Bare `node --test` auto-discovers **/*.test.mjs — portable across versions.
+      - run: node --test
