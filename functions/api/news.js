@@ -60,6 +60,11 @@ async function _handle({ request, env }) {
     sources_succeeded: data.sources_succeeded || 0,
     sources_total: data.sources_total || 0,
     top_keywords: data.top_keywords || [],
+    // Direction-aware sentiment (2026-06-23) — escalating | neutral | de-escalating
+    sentiment: data.sentiment ?? null,
+    net_sentiment: data.net_sentiment ?? null,
+    escalation_items_24h: data.escalation_items_24h ?? null,
+    deescalation_items_24h: data.deescalation_items_24h ?? null,
     source: "kv:news_headlines",
   });
 }
