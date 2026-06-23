@@ -114,6 +114,29 @@ Logged in `.process/DECISIONS.md` under "Batch G". Full list:
 | G13 | GDELT TimelineTone API | Low | Batch D made GDELT a coverage-volume signal (tone fields nulled). A real tone signal needs the TimelineTone API endpoint — separate integration. |
 | G14 | Surface verdict `confidence` in the UI | Medium | Batch D added `confidence`/`coverage_pct` to the `verdict_latest` payload + `/api/record`. The frontend (`index.html`) should display "verdict computed from N/13 signals" so a low-confidence verdict doesn't look authoritative. |
 
+Note: several G items were partly addressed by the 2026-06-23 verdict
+direction-awareness work (G13 GDELT tone now nulled+de-weighted; G14 confidence
+now in payload but still not shown in UI). Re-check before starting each.
+
+---
+
+## 4b. Batch H — Verdict Engine v2 (design recommendation)
+
+**Full design doc:** `.process/VERDICT_ENGINE_V2.md`. Architectural, NOT cleanup
+— do not fold into E/F. Addresses the recurring class of bug (4 instances:
+ships-in-port-as-transits ×2, NORMAL-during-war, de-escalation-read-as-HIGH).
+
+Six principles: (1) signal contract `{level, direction, confidence, asOf}`;
+(2) symmetric by construction; (3) regime state machine w/ hysteresis;
+(4) rolling baselines (kill `PREWAR_BRENT=72` / 22-42-140 magic constants);
+(5) **golden-fixture regression tests — DO FIRST** (15 labelled scenarios in the
+doc); (6) explainability surfacing.
+
+Sequence: **H1 fixtures (~0.5d)** → H2 contract+symmetry (~1.5d) → H3 rolling
+baselines (~1d) → H4 regime machine (~2d) → H5 explainability (~0.5d). H1 is the
+difference between "fixed" and "stays fixed." Current `record.js` is working
+(2026-06-23 fixes verified in prod), so v2 is improvement-under-test.
+
 ---
 
 ## 5. Testing systems to stand up (the "expert tester" deliverable)

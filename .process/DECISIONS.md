@@ -110,6 +110,25 @@ auto-feed; sourcing decision still open. The 185-vs-148 scraper reconciliation
 
 ---
 
+## 2026-06-23 — Batch H opened: Verdict Engine v2 (design recommendation)
+
+After the direction-awareness fix (below), recognised this was the 4th instance
+of the SAME class of bug (volume/category/direction confusion), each patched
+reactively. Wrote a design doc — `.process/VERDICT_ENGINE_V2.md` — to make the
+class structurally impossible rather than fixing instances.
+
+Six principles: typed signal contract (level/direction/confidence/asOf),
+symmetric-by-construction, regime state machine w/ hysteresis, rolling baselines
+(kill PREWAR_BRENT=72 / 22-42-140 constants), golden-fixture regression tests
+(DO FIRST — 15 scenarios specced), explainability surfacing.
+
+Sequence H1 fixtures → H2 contract → H3 baselines → H4 regime → H5 explain.
+Architectural workstream, NOT folded into E/F. Current record.js works (today's
+fixes verified in prod), so v2 is built behind the fixtures as improvement-
+under-test. User approved writing the design; implementation not yet scheduled.
+
+---
+
 ## 2026-06-23 — Verdict direction-awareness (de-escalation false-positive fix)
 
 **Problem:** Verdict read HIGH/CRITICAL during a clear US-Iran *de-escalation*
