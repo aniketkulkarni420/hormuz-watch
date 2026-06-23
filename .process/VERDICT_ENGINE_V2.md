@@ -99,6 +99,11 @@ Implementation: extract `computeVerdict` into a pure module (no fetch), feed
 fixtures, assert band + key trigger fires. Wire into `tests.yml` (testing
 system #4 from the Batch E/F handoff).
 
+**DONE 2026-06-23:** `functions/_lib/verdict.js` (pure module, record.js imports
+it — equivalence vs old inline proven 4000/4000); `tests/verdict.test.mjs` (16
+fixtures, all pass — the table above plus a fresh-waiver-doesn't-fire case);
+`.github/workflows/tests.yml`; `package.json`. Run locally: `npm test`.
+
 ### 6. Provenance + explainability surfaced (the product moat)
 You already half-do this (the "Why:" line). Extend it so every verdict states:
 inputs used, their age, their direction, and **what would change it** ("would
@@ -111,7 +116,7 @@ the auditability *is* the product.
 
 | Phase | Work | Effort | Why this order |
 |-------|------|--------|----------------|
-| **H1** | Golden-fixture regression tests (#5) | ~0.5d | Protects everything else; lets v2 refactor proceed safely |
+| **H1 ✅ DONE** | Golden-fixture regression tests (#5) + extract verdict to pure module | ~0.5d | Protects everything else; lets v2 refactor proceed safely |
 | **H2** | Signal contract + symmetry (#1, #2) | ~1.5d | The core correctness refactor; fixtures catch regressions |
 | **H3** | Rolling baselines (#4) | ~1d | Removes the frozen-anchor failure mode |
 | **H4** | Regime state machine (#3) | ~2d | Larger; adds memory/hysteresis once contract is stable |

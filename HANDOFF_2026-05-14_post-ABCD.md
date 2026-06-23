@@ -132,10 +132,15 @@ Six principles: (1) signal contract `{level, direction, confidence, asOf}`;
 (5) **golden-fixture regression tests — DO FIRST** (15 labelled scenarios in the
 doc); (6) explainability surfacing.
 
-Sequence: **H1 fixtures (~0.5d)** → H2 contract+symmetry (~1.5d) → H3 rolling
-baselines (~1d) → H4 regime machine (~2d) → H5 explainability (~0.5d). H1 is the
-difference between "fixed" and "stays fixed." Current `record.js` is working
-(2026-06-23 fixes verified in prod), so v2 is improvement-under-test.
+Sequence: ~~H1 fixtures~~ ✅ DONE → **H2 contract+symmetry (~1.5d)** → H3 rolling
+baselines (~1d) → H4 regime machine (~2d) → H5 explainability (~0.5d).
+
+**H1 SHIPPED (2026-06-23):** verdict logic extracted to pure
+`functions/_lib/verdict.js` (record.js imports it; equivalence proven 4000/4000
+vs old inline); `tests/verdict.test.mjs` = 16 golden fixtures (all pass);
+`.github/workflows/tests.yml` runs them on push/PR; `package.json` added
+(`npm test`, closes G12). The fixtures are now the regression guard for H2–H5 —
+add a fixture for any new behaviour before changing weights/thresholds.
 
 ---
 

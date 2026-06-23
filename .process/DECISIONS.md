@@ -110,6 +110,28 @@ auto-feed; sourcing decision still open. The 185-vs-148 scraper reconciliation
 
 ---
 
+## 2026-06-23 — Batch H1 DONE: verdict extracted to pure module + golden fixtures
+
+First phase of Verdict Engine v2 shipped (the "do first" item).
+- **Extracted** all scorers + computeOverrides/applyOverrides/computeVerdict
+  verbatim from `record.js` into `functions/_lib/verdict.js` (pure, no I/O).
+  `record.js` now `import { computeVerdict }`s it. **Equivalence proven**: new
+  module == old inline across 4000 randomized snapshots (0 mismatches).
+- **`tests/verdict.test.mjs`** — 16 golden fixtures (node:test, no deps): calm,
+  the 2026-06-23 thaw → ELEVATED, genuine calm → NORMAL, active war → CRITICAL,
+  Hormuz incident, de-esc vs esc high-volume news, OFAC waiver vs designation,
+  port-count-not-transits, blockade, low-confidence, war_tone gating, mixed.
+  All pass.
+- **`.github/workflows/tests.yml`** — runs the suite on push (paths: verdict
+  module / record.js / tests / package.json) + PR + dispatch. No deps.
+- **`package.json`** added (`npm test` → node --test) — also closes G12.
+
+This is the safety net for H2–H5: any future weight/threshold change that
+re-breaks a labelled scenario now fails CI before shipping. Next: H2 (signal
+contract {level,direction,confidence,asOf} + symmetric-by-construction).
+
+---
+
 ## 2026-06-23 — Batch H opened: Verdict Engine v2 (design recommendation)
 
 After the direction-awareness fix (below), recognised this was the 4th instance
