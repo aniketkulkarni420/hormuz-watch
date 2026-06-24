@@ -112,51 +112,11 @@ def fetch_page(p, url, label, wait_selector=None, wait_ms=4000):
         return None
 
 
-# ───── Source 1: Yahoo Finance — USD/IRR (official-ish) ─────
-def scrape_yahoo_irr(p):
-    url = "https://finance.yahoo.com/quote/IRR=X"
-    html = fetch_page(p, url, "yahoo-irr", wait_ms=5000,
-                      wait_selector='fin-streamer[data-symbol="IRR=X"]')
-    if not html:
-        return None
-    for pat in [
-        r'data-symbol="IRR=X"[^>]*data-field="regularMarketPrice"[^>]*value="([\d\.]+)"',
-        r'data-symbol="IRR=X"[^>]*data-field="regularMarketPrice"[^>]*>\s*([\d,\.]+)',
-        r'"regularMarketPrice"\s*:\s*\{?\s*"raw"\s*:\s*([\d\.]+)',
-        r'"symbol":"IRR=X"[^}]*?"regularMarketPrice"[^}]*?"raw":([\d\.]+)',
-    ]:
-        m = re.search(pat, html)
-        if m:
-            v = _to_float(m.group(1))
-            if sanity_irr(v):
-                print(f"  YAHOO IRR: {v}")
-                return v
-    print("  YAHOO IRR: no value extracted")
-    return None
+# Dead Yahoo/XE IRR scrapers removed (Batch E · 2026-06-24) — never called;
+# main() uses open.er-api.com + bonbast. Their selectors were the broken ones
+# that prompted the 2026-05 migration.
 
-
-# ───── Source 2: XE.com — USD/IRR (backup official) ─────
-def scrape_xe_irr(p):
-    url = "https://www.xe.com/currencyconverter/convert/?Amount=1&From=USD&To=IRR"
-    html = fetch_page(p, url, "xe-irr", wait_ms=6000)
-    if not html:
-        return None
-    for pat in [
-        r'(\d{2,3}(?:,\d{3})+(?:\.\d+)?)\s*Iranian\s*Ria',
-        r'1\s*US\s*Dollar[^<]{0,60}?=\s*([\d,\.]+)\s*Iran',
-        r'data-cy="result-display"[^>]*>\s*([\d,\.]+)',
-    ]:
-        m = re.search(pat, html, re.I)
-        if m:
-            v = _to_float(m.group(1))
-            if sanity_irr(v):
-                print(f"  XE IRR: {v}")
-                return v
-    print("  XE IRR: no value extracted")
-    return None
-
-
-# ───── Source 3: bonbast.com — black-market USD/IRR ─────
+# ───── bonbast.com — black-market USD/IRR (the only live scraper here) ─────
 def scrape_bonbast(p):
     url = "https://bonbast.com/"
     html = fetch_page(p, url, "bonbast", wait_ms=6000)
@@ -187,27 +147,6 @@ def scrape_bonbast(p):
     print("  BONBAST: no value extracted")
     return None
 
-
-# ───── Source 4: Yahoo AED ─────
-def scrape_yahoo_aed(p):
-    url = "https://finance.yahoo.com/quote/AED=X"
-    html = fetch_page(p, url, "yahoo-aed", wait_ms=5000,
-                      wait_selector='fin-streamer[data-symbol="AED=X"]')
-    if not html:
-        return None
-    for pat in [
-        r'data-symbol="AED=X"[^>]*data-field="regularMarketPrice"[^>]*value="([\d\.]+)"',
-        r'data-symbol="AED=X"[^>]*data-field="regularMarketPrice"[^>]*>\s*([\d\.]+)',
-        r'"symbol":"AED=X"[^}]*?"regularMarketPrice"[^}]*?"raw":([\d\.]+)',
-    ]:
-        m = re.search(pat, html)
-        if m:
-            v = _to_float(m.group(1))
-            if sanity_aed(v):
-                print(f"  YAHOO AED: {v}")
-                return v
-    print("  YAHOO AED: no value extracted")
-    return None
 
 
 def kv_put(key, value):

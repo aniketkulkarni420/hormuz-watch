@@ -137,43 +137,8 @@ def scrape_oilpriceapi_demo(_p):
     return out
 
 
-def scrape_trading_economics(p):
-    """Trading Economics commodity pages. Headline value usually in
-    <span class="commodity-value"> or in a #p-value type element."""
-    out = {"brent": None, "wti": None}
-    for sym, url in [
-        ("brent", "https://tradingeconomics.com/commodity/brent-crude-oil"),
-        ("wti",   "https://tradingeconomics.com/commodity/crude-oil"),
-    ]:
-        html, sel = fetch_page(p, url, f"te-{sym}")
-        if not html:
-            continue
-        candidates = []
-        if sel and sel.get("val"):
-            v = _to_float(sel["val"])
-            if sanity_ok(v):
-                candidates.append(("selector:" + sel["sel"], v))
-        # Headline cell on TE pages: <span class="commodity-value">XX.XX</span>
-        for pat in [
-            r'class="commodity-value"[^>]*>\s*\$?\s*([0-9]+\.[0-9]+)',
-            r'id="p"[^>]*>\s*\$?\s*([0-9]+\.[0-9]+)',
-            r'class="te-blue text-right"[^>]*>\s*([0-9]+\.[0-9]+)',
-            # First "last value" near "Brent" / "WTI" text
-            r'(?:Brent|WTI|Crude\s*Oil)[^<]{0,80}>\s*\$?\s*([0-9]{2,3}\.[0-9]{1,3})',
-        ]:
-            m = re.search(pat, html, re.I)
-            if m:
-                v = _to_float(m.group(1))
-                if sanity_ok(v):
-                    candidates.append((pat[:30], v))
-                    break
-        if candidates:
-            out[sym] = candidates[0][1]
-            print(f"  TE {sym}: {out[sym]} ({candidates[0][0]})")
-        else:
-            print(f"  TE {sym}: no value extracted")
-    return out
-
+# Dead scrape_trading_economics removed (Batch E · 2026-06-24) — dropped
+# 2026-05-13 for being ~4% off consensus; never called since.
 
 # ─────────────────── Source 2: Investing.com ───────────────────
 def scrape_investing(p):
@@ -210,40 +175,9 @@ def scrape_investing(p):
     return out
 
 
-# ─────────────────── Source 3: Yahoo Finance ───────────────────
-def scrape_yahoo(p):
-    out = {"brent": None, "wti": None}
-    for sym, url in [
-        ("brent", "https://finance.yahoo.com/quote/BZ=F"),
-        ("wti",   "https://finance.yahoo.com/quote/CL=F"),
-    ]:
-        html, sel = fetch_page(p, url, f"yh-{sym}")
-        if not html:
-            continue
-        candidates = []
-        if sel and sel.get("val"):
-            v = _to_float(sel["val"])
-            if sanity_ok(v):
-                candidates.append(("selector:" + sel["sel"], v))
-        for pat in [
-            r'data-field="regularMarketPrice"[^>]*value="([0-9]+\.[0-9]+)"',
-            r'data-test="qsp-price"[^>]*>\s*([0-9]+\.[0-9]+)',
-            r'"regularMarketPrice":\{"raw":([0-9]+\.[0-9]+)',
-            r'fin-streamer[^>]*data-symbol="(?:BZ=F|CL=F)"[^>]*data-value="([0-9]+\.[0-9]+)"',
-        ]:
-            m = re.search(pat, html)
-            if m:
-                v = _to_float(m.group(1))
-                if sanity_ok(v):
-                    candidates.append((pat[:30], v))
-                    break
-        if candidates:
-            out[sym] = candidates[0][1]
-            print(f"  YH {sym}: {out[sym]} ({candidates[0][0]})")
-        else:
-            print(f"  YH {sym}: no value extracted")
-    return out
-
+# Dead scrape_yahoo removed (Batch E · 2026-06-24) — Yahoo's fin-streamer
+# selector kept extracting the wrong element; never called. (Stooq is the
+# planned independent cross-verify source — Batch G4.)
 
 def cross_verify(values):
     """values: list of floats. Returns (median, min, max, confidence)."""

@@ -4,8 +4,7 @@
 Strategy: target per-port HTML pages which contain arrivals/departures tables,
 rather than the homepage canvas-map (data in JS state, fragile to extract).
 
-Targets:
-  MyShipTracking port pages — https://www.myshiptracking.com/ports/<slug>
+Target (Batch E · 2026-06-24 — single source; MyShipTracking removed):
   VesselFinder port pages   — https://www.vesselfinder.com/ports/<UN_LOCODE>
 
 Gulf ports tracked:
@@ -24,8 +23,8 @@ dashboard carry analytical weight without this data.
 
 KV output `vessel_count_scraped`:
   { fetchedAt, totals: { arrivals, departures, all }, perPort: {...},
-    perSite: { myshiptracking: {...}, vesselfinder: {...} },
-    confidence, sites_succeeded: int }
+    perSite: { vesselfinder: {...} },
+    confidence, ports_succeeded, ports_tried, sites_succeeded: int }
 """
 
 import os, sys, time, json, random, re
@@ -37,28 +36,24 @@ KV_NS         = os.environ["CF_KV_NAMESPACE_ID"]
 
 # Per-site port URL patterns. VesselFinder uses UN_LOCODE.
 #
-# MyShipTracking ports: DEFERRED 2026-05-13. MST uses /ports/port-of-NAME-in-CC-COUNTRY-id-NNN
-# URLs whose numeric IDs are not exposed by any public search endpoint we could find
-# (autocomplete/searchresult endpoints 404 from script context; `?searchresult=` query
-# string is silently ignored and returns the alphabetical first page; country filters
-# don't paginate). Slug guesses without IDs 404. Until IDs are sourced (manual via
-# browser network tab, or a paid MST API key), MST is left in PORTS as best-effort and
-# expected to return "no-data"/blocked — VesselFinder is the working source.
+# MyShipTracking REMOVED (Batch E · 2026-06-24). MST URLs need numeric port IDs
+# not exposed by any public endpoint — it returned no-data/blocked every run,
+# burning ~half the job's runtime on a guaranteed-fail source. VesselFinder is
+# the sole working source; confidence now rebased on per-port success (below).
 PORTS = [
-    # (display_name, mst_slug_GUESS, vf_locode)
-    ("Fujairah",    "port-of-fujairah-in-ae-united-arab-emirates",       "AEFJR"),
-    ("Khor Fakkan", "port-of-khor-fakkan-in-ae-united-arab-emirates",    "AEKLF"),
-    ("Jebel Ali",   "port-of-jebel-ali-in-ae-united-arab-emirates",      "AEJEA"),
-    ("Ras Tanura",  "port-of-ras-tanura-in-sa-saudi-arabia",             "SARTA"),
-    ("Bandar Abbas","port-of-bandar-abbas-in-ir-iran",                   "IRBND"),
-    ("Khark Island","port-of-khark-island-in-ir-iran",                   "IRKHK"),  # Iran's main crude export terminal
-    # 2026-05-29 hardening — added 3 strait-proximate ports for coverage +
-    # resilience. With the anomaly guard below, a wrong/404 LOCODE just adds 0
-    # and won't drag the total down (the guard rejects a sudden drop). More
-    # ports = the total survives any single port page breaking.
-    ("Khasab",      "port-of-khasab-in-om-oman",                         "OMKHS"),  # inside the strait
-    ("Sohar",       "port-of-sohar-in-om-oman",                          "OMSOH"),
-    ("Sharjah",     "port-of-sharjah-in-ae-united-arab-emirates",        "AESHJ"),
+    # (display_name, vf_locode)
+    ("Fujairah",    "AEFJR"),
+    ("Khor Fakkan", "AEKLF"),
+    ("Jebel Ali",   "AEJEA"),
+    ("Ras Tanura",  "SARTA"),
+    ("Bandar Abbas","IRBND"),
+    ("Khark Island","IRKHK"),  # Iran's main crude export terminal
+    # 2026-05-29 hardening — strait-proximate ports for coverage + resilience.
+    # The anomaly guard below means a wrong/404 LOCODE just adds 0 and won't drag
+    # the total down — more ports = the total survives any single port breaking.
+    ("Khasab",      "OMKHS"),  # inside the strait
+    ("Sohar",       "OMSOH"),
+    ("Sharjah",     "AESHJ"),
 ]
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
@@ -131,34 +126,7 @@ def open_browser_page(url, label):
 
 
 # ─── MyShipTracking port page parsers ─────────────────────────────────────
-def parse_mst_port(html):
-    """Extract arrivals + departures counts from MyShipTracking port page.
-    Their port pages have <table> elements with arrivals/departures rows.
-    Pattern: look for table rows containing vessel names + ETA/ATA columns.
-    """
-    if not html:
-        return None
-    # MST typically shows tables with class 'table-arrivals' and 'table-departures'
-    # or generic <table> with rows containing vessel data
-    # Count <tr> rows in main vessel tables, excluding header rows
-    arrivals = 0
-    departures = 0
-
-    # Heuristic 1: count rows with vessel detail links
-    vessel_links = re.findall(r'/vessels/[^"\']+', html)
-    unique_vessels = set(vessel_links)
-
-    # Heuristic 2: look for explicit count strings
-    m_arr = re.search(r'(\d+)\s*(?:arrivals?|expected\s*arrivals?)', html, re.IGNORECASE)
-    if m_arr: arrivals = int(m_arr.group(1))
-
-    m_dep = re.search(r'(\d+)\s*(?:departures?|recent\s*departures?)', html, re.IGNORECASE)
-    if m_dep: departures = int(m_dep.group(1))
-
-    total = max(len(unique_vessels), arrivals + departures)
-    if total == 0:
-        return None
-    return {"arrivals": arrivals, "departures": departures, "unique_vessels": len(unique_vessels), "total": total}
+# parse_mst_port removed (Batch E · 2026-06-24) — MyShipTracking source dropped.
 
 
 VESSEL_TYPE_BUCKETS = {
@@ -294,35 +262,27 @@ def parse_vf_port(html):
     }
 
 
-def scrape_site(site, ports):
-    """Iterate over ports for one site, return per-port results + totals."""
+def scrape_site(ports):
+    """Iterate over ports on VesselFinder, return per-port results + totals.
+    (Batch E · 2026-06-24: was multi-site; MST removed → VesselFinder only.)"""
     per_port = {}
     sum_arrivals = 0
     sum_departures = 0
     sum_total = 0
     successful = 0
 
-    for name, mst_slug, vf_locode in ports:
+    for name, vf_locode in ports:
         # Polite delay between ports
         delay = random.uniform(4, 10)
         time.sleep(delay)
 
-        if site == "myshiptracking":
-            url = f"https://www.myshiptracking.com/ports/{mst_slug}"
-            page, status = open_browser_page(url, f"mst-{name}")
-            if status != "ok" or not page:
-                per_port[name] = {"status": status, "data": None}
-                print(f"  {name}: {status}")
-                continue
-            data = parse_mst_port(page["html"])
-        else:  # vesselfinder
-            url = f"https://www.vesselfinder.com/ports/{vf_locode}"
-            page, status = open_browser_page(url, f"vf-{name}")
-            if status != "ok" or not page:
-                per_port[name] = {"status": status, "data": None}
-                print(f"  {name}: {status}")
-                continue
-            data = parse_vf_port(page["html"])
+        url = f"https://www.vesselfinder.com/ports/{vf_locode}"
+        page, status = open_browser_page(url, f"vf-{name}")
+        if status != "ok" or not page:
+            per_port[name] = {"status": status, "data": None}
+            print(f"  {name}: {status}")
+            continue
+        data = parse_vf_port(page["html"])
 
         if data:
             per_port[name] = {"status": "ok", "data": data, "url": url}
@@ -336,7 +296,7 @@ def scrape_site(site, ports):
             print(f"  {name}: page loaded but no vessel data extracted")
 
     return {
-        "site": site,
+        "site": "vesselfinder",
         "ports_succeeded": successful,
         "ports_tried": len(ports),
         "totals": {"arrivals": sum_arrivals, "departures": sum_departures, "total": sum_total},
@@ -346,24 +306,33 @@ def scrape_site(site, ports):
 
 def main():
     print(f"=== vessel web scrape at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())} ===")
-    print(f"Scraping {len(PORTS)} Gulf ports across 2 sites")
+    print(f"Scraping {len(PORTS)} Gulf ports on VesselFinder")
 
-    # Randomize site order each run
-    sites = ["myshiptracking", "vesselfinder"]
-    random.shuffle(sites)
+    # Single source (Batch E · 2026-06-24: MST removed). `per_site` keeps the
+    # vesselfinder key so the snapshot consumer (perSite.vesselfinder.perPort)
+    # and the type roll-up below are unchanged.
+    print("\n--- vesselfinder ---")
+    vf_result = scrape_site(PORTS)
+    per_site = {"vesselfinder": vf_result}
 
-    per_site = {}
-    for site in sites:
-        print(f"\n--- {site} ---")
-        per_site[site] = scrape_site(site, PORTS)
+    total_arrivals = vf_result["totals"]["arrivals"]
+    total_departures = vf_result["totals"]["departures"]
+    total_all = vf_result["totals"]["total"]
+    ports_succeeded = vf_result["ports_succeeded"]
+    ports_tried = vf_result["ports_tried"]
+    sites_succeeded = 1 if ports_succeeded > 0 else 0   # back-compat field
 
-    # Aggregate across sites — take the max (sites partly overlap; max approximates union)
-    total_arrivals = max(s["totals"]["arrivals"] for s in per_site.values())
-    total_departures = max(s["totals"]["departures"] for s in per_site.values())
-    total_all = max(s["totals"]["total"] for s in per_site.values())
-    sites_succeeded = sum(1 for s in per_site.values() if s["ports_succeeded"] > 0)
-
-    confidence = "high" if sites_succeeded == 2 else "medium" if sites_succeeded == 1 else "none"
+    # Confidence rebased on PER-PORT success within VesselFinder (Batch E):
+    # was "high only if 2 sites" → permanently capped at medium once MST died.
+    # Now: a strong majority of ports scraping cleanly = high confidence.
+    if ports_succeeded == 0:
+        confidence = "none"
+    elif ports_succeeded >= max(5, round(ports_tried * 0.6)):
+        confidence = "high"
+    elif ports_succeeded >= 3:
+        confidence = "medium"
+    else:
+        confidence = "low"
 
     # ---- Roll up vessel types across all ports of the richest site ----
     # Prefer vesselfinder (the parser that emits types). Sum types across ports.
@@ -417,9 +386,11 @@ def main():
         "byType_sample_n": types_sum,
         "tanker_estimate": tanker_estimate,  # scaled to authoritative total
         "perSite": per_site,
-        "sites_succeeded": sites_succeeded,
+        "sites_succeeded": sites_succeeded,     # back-compat (always 0 or 1 now)
+        "ports_succeeded": ports_succeeded,     # Batch E: confidence basis
+        "ports_tried": ports_tried,
         "confidence": confidence,
-        "blocked": sites_succeeded == 0,
+        "blocked": ports_succeeded == 0,
     }
 
     # ── HARDENING (2026-05-29): don't overwrite a good total with a degraded

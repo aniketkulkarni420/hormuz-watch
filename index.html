@@ -1634,22 +1634,8 @@ var SHIP_TYPES = {
   30:{label:"Fishing",     color:"#1dd47e", cargoM:0}
 };
 
-var SIM_FLEET = [
-  {mmsi:419000001,name:"OCEANIA",         typeCode:80,heading:282,t:0.05,lane:"in", flag:"\uD83C\uDDEE\uD83C\uDDF3"},
-  {mmsi:636092297,name:"GULF PIONEER",    typeCode:80,heading:285,t:0.19,lane:"in", flag:"\uD83C\uDDF1\uD83C\uDDF7"},
-  {mmsi:311000233,name:"AL SALEEF",       typeCode:80,heading:280,t:0.33,lane:"in", flag:"\uD83C\uDDF8\uD83C\uDDE6"},
-  {mmsi:477321654,name:"PACIFIC CROWN",   typeCode:80,heading:286,t:0.47,lane:"in", flag:"\uD83C\uDDEF\uD83C\uDDF5"},
-  {mmsi:311046600,name:"AL GATTARA",      typeCode:84,heading:278,t:0.62,lane:"in", flag:"\uD83C\uDDF6\uD83C\uDDE6"},
-  {mmsi:636016823,name:"MARAN ZEUS",      typeCode:80,heading:283,t:0.76,lane:"in", flag:"\uD83C\uDDEC\uD83C\uDDF7"},
-  {mmsi:538003422,name:"TI HELLAS",       typeCode:80,heading:281,t:0.89,lane:"in", flag:"\uD83C\uDDF2\uD83C\uDDED"},
-  {mmsi:235012345,name:"STENA IMPERIAL",  typeCode:89,heading:101,t:0.09,lane:"out",flag:"\uD83C\uDDEC\uD83C\uDDE7"},
-  {mmsi:636091200,name:"ATHENIAN STAR",   typeCode:80,heading:105,t:0.24,lane:"out",flag:"\uD83C\uDDF1\uD83C\uDDF7"},
-  {mmsi:419222333,name:"JNPT MARINER",    typeCode:80,heading:103,t:0.38,lane:"out",flag:"\uD83C\uDDEE\uD83C\uDDF3"},
-  {mmsi:311033456,name:"MOZAH",           typeCode:84,heading:98, t:0.52,lane:"out",flag:"\uD83C\uDDF6\uD83C\uDDE6"},
-  {mmsi:538003421,name:"EXCELLENCE",      typeCode:84,heading:102,t:0.66,lane:"out",flag:"\uD83C\uDDE7\uD83C\uDDEA"},
-  {mmsi:477891234,name:"MSC ADRIATIC",    typeCode:71,heading:100,t:0.79,lane:"out",flag:"\uD83C\uDDF2\uD83C\uDDED"},
-  {mmsi:357234567,name:"THOR INTEGRITY",  typeCode:89,heading:107,t:0.91,lane:"out",flag:"\uD83C\uDDF5\uD83C\uDDE6"}
-];
+// SIM_FLEET removed (Batch E \u00B7 2026-06-24) \u2014 the hardcoded vessel fleet that
+// drove the retired map animation. No remaining references.
 
 // 4.5 Cape of Good Hope rerouting \u00b7 static seed (will be AIS-driven in Phase 2
 // when the scraper is extended to the SA-waters bbox). Three buckets matching
@@ -2728,32 +2714,20 @@ LOCS.forEach(function(loc){
 });
 
 // ═══════════════════════════════════════════════════
-// VESSEL ANIMATION + LOG
+// VESSEL LOG
 // ═══════════════════════════════════════════════════
-function lerp(a,b,t){return a+(b-a)*t;}
-function posOnPath(pts,t){
-  var n=pts.length-1;var raw=Math.max(0,Math.min(.9999,t))*n;
-  var i=Math.floor(raw),f=raw-i,i2=Math.min(i+1,n);
-  return [lerp(pts[i][0],pts[i2][0],f),lerp(pts[i][1],pts[i2][1],f)];
-}
-function mkVIcon(color,heading){
-  return L.divIcon({className:"",iconSize:[14,14],iconAnchor:[7,7],
-    html:'<div style="width:14px;height:14px;display:flex;align-items:center;justify-content:center;transform:rotate('+heading+'deg)">'
-      +'<div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:11px solid '+color+';filter:drop-shadow(0 0 3px '+color+')"></div>'
-      +'</div>'});
-}
+// lerp/posOnPath/mkVIcon removed (Batch E · 2026-06-24) — orphaned helpers from
+// the retired SIM_FLEET map animation.
 
 function getShipInfo(typeCode,name){
   if((name||"").toUpperCase().indexOf("LNG")>=0) return SHIP_TYPES[84];
   return SHIP_TYPES[typeCode]||{label:"Vessel",color:"#38aaff",cargoM:0};
 }
 
-// ── Animated SIM_FLEET removed (B-interactive · 2026-05-14) ──────────────
-// The looping requestAnimationFrame vessel animation used hardcoded SIM_FLEET
-// data, not a real feed — the "map cannot be stopped, looks horrible" bug.
-// Replaced by the real-data Port Pressure / Aircraft / Seismic layers above.
-// simVessels kept declared-but-empty: the log-entry click handler references it.
-var simVessels=[];
+// Animated SIM_FLEET retired (B-interactive · 2026-05-14) — real-data Port
+// Pressure / Aircraft / Seismic layers replace it. (Batch E · 2026-06-24:
+// SIM_FLEET array + lerp/posOnPath/mkVIcon orphans deleted; the vessel-log
+// click handler no longer flies to a simulated position.)
 
 var logScroll=document.getElementById("logScroll");
 var loggedMMSIs={};var loggedVessels=[];
@@ -2782,9 +2756,10 @@ function addLogEntry(vessel,flash){
       +(si.cargoM>0?'<div class="ve-cargo" style="color:'+si.color+'">$'+si.cargoM+'M</div>':'')
       +'<div class="ve-time">'+timeStr+'</div>'
     +'</div>';
+  // Click → recenter the map on the strait. Per-vessel fly-to is gone with the
+  // simulated fleet; real per-ship positions return when AIS recovers. (Batch E)
   d.addEventListener("click",function(){
-    var v=null;for(var i=0;i<simVessels.length;i++){if(simVessels[i].data&&simVessels[i].data.mmsi===vessel.mmsi){v=simVessels[i];break;}}
-    if(v){map.flyTo(posOnPath(v.pts,v.t),11,{duration:1.2,easeLinearity:.3});}
+    try { map.flyTo([26.566, 56.25], 9, {duration:1.0, easeLinearity:.3}); } catch(e){}
   });
   logScroll.insertBefore(d,logScroll.firstChild);
   loggedMMSIs[vessel.mmsi]=true;
