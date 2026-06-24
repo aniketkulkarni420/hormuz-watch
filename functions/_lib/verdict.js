@@ -11,7 +11,13 @@
 // Any scoring/threshold change goes through tests/verdict.test.mjs.
 
 // ─── Per-signal scorers · each returns 0 (calm) → 4 (critical) ──────────────
-export const BASELINE_TRANSITS = 22;
+// Pre-crisis normal daily transit count (Batch F · 2026-06-24: unified 22→42).
+// 42 = the documented derivation (21M bbl/d ÷ ~500k bbl/vessel) and matches
+// config/regions.json transitsPerDay + the methodology page. The old 22 made
+// the blockade scorer LESS sensitive (needed transits < 18.7 vs < 35.7 to
+// flag) — wrong direction for a war monitor. Used only as the fallback when
+// the rolling baseline (H3) has no data (AIS dark / cold start).
+export const BASELINE_TRANSITS = 42;
 // Pre-war Brent anchor (2026-02-27 close, before the Iran conflict began).
 // Used to score the WAR PREMIUM LEVEL, not just daily spikes — three months
 // into a conflict, prices plateau and a Δ-only scorer decays to NORMAL while

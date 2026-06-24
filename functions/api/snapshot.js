@@ -111,7 +111,11 @@ export async function onRequestGet({ request, env }) {
   // Resolve final values. transits24h is ONLY real AIS gate-crossings; null
   // when AIS is dark (no fabricated fallback — see fix note above).
   const transits24h = aisLive ? aisLive.transits24h : null;
-  const baseline = numFromEnv(env.HORMUZ_BASELINE_30D, 140);
+  // Batch F (2026-06-24): default unified 140→42. pct_of_normal = transits24h
+  // / baseline; transits24h is a DAILY count (~42 normal), so a 140 baseline
+  // made normal traffic read "30% of normal". 42 matches regions.json +
+  // methodology + verdict BASELINE_TRANSITS.
+  const baseline = numFromEnv(env.HORMUZ_BASELINE_30D, 42);
   const inbound = aisLive ? aisLive.inbound : null;
   const outbound = aisLive ? aisLive.outbound : null;
   // Dark-vessel count: we have NO real source for this. The old

@@ -16,7 +16,10 @@ export async function onRequestGet({ env }) {
     + "&sort%5B0%5D%5Bdirection%5D=desc"
     + "&offset=0&length=5";
   try {
-    const r = await fetch(eiaUrl); // cache disabled for debugging
+    // EIA weekly series changes at most weekly; the CDN caches the RESPONSE
+    // (cache-control max-age=1800 below) so this upstream fetch isn't hit every
+    // call. (Batch F · 2026-06-24: removed stale "cache disabled for debugging".)
+    const r = await fetch(eiaUrl, { cf: { cacheTtl: 1800, cacheEverything: true } });
     if (!r.ok) return json({ error: "eia " + r.status }, 502);
     const data = await r.json();
     const rows = data && data.response && data.response.data;

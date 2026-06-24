@@ -290,17 +290,17 @@ test("23 · deescalation marker is informational, not acting", () => {
 
 // ─── H3 rolling-baseline fixtures (2026-06-24) ──────────────────────────────
 
-// 25. Transit baseline: rolling value (when provided) is used; else constant 22.
+// 25. Transit baseline: rolling value (when provided) is used; else constant 42.
 test("25 · rolling transit baseline is applied vs constant fallback", () => {
-  // 30 transits: vs constant baseline 22 → scoreTransits(30,22): 30 ≥ 22*0.85=18.7 → 0.
-  const def = computeVerdict(fx({ transits_24h: 30 }));
+  // 40 transits vs default baseline 42 → scoreTransits(40,42): 40 ≥ 42*0.85=35.7 → 0.
+  const def = computeVerdict(fx({ transits_24h: 40 }));
   assert.equal(def.stage1_inputs.transits, 0);
-  assert.equal(def.baselines.baseline_transits, 22);
+  assert.equal(def.baselines.baseline_transits, 42, "Batch F: default unified to 42");
   assert.equal(def.baselines.baseline_transits_source, "default");
-  // Same 30 transits but rolling baseline 60 → 30 < 60*0.85=51 and ≥18 → 1.
-  const roll = computeVerdict(fx({ transits_24h: 30, baseline_transits: 60 }));
+  // Same 40 transits but rolling baseline 80 → 40 < 80*0.85=68 and ≥18 → 1.
+  const roll = computeVerdict(fx({ transits_24h: 40, baseline_transits: 80 }));
   assert.equal(roll.stage1_inputs.transits, 1, "rolling baseline shifts the transit score");
-  assert.equal(roll.baselines.baseline_transits, 60);
+  assert.equal(roll.baselines.baseline_transits, 80);
   assert.equal(roll.baselines.baseline_transits_source, "rolling");
 });
 
@@ -321,7 +321,7 @@ test("26 · prewar_brent anchor is overridable", () => {
 // 27. Invalid/absent baselines fall back to constants (no crash, no drift).
 test("27 · invalid baselines fall back to constants", () => {
   const r = computeVerdict(fx({ baseline_transits: 0, prewar_brent: -5, transits_24h: 30 }));
-  assert.equal(r.baselines.baseline_transits, 22);
+  assert.equal(r.baselines.baseline_transits, 42);
   assert.equal(r.baselines.prewar_brent, 72);
 });
 
