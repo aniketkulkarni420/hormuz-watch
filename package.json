@@ -2,8 +2,8 @@
   "name": "hormuz-watch",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "description": "Strait of Hormuz monitoring dashboard — Cloudflare Pages (static + Functions) + KV/D1.",
+  "//type": "Intentionally NOT 'type:module' — playwright.config.js uses CommonJS require(). The verdict tests are .mjs (ESM regardless of this field), so node --test is unaffected. (Fixed 2026-06-24: type:module broke the smoke/browser Playwright runner.)",
   "scripts": {
     "test": "node --test"
   },
