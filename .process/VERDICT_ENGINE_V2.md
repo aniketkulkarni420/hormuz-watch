@@ -143,6 +143,8 @@ the auditability *is* the product.
 | **H2 ✅ DONE** | Signal contract {level,direction,confidence,asOf} (#1) — additive, behaviour-locked (5000/5000 equivalent). | ~1.5d | The core correctness refactor; fixtures catch regressions |
 | **H2.5 ✅ DONE** | Signed weighted average (#2, symmetric-by-construction). De-escalatory news/OFAC carry negative level → proportional offset; blunt -1-level de-trigger retired. Hard fundamentals dominate weak de-escalation. 25 fixtures; moves bounded ±1 level. | ~1d | Replaces ad-hoc de-trigger with principled symmetry |
 | **H3 ✅ DONE** | Rolling baselines (#4) — transits→rolling-30d-median (D1), oil anchor→deliberate env knob (NOT auto-rolled, D1 is all-wartime), anchor-staleness flag. Behaviour-locked, 28 fixtures. | ~1d | Removes frozen-anchor drift without disabling war detection |
+| **H4 ✅ DONE** | Regime state machine (#3) — `computeRegime` with ASYMMETRIC hysteresis: escalate immediately, de-escalate only after the lower band holds 12h. Persisted in `regime_state` KV; surfaced as `regime` in the payload. 34 fixtures. | ~1d | Kills whipsaw; gives the verdict memory |
+| **H5 ✅ DONE** | Explainability (#6) — verdict tile shows the regime (smoothed band + age + trajectory + "confirms in ~Nh"), per-signal direction arrows (↑/↓) + low-confidence flags, and the confidence/coverage + anchor-review lines (G14). | ~0.5d | Auditability is the product |
 | **H3** | Rolling baselines (#4) | ~1d | Removes the frozen-anchor failure mode |
 | **H4** | Regime state machine (#3) | ~2d | Larger; adds memory/hysteresis once contract is stable |
 | **H5** | Explainability surfacing (#6) | ~0.5d | UI/payload polish on top of the new structure |

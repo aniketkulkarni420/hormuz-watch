@@ -133,7 +133,8 @@ Six principles: (1) signal contract `{level, direction, confidence, asOf}`;
 doc); (6) explainability surfacing.
 
 Sequence: ~~H1 fixtures~~ ✅ → ~~H2 contract~~ ✅ → ~~H2.5 signed-average~~ ✅ →
-~~H3 rolling baselines~~ ✅ → **H4 regime machine (~2d)** → H5 explainability (~0.5d).
+~~H3 rolling baselines~~ ✅ → ~~H4 regime machine~~ ✅ → ~~H5 explainability~~ ✅.
+**ENGINE V2 COMPLETE (H1–H5).** 34 fixtures, all CI green.
 
 **H3 SHIPPED (2026-06-24):** transits baseline → rolling-30d D1 median (constant
 22 fallback); oil war-premium anchor → `HORMUZ_PREWAR_BRENT` env knob (default

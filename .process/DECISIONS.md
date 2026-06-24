@@ -110,6 +110,30 @@ auto-feed; sourcing decision still open. The 185-vs-148 scraper reconciliation
 
 ---
 
+## 2026-06-24 — Batch H4 + H5 DONE: regime state machine + explainability (engine v2 COMPLETE)
+
+**H4 — regime state machine** (`computeRegime` in verdict.js, pure/tested):
+asymmetric hysteresis over the instantaneous verdict — escalate IMMEDIATELY
+(never dampen an emerging crisis), de-escalate only after the lower band holds
+continuously for 12h (REGIME_DEESC_DWELL_SEC); a blip back up resets the clock;
+a real attack interrupts instantly. Persisted in `regime_state` KV by record.js
+(best-effort), surfaced as `regime {regime, regime_since, instantaneous,
+trajectory, pending}`. 6 fixtures (28→34).
+
+**H5 — explainability** (index.html renderVerdictBlock): the verdict tile now
+shows the regime line (smoothed band + age + "live read X ↓ de-escalating
+(confirms in ~Nh)"), per-signal direction arrows (↑/↓, green for de-escalatory)
++ low-confidence "·?" flags from the H2 contract, and contributors now sort by
+ABSOLUTE contribution so a strong de-escalation ranks as a top driver. Builds on
+the G14 confidence/coverage + anchor-review lines.
+
+**Engine v2 is now COMPLETE (H1–H5).** Also fixed in this stretch: the H1
+package.json `type:module` regression that had been failing smoke/browser-test
+(removed the field; scoped Playwright testMatch to *.spec.js so it ignores the
+node:test unit suite). All three CI workflows green.
+
+---
+
 ## 2026-06-24 — Batches E / F / G (cleanup, config, catch-all)
 
 Many items were already resolved by the May–June architecture migration; each

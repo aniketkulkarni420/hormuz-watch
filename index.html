@@ -5499,8 +5499,15 @@ function _v2Row(c){
   var fillColor = c.input < 0 ? "#1dd47e"               // de-escalatory → green
     : c.input >= 3 ? "#ff6b35" : c.input >= 2 ? "#f09014" : c.input >= 1 ? "#38aaff" : "#627a95";
   var val = (c.contribution >= 0 ? "" : "−") + Math.abs(c.contribution).toFixed(2);
+  // H5 (2026-06-24): direction arrow + low-confidence flag from the signal
+  // contract (stage1_signals). A de-escalatory driver reads "↓", an escalatory
+  // one "↑"; a stale/thin signal gets a muted "·?" so the reader can discount it.
+  var arrow = c.direction < 0 ? '<span style="color:#1dd47e">↓</span>'
+            : c.direction > 0 ? '<span style="color:'+fillColor+'">↑</span>' : '';
+  var lowConf = (c.confidence != null && c.confidence < 0.6)
+    ? ' <span title="low-confidence / stale signal" style="color:var(--muted2)">·?</span>' : '';
   return '<div class="v2-row">'
-    + '<div class="v2-row-label">'+c.name+'</div>'
+    + '<div class="v2-row-label">'+c.name+' '+arrow+lowConf+'</div>'
     + '<div class="v2-row-bar"><div class="v2-row-fill" style="width:'+pct+'%;background:'+fillColor+'"></div></div>'
     + '<div class="v2-row-val">'+val+'</div></div>';
 }
@@ -5568,16 +5575,46 @@ function renderVerdictBlock(v){
         + (v.anchor_review_suggested ? ' · <span style="color:var(--amber)" title="Trailing Brent has run well above the $72 pre-war anchor — consider re-baselining HORMUZ_PREWAR_BRENT when the conflict ends">⚑ anchor review</span>' : '')
         + '</div>';
     }
+    // H5 (2026-06-24): regime line — the hysteresis-smoothed state with memory.
+    // Shows the stable regime + how long it's held; if the live read differs,
+    // shows the trajectory and (when de-escalating) when it would confirm.
+    var rg = v.regime;
+    if(rg && rg.regime){
+      var rgHex = VERDICT_HEX[rg.regime] || hex;
+      var sinceTxt = "";
+      if(rg.regime_since){
+        var ageH = Math.max(0, Math.round((Date.now()/1000 - rg.regime_since)/3600));
+        sinceTxt = ageH >= 48 ? (Math.round(ageH/24)+"d") : (ageH+"h");
+      }
+      var rline = 'Regime: <b style="color:'+rgHex+'">'+rg.regime+'</b>'
+        + (sinceTxt ? ' <span style="color:var(--muted2)">('+sinceTxt+')</span>' : '');
+      if(rg.trajectory && rg.trajectory !== "stable" && rg.instantaneous && rg.instantaneous !== rg.regime){
+        var arrow = rg.trajectory === "de-escalating" ? "↓" : "↑";
+        var tColor = rg.trajectory === "de-escalating" ? "var(--green)" : "#ff6b35";
+        rline += ' · live read <b style="color:'+(VERDICT_HEX[rg.instantaneous]||hex)+'">'+rg.instantaneous+'</b> '
+          + '<span style="color:'+tColor+'">'+arrow+' '+rg.trajectory+'</span>';
+        if(rg.pending && rg.pending.dwell_needed_sec){
+          var remH = Math.max(0, Math.round((rg.pending.dwell_needed_sec - (rg.pending.dwell_so_far_sec||0))/3600));
+          rline += ' <span style="color:var(--muted2)">(confirms in ~'+remH+'h)</span>';
+        }
+      }
+      line += '<div style="margin-top:4px;font-size:10px;color:var(--muted)">'+rline+'</div>';
+    }
     sumEl.innerHTML = line;
   }
 
   // ── Contributors (Tier 2: drivers visible; Tier 3: rest collapsed) ──
   var weights = v.stage1_weights || {};
   var inputs  = v.stage1_inputs  || v.inputs || {};
+  var sigs    = v.stage1_signals || {};   // H2 contract: {level,direction,confidence,asOf}
   var contribs = Object.keys(weights)
     .filter(function(k){ return weights[k] > 0 && inputs[k] != null; })
-    .map(function(k){ return { name:k, weight:weights[k], input:inputs[k], contribution: weights[k] * inputs[k] }; })
-    .sort(function(a,b){ return b.contribution - a.contribution; });
+    .map(function(k){ return { name:k, weight:weights[k], input:inputs[k], contribution: weights[k] * inputs[k],
+        direction: sigs[k] ? sigs[k].direction : (inputs[k] < 0 ? -1 : inputs[k] > 0 ? 1 : 0),
+        confidence: sigs[k] ? sigs[k].confidence : null }; })
+    // Sort by ABSOLUTE contribution so a strong de-escalation (negative) ranks
+    // as a top driver too, not buried at the bottom.
+    .sort(function(a,b){ return Math.abs(b.contribution) - Math.abs(a.contribution); });
 
   var topEl = document.getElementById("v2Top");
   if(topEl){ topEl.innerHTML = contribs.slice(0, 3).map(_v2Row).join(""); }
