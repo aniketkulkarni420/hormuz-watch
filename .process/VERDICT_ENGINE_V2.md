@@ -78,9 +78,20 @@ anchor problem disappears, and the verdict gains a memory analysts can read
 `PREWAR_BRENT = 72`, `BASELINE_TRANSITS = 22/42/140` are frozen-in-time and go
 quietly wrong as the world moves (once $78 is the new normal, the +8% war
 premium floor misfires forever). Replace with **rolling/relative baselines**
-computed from the D1 history already stored: trailing-90d Brent median,
-trailing-30d transit median, trailing-1y BDTI percentile. The verdict becomes
-"vs recent normal," which is what an analyst actually means.
+computed from the D1 history already stored.
+
+> **H3 status (2026-06-24, DONE) — with a critical correction to this sketch:**
+> a naive "trailing-90d Brent median" anchor is UNSAFE. D1 history only goes
+> back to 2026-05-11 and the war began ~Feb 2026, so all history is wartime —
+> a trailing median would sit at ~$80, making the war premium read ~0 and
+> silently disabling war detection (re-breaking the 2026-06-10 fix). Shipped:
+> **(a) transits baseline → rolling** (trailing-30d median of real AIS transits
+> from D1, ≥14 samples, else constant 22 — the correct rolling case);
+> **(b) oil anchor → a deliberate env knob** `HORMUZ_PREWAR_BRENT` (default 72),
+> NEVER a trailing stat; **(c) anchor-staleness flag** `anchor_review_suggested`
+> (trailing Brent median > anchor×1.25 → suggest a human re-baseline; no
+> auto-act). `verdict.js` exposes `baselines{...}`; behaviour-locked (defaults =
+> old constants); 28 fixtures.
 
 ### 5. Golden-fixture regression tests — the missing safety net (DO FIRST)
 The reason these bugs ship is there is **no test** asserting "this input bundle
@@ -131,6 +142,7 @@ the auditability *is* the product.
 | **H1 ✅ DONE** | Golden-fixture regression tests (#5) + extract verdict to pure module | ~0.5d | Protects everything else; lets v2 refactor proceed safely |
 | **H2 ✅ DONE** | Signal contract {level,direction,confidence,asOf} (#1) — additive, behaviour-locked (5000/5000 equivalent). | ~1.5d | The core correctness refactor; fixtures catch regressions |
 | **H2.5 ✅ DONE** | Signed weighted average (#2, symmetric-by-construction). De-escalatory news/OFAC carry negative level → proportional offset; blunt -1-level de-trigger retired. Hard fundamentals dominate weak de-escalation. 25 fixtures; moves bounded ±1 level. | ~1d | Replaces ad-hoc de-trigger with principled symmetry |
+| **H3 ✅ DONE** | Rolling baselines (#4) — transits→rolling-30d-median (D1), oil anchor→deliberate env knob (NOT auto-rolled, D1 is all-wartime), anchor-staleness flag. Behaviour-locked, 28 fixtures. | ~1d | Removes frozen-anchor drift without disabling war detection |
 | **H3** | Rolling baselines (#4) | ~1d | Removes the frozen-anchor failure mode |
 | **H4** | Regime state machine (#3) | ~2d | Larger; adds memory/hysteresis once contract is stable |
 | **H5** | Explainability surfacing (#6) | ~0.5d | UI/payload polish on top of the new structure |

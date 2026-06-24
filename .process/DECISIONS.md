@@ -110,6 +110,45 @@ auto-feed; sourcing decision still open. The 185-vs-148 scraper reconciliation
 
 ---
 
+## 2026-06-24 — Batch H3 DONE: rolling baselines (with a critical correction)
+
+Killed the frozen magic-constant anchors — but the planned naive "rolling
+median for everything" was WRONG and would have re-broken war detection.
+
+**Critical finding:** D1 history only goes back to 2026-05-11; the Iran war began
+~Feb 2026. ALL stored history is wartime ($76–99). So a trailing median can NOT
+serve as the oil war-premium anchor — it would sit at ~$80 (wartime), making
+"premium vs baseline" ≈ 0 and silently switching off the standing-war signal
+(re-breaking the 2026-06-10 fix). The pre-war $72 reference is a structural fact
+absent from the data.
+
+**What shipped:**
+- **Transits baseline → rolling.** `record.js` computes the trailing-30d median
+  of real AIS `transits_24h` from D1 (needs ≥14 non-null samples), threaded as
+  `baseline_transits`; `verdict.js` falls back to the constant 22 otherwise.
+  Correct rolling case; dormant while AIS dark (transits null) but ready on
+  recovery.
+- **Oil anchor → deliberate knob, NOT auto-rolled.** `env.HORMUZ_PREWAR_BRENT`
+  (default 72) threaded as `prewar_brent`; `scoreOilSpike`, the war_premium
+  trigger, and the residual floor all use it. NEVER a trailing stat (see above).
+- **Anchor-staleness flag (detection, not action):** `record.js` compares the
+  trailing-30d Brent median to the anchor; if sustained >25% above, sets
+  `anchor_review_suggested: true` so a human re-baselines deliberately when the
+  war ends. No auto-drift.
+- `verdict.js` exposes `baselines` {prewar_brent(+source), baseline_transits
+  (+source)} for audit. `record.js` surfaces `baselines` + `anchor_review_suggested`
+  in the payload.
+
+**Behaviour-locked:** all 28 fixtures pass; defaults == old constants so live
+verdict is unchanged (rolling transit baseline is null today — AIS dark; anchor
+default 72). 3 new H3 fixtures (rolling-vs-constant, anchor override, fallback).
+
+This corrects the VERDICT_ENGINE_V2.md sketch ("trailing-90d Brent median") —
+that sketch was unsafe; oil anchor stays a controlled knob. Engine-v2 H1–H3
+complete; H4 (regime state machine) + H5 (explainability) remain.
+
+---
+
 ## 2026-06-24 — Batch H2.5 DONE: signed weighted average (symmetric by construction)
 
 Replaced the blunt -1-level de-escalation DE-TRIGGER with a genuinely signed

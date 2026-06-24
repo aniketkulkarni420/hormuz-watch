@@ -169,6 +169,43 @@ async function _handleRecord({ request, env }) {
       && pwAsOf && (Date.now() - pwAsOf) < 12 * 86400000) {
     pwTransits = snapshotD.portwatch_transits_daily;
   }
+
+  // ── H3 rolling baselines (2026-06-24) ──────────────────────────────────────
+  // baseline_transits: trailing-30d median of REAL AIS transit counts from D1.
+  // Needs ≥14 non-null samples or we fall back to the constant (cold start /
+  // AIS dark). prewar_brent: a deliberate env knob (NEVER a trailing stat — all
+  // D1 history is wartime, so a rolling oil baseline would normalize the war
+  // away). anchor_review_suggested flags when trailing Brent has run far above
+  // the anchor for a while → a human should consider re-baselining (no auto-act).
+  let baselineTransits = null;
+  let anchorReviewSuggested = false;
+  const prewarBrent = (() => {
+    const v = parseFloat(env.HORMUZ_PREWAR_BRENT);
+    return isFinite(v) && v > 0 ? v : 72.0;
+  })();
+  if (env.DB) {
+    try {
+      const cutoff = Math.floor(Date.now() / 1000) - 30 * 86400;
+      const rows = await env.DB.prepare(
+        "SELECT transits_24h FROM snapshots WHERE ts > ? AND transits_24h IS NOT NULL ORDER BY transits_24h"
+      ).bind(cutoff).all();
+      const vals = (rows?.results || []).map(r => r.transits_24h).filter(v => Number.isFinite(v));
+      if (vals.length >= 14) {
+        const mid = Math.floor(vals.length / 2);
+        baselineTransits = vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2;
+      }
+      // Anchor-staleness probe: trailing-30d median Brent vs the anchor.
+      const br = await env.DB.prepare(
+        "SELECT brent_price FROM snapshots WHERE ts > ? AND brent_price IS NOT NULL ORDER BY brent_price"
+      ).bind(cutoff).all();
+      const bvals = (br?.results || []).map(r => r.brent_price).filter(v => Number.isFinite(v));
+      if (bvals.length >= 14) {
+        const bmid = Math.floor(bvals.length / 2);
+        const bmedian = bvals.length % 2 ? bvals[bmid] : (bvals[bmid - 1] + bvals[bmid]) / 2;
+        anchorReviewSuggested = bmedian > prewarBrent * 1.25;   // sustained >25% above anchor
+      }
+    } catch { /* best effort — fall back to constants */ }
+  }
   const verdictInput = {
     transits_24h:               vTransit24h != null ? vTransit24h : pwTransits,
     // 2026-05-18: pass scraped_vessel_total so computeVerdict can fall back
@@ -210,6 +247,9 @@ async function _handleRecord({ request, env }) {
     news_age_sec:               snapshotD?.news_age_sec ?? null,
     currency_age_sec:           snapshotD?.currency_age_sec ?? null,
     ofac_age_sec:               snapshotD?.ofac_age_sec ?? null,
+    // H3 rolling baselines (null → module uses constant fallback)
+    baseline_transits:          baselineTransits,
+    prewar_brent:               prewarBrent,
   };
 
   const verdictResult = computeVerdict(verdictInput);
@@ -222,6 +262,8 @@ async function _handleRecord({ request, env }) {
     structural_score:   verdictResult.structural_score,
     stage1_inputs:      verdictResult.stage1_inputs,
     stage1_signals:     verdictResult.stage1_signals,   // H2 typed contract
+    baselines:          verdictResult.baselines,        // H3 baselines actually used
+    anchor_review_suggested: anchorReviewSuggested,      // H3: re-baseline hint (no auto-act)
     stage1_weights:     verdictResult.weights,
     stage2_triggers:    verdictResult.stage2_triggers,
     stage2_fired_count: verdictResult.stage2_fired_count,

@@ -288,6 +288,43 @@ test("23 · deescalation marker is informational, not acting", () => {
   assert.equal(de.informational, true);
 });
 
+// ─── H3 rolling-baseline fixtures (2026-06-24) ──────────────────────────────
+
+// 25. Transit baseline: rolling value (when provided) is used; else constant 22.
+test("25 · rolling transit baseline is applied vs constant fallback", () => {
+  // 30 transits: vs constant baseline 22 → scoreTransits(30,22): 30 ≥ 22*0.85=18.7 → 0.
+  const def = computeVerdict(fx({ transits_24h: 30 }));
+  assert.equal(def.stage1_inputs.transits, 0);
+  assert.equal(def.baselines.baseline_transits, 22);
+  assert.equal(def.baselines.baseline_transits_source, "default");
+  // Same 30 transits but rolling baseline 60 → 30 < 60*0.85=51 and ≥18 → 1.
+  const roll = computeVerdict(fx({ transits_24h: 30, baseline_transits: 60 }));
+  assert.equal(roll.stage1_inputs.transits, 1, "rolling baseline shifts the transit score");
+  assert.equal(roll.baselines.baseline_transits, 60);
+  assert.equal(roll.baselines.baseline_transits_source, "rolling");
+});
+
+// 26. Oil anchor is configurable (and never silently rolled).
+test("26 · prewar_brent anchor is overridable", () => {
+  // Brent 90 vs default anchor 72 → +25% premium → oil prem score 3.
+  const def = computeVerdict(fx({ brent_price: 90 }));
+  assert.equal(def.stage1_inputs.oil, 3);
+  assert.equal(def.baselines.prewar_brent, 72);
+  assert.equal(def.baselines.prewar_brent_source, "default");
+  // Re-baseline anchor to 88 → 90 is only +2.3% → premium score 0 (spike 0 too).
+  const reb = computeVerdict(fx({ brent_price: 90, prewar_brent: 88 }));
+  assert.equal(reb.stage1_inputs.oil, 0, "a higher anchor lowers the war-premium read");
+  assert.equal(reb.baselines.prewar_brent, 88);
+  assert.equal(reb.baselines.prewar_brent_source, "configured");
+});
+
+// 27. Invalid/absent baselines fall back to constants (no crash, no drift).
+test("27 · invalid baselines fall back to constants", () => {
+  const r = computeVerdict(fx({ baseline_transits: 0, prewar_brent: -5, transits_24h: 30 }));
+  assert.equal(r.baselines.baseline_transits, 22);
+  assert.equal(r.baselines.prewar_brent, 72);
+});
+
 // 24. Hard fundamentals DOMINATE weak de-escalation (the H2.5 design call):
 // severe oil + freight + tone with a few de-escalating headlines stays HIGH+ —
 // proportional offset means soft news can't mask a hard market crisis. Contrast

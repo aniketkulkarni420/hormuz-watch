@@ -77,7 +77,7 @@ export function scoreTransits(t, baseline) {
   if (t < baseline * 0.85) return 1;
   return 0;
 }
-export function scoreOilSpike(price, dp24h) {
+export function scoreOilSpike(price, dp24h, anchor = PREWAR_BRENT) {
   if (!isFinite(price)) return null;
   const dp = isFinite(dp24h) ? Math.abs(dp24h) : 0;
   let spike = 0;
@@ -88,7 +88,12 @@ export function scoreOilSpike(price, dp24h) {
   // War-premium LEVEL vs pre-war anchor (2026-06-10): a sustained +27% level
   // with calm dailies is NOT calm — it is the market pricing a standing
   // conflict. Score the premium and take the worse of the two reads.
-  const premPct = (price - PREWAR_BRENT) / PREWAR_BRENT * 100;
+  // H3 (2026-06-24): `anchor` is overridable (snapshot.prewar_brent →
+  // env HORMUZ_PREWAR_BRENT) but is NEVER a trailing average — all D1 history
+  // is wartime (starts May 2026; war began Feb), so a rolling baseline would
+  // normalize the war away. The anchor is a deliberate pre-conflict reference.
+  const a = (isFinite(anchor) && anchor > 0) ? anchor : PREWAR_BRENT;
+  const premPct = (price - a) / a * 100;
   let prem = 0;
   if (premPct >= 40) prem = 4;
   else if (premPct >= 25) prem = 3;
@@ -299,10 +304,13 @@ export function computeOverrides(snapshot) {
     triggers.push({ id: "war_tone", reason: tone.toFixed(0) + "% negative tone (threshold 70)", fires: false });
   }
   // Standing war premium: Brent >= +20% over the pre-war anchor means the
-  // market is pricing a live conflict regardless of daily calm.
+  // market is pricing a live conflict regardless of daily calm. H3: anchor
+  // overridable via snapshot.prewar_brent (env), never a trailing stat.
   const bp = snapshot.brent_price;
-  if (isFinite(bp) && PREWAR_BRENT > 0) {
-    const prem = (bp - PREWAR_BRENT) / PREWAR_BRENT * 100;
+  const anchorBp = (snapshot.prewar_brent != null && isFinite(snapshot.prewar_brent) && snapshot.prewar_brent > 0)
+                    ? snapshot.prewar_brent : PREWAR_BRENT;
+  if (isFinite(bp) && anchorBp > 0) {
+    const prem = (bp - anchorBp) / anchorBp * 100;
     if (prem >= 20) {
       triggers.push({ id: "war_premium", reason: "Brent +" + prem.toFixed(0) + "% vs pre-war (standing conflict pricing)", fires: true });
     } else {
@@ -374,11 +382,22 @@ export function computeVerdict(snapshot) {
   // the blockade. This is how the engine said NORMAL during active missile
   // exchanges. In-port counts must NEVER enter the transits slot. When AIS is
   // dormant, transits = null → W_COMPOSITE mode (transits weight 0).
+  // H3 (2026-06-24): rolling baselines with constant fallback.
+  //   baseline_transits — trailing-30d median of real AIS transits (record.js
+  //     computes it from D1); falls back to BASELINE_TRANSITS when history is
+  //     thin. This is the CORRECT rolling case (the transit "normal" should
+  //     adapt). Dormant while AIS is dark (transits null) but ready on recovery.
+  //   prewar_brent — the war-premium anchor; overridable via env but NEVER a
+  //     trailing stat (see scoreOilSpike note). Fallback to PREWAR_BRENT.
+  const baselineTransits = (snapshot.baseline_transits != null && isFinite(snapshot.baseline_transits) && snapshot.baseline_transits > 0)
+                            ? snapshot.baseline_transits : BASELINE_TRANSITS;
+  const prewarBrent = (snapshot.prewar_brent != null && isFinite(snapshot.prewar_brent) && snapshot.prewar_brent > 0)
+                            ? snapshot.prewar_brent : PREWAR_BRENT;
   const transitsRaw = (snapshot.transits_24h != null && snapshot.transits_24h > 0)
                         ? snapshot.transits_24h : null;
   const transitsScore = transitsRaw != null
-                          ? scoreTransits(transitsRaw, BASELINE_TRANSITS) : null;
-  const oilScore        = scoreOilSpike(snapshot.brent_price, snapshot.brent_dp_24h);
+                          ? scoreTransits(transitsRaw, baselineTransits) : null;
+  const oilScore        = scoreOilSpike(snapshot.brent_price, snapshot.brent_dp_24h, prewarBrent);
   const stocksScore     = scoreTankerStocks(snapshot.tanker_index);
   const aircraftScore   = scoreAircraft(snapshot.military_aircraft_count);
   const eventsScore     = scoreEvents(snapshot.gdelt_neg_tone);
@@ -485,7 +504,7 @@ export function computeVerdict(snapshot) {
   // all-clear. Floor the verdict at ELEVATED in that residual-risk state so a
   // thaw reads as "winding down, watch it" — never a premature NORMAL.
   const bpFloor = snapshot.brent_price;
-  const premFloor = (isFinite(bpFloor) && PREWAR_BRENT > 0) ? (bpFloor - PREWAR_BRENT) / PREWAR_BRENT * 100 : 0;
+  const premFloor = (isFinite(bpFloor) && prewarBrent > 0) ? (bpFloor - prewarBrent) / prewarBrent * 100 : 0;
   const residualRisk = (premFloor >= 8) || (isFinite(snapshot.bdti) && snapshot.bdti > 1800);
   const levelsF = ["NORMAL", "ELEVATED", "HIGH", "CRITICAL"];
   if (residualRisk && levelsF.indexOf(final) < 1) {
@@ -498,6 +517,14 @@ export function computeVerdict(snapshot) {
     structural_verdict: structural,
     structural_score: Math.round(weighted * 100) / 100,
     score: Math.round(weighted * 100) / 100,
+    // H3 baselines actually used (audit trail): whether rolling values were
+    // applied or the constant fallbacks. `source` flags which.
+    baselines: {
+      prewar_brent: prewarBrent,
+      prewar_brent_source: (snapshot.prewar_brent != null && isFinite(snapshot.prewar_brent) && snapshot.prewar_brent > 0) ? "configured" : "default",
+      baseline_transits: baselineTransits,
+      baseline_transits_source: (snapshot.baseline_transits != null && isFinite(snapshot.baseline_transits) && snapshot.baseline_transits > 0) ? "rolling" : "default",
+    },
     stage1_inputs: inputs,
     stage1_signals: signals,   // H2 typed contract: {level, direction, confidence, asOf}
     weights,

@@ -132,9 +132,15 @@ Six principles: (1) signal contract `{level, direction, confidence, asOf}`;
 (5) **golden-fixture regression tests — DO FIRST** (15 labelled scenarios in the
 doc); (6) explainability surfacing.
 
-Sequence: ~~H1 fixtures~~ ✅ → ~~H2 contract~~ ✅ → **H3 rolling baselines (~1d)**
-→ H4 regime machine (~2d) → H5 explainability (~0.5d). (H2.5 signed-average,
-optional, moves numbers — behind its own fixtures.)
+Sequence: ~~H1 fixtures~~ ✅ → ~~H2 contract~~ ✅ → ~~H2.5 signed-average~~ ✅ →
+~~H3 rolling baselines~~ ✅ → **H4 regime machine (~2d)** → H5 explainability (~0.5d).
+
+**H3 SHIPPED (2026-06-24):** transits baseline → rolling-30d D1 median (constant
+22 fallback); oil war-premium anchor → `HORMUZ_PREWAR_BRENT` env knob (default
+72, NEVER auto-rolled — D1 history is all-wartime so a trailing median would
+disable war detection); `anchor_review_suggested` flag (no auto-act). 28 fixtures,
+behaviour-locked. New env var available: set `HORMUZ_PREWAR_BRENT` in CF Pages
+to re-baseline the oil anchor when the war ends (watch `anchor_review_suggested`).
 
 **H2 SHIPPED (2026-06-23):** per-signal contract `{level, direction, confidence,
 asOf}` as `stage1_signals` in `functions/_lib/verdict.js` + `verdict_latest`
