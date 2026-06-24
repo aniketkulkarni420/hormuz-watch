@@ -18,6 +18,62 @@ export const BASELINE_TRANSITS = 22;
 // the strait is under blockade. (2026-06-10 verdict-engine repair.)
 export const PREWAR_BRENT = 72.0;
 
+// ─── H2 signal contract (2026-06-23) ────────────────────────────────────────
+// Every signal is described by {level, direction, confidence, asOf}, not a bare
+// 0–4 scalar. This makes direction a first-class, uniform property instead of
+// being special-cased in two places, and surfaces per-signal confidence for the
+// UI (H5) and for downweighting stale feeds. The weighted AVERAGE still uses
+// `level` (so behaviour is locked by tests/verdict.test.mjs), but the contract
+// is now the structure H3/H4 build on. See .process/VERDICT_ENGINE_V2.md.
+//
+//   direction: +1 escalatory · 0 neutral/calm · -1 de-escalatory
+//     Most signals are magnitude-only (a low oil price is not "de-escalation
+//     pressure") → +1 when level>0 else 0. Genuinely bidirectional signals —
+//     NEWS (sentiment) and OFAC (designations vs waivers) — can be -1.
+//   confidence: 0 when the signal is absent; otherwise freshness-scaled when a
+//     per-signal age is available, else 1.0.
+
+// Per-signal max-age (seconds) for freshness-based confidence — mirrors the
+// cron cadences in functions/api/diag.js. Only signals whose age is threaded
+// from snapshot.js appear here; the rest default to confidence 1.0 when present.
+export const SIGNAL_MAX_AGE_SEC = {
+  news: 5400,      // every 30 min
+  currency: 9000,  // hourly
+  ofac: 28800,     // every 6 h
+};
+
+function freshnessConfidence(key, ageSec) {
+  if (ageSec == null || !isFinite(ageSec)) return 1;   // no age info → assume fresh
+  const maxAge = SIGNAL_MAX_AGE_SEC[key];
+  if (maxAge == null) return 1;
+  if (ageSec <= maxAge) return 1;
+  if (ageSec >= maxAge * 3) return 0.3;                 // very stale → low confidence
+  // linear 1 → 0.3 between maxAge and 3×maxAge
+  return Math.round((1 - 0.7 * ((ageSec - maxAge) / (maxAge * 2))) * 100) / 100;
+}
+
+// SINGLE SOURCE OF TRUTH for news direction (2026-06-23). Used by both the
+// signal contract and the de-escalation de-trigger so they can never disagree.
+// Identical semantics to the prior inline `newsDeescalating` derivation.
+export function newsDirection(snapshot) {
+  const net = snapshot.news_net_sentiment;
+  if ((net != null && isFinite(net) && net <= -0.33) || snapshot.news_sentiment === "de-escalating") return -1;
+  if ((net != null && isFinite(net) && net >= 0.33) || snapshot.news_sentiment === "escalating") return +1;
+  return 0;
+}
+
+function signalDirection(key, level, snapshot) {
+  if (level == null) return 0;
+  if (key === "news") return newsDirection(snapshot);
+  if (key === "ofac") {
+    const nd = snapshot.ofac_net_designations_30d;
+    if (nd != null && isFinite(nd)) return nd < 0 ? -1 : (nd > 0 ? +1 : 0);
+    return level > 0 ? +1 : 0;
+  }
+  // Magnitude-only signals: escalatory when they carry any level, else neutral.
+  return level > 0 ? +1 : 0;
+}
+
 export function scoreTransits(t, baseline) {
   if (t == null || !isFinite(t)) return null;
   if (t === 0) return 4;
@@ -201,8 +257,9 @@ export function computeOverrides(snapshot) {
   // sanctions waivers + talks) and single-handedly pushed ELEVATED → HIGH.
   const news24 = snapshot.news_count_24h || 0;
   const newsNet = snapshot.news_net_sentiment;
-  const newsDeescalating = (newsNet != null && isFinite(newsNet) && newsNet <= -0.33)
-                            || snapshot.news_sentiment === "de-escalating";
+  // Direction via the single-source-of-truth helper (H2) — the contract and
+  // this de-trigger can no longer disagree about what "de-escalating" means.
+  const newsDeescalating = newsDirection(snapshot) === -1;
   if (news24 >= 40 && !newsDeescalating) {
     const dir = (newsNet != null && newsNet >= 0.33) ? "escalatory" : "mixed";
     triggers.push({ id: "news", reason: news24 + " headlines in 24h (" + dir + ")", fires: true });
@@ -374,6 +431,26 @@ export function computeVerdict(snapshot) {
     ofac: ofacScore, currency: currencyScore, news: newsScore,
     inventory: inventoryScore, production: productionScore
   };
+
+  // ── H2 signal contract — rich {level, direction, confidence, asOf} per signal.
+  // `inputs` (numeric levels) is kept for the weighted average + back-compat;
+  // `signals` is the typed contract surfaced for the UI and downstream gating.
+  const ageOf = {
+    news: snapshot.news_age_sec, currency: snapshot.currency_age_sec, ofac: snapshot.ofac_age_sec,
+  };
+  const nowSec = Math.floor(Date.now() / 1000);
+  const signals = {};
+  for (const k of Object.keys(inputs)) {
+    const lvl = inputs[k];
+    const ageSec = ageOf[k];
+    signals[k] = {
+      level: lvl,
+      direction: signalDirection(k, lvl, snapshot),
+      confidence: lvl == null ? 0 : freshnessConfidence(k, ageSec),
+      asOf: (ageSec != null && isFinite(ageSec)) ? nowSec - ageSec : null,
+    };
+  }
+
   let weighted = 0;
   let used = 0;          // sum of WEIGHTS of inputs that had data
   let usedCount = 0;     // COUNT of inputs that had data
@@ -428,6 +505,7 @@ export function computeVerdict(snapshot) {
     structural_score: Math.round(weighted * 100) / 100,
     score: Math.round(weighted * 100) / 100,
     stage1_inputs: inputs,
+    stage1_signals: signals,   // H2 typed contract: {level, direction, confidence, asOf}
     weights,
     stage2_triggers: triggers,
     stage2_fired_count: firedCount,

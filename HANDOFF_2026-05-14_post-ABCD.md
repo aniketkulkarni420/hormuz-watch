@@ -132,8 +132,16 @@ Six principles: (1) signal contract `{level, direction, confidence, asOf}`;
 (5) **golden-fixture regression tests — DO FIRST** (15 labelled scenarios in the
 doc); (6) explainability surfacing.
 
-Sequence: ~~H1 fixtures~~ ✅ DONE → **H2 contract+symmetry (~1.5d)** → H3 rolling
-baselines (~1d) → H4 regime machine (~2d) → H5 explainability (~0.5d).
+Sequence: ~~H1 fixtures~~ ✅ → ~~H2 contract~~ ✅ → **H3 rolling baselines (~1d)**
+→ H4 regime machine (~2d) → H5 explainability (~0.5d). (H2.5 signed-average,
+optional, moves numbers — behind its own fixtures.)
+
+**H2 SHIPPED (2026-06-23):** per-signal contract `{level, direction, confidence,
+asOf}` as `stage1_signals` in `functions/_lib/verdict.js` + `verdict_latest`
+payload. Additive — 5000/5000 verdict outputs identical vs pre-H2. `direction`
+uniform (news/OFAC bidirectional, rest +1/0); `confidence` freshness-scaled
+(news/currency/ofac ages threaded). 21 fixtures pass. H5/G14 should render
+`stage1_signals` (per-signal arrows + confidence) in the verdict tile.
 
 **H1 SHIPPED (2026-06-23):** verdict logic extracted to pure
 `functions/_lib/verdict.js` (record.js imports it; equivalence proven 4000/4000

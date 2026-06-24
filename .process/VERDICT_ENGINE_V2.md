@@ -46,6 +46,18 @@ which makes "lots of de-escalation news = risk" a **type error**, not a
 judgment call. (Today's fix did this ad hoc for news + OFAC; v2 makes it the
 contract every signal obeys.)
 
+> **H2 status (2026-06-23, DONE):** the contract is implemented as
+> `stage1_signals` in `functions/_lib/verdict.js` — every signal carries
+> `{level, direction, confidence, asOf}`. It is **additive**: the weighted
+> average still uses `level` (numeric `stage1_inputs`), so all 16 original
+> fixtures + 5000-input equivalence stay identical. `direction` is now a uniform
+> first-class field (magnitude-only signals +1/0; news + OFAC bidirectional),
+> sourced from `newsDirection()`/`signalDirection()`. The *signed* weighted
+> average (where a de-escalatory signal contributes NEGATIVELY, replacing the
+> de-trigger) is the remaining piece — deferred to **H2.5** because it MOVES
+> verdict numbers and must land behind its own fixtures. The current symmetric
+> behaviour is delivered by the contract-driven de-escalation de-trigger.
+
 ### 2. Symmetric by construction
 The pre-2026-06-23 engine had 7 ways UP and 0 ways DOWN — it *had* to lag any
 thaw. In v2 the weighted average spans calm↔crisis natively (a de-escalatory
@@ -117,7 +129,7 @@ the auditability *is* the product.
 | Phase | Work | Effort | Why this order |
 |-------|------|--------|----------------|
 | **H1 ✅ DONE** | Golden-fixture regression tests (#5) + extract verdict to pure module | ~0.5d | Protects everything else; lets v2 refactor proceed safely |
-| **H2** | Signal contract + symmetry (#1, #2) | ~1.5d | The core correctness refactor; fixtures catch regressions |
+| **H2 ✅ DONE** | Signal contract {level,direction,confidence,asOf} (#1) — additive, behaviour-locked (5000/5000 equivalent). Symmetry (#2) realized via the contract-driven de-escalation de-trigger; full signed-average deferred. | ~1.5d | The core correctness refactor; fixtures catch regressions |
 | **H3** | Rolling baselines (#4) | ~1d | Removes the frozen-anchor failure mode |
 | **H4** | Regime state machine (#3) | ~2d | Larger; adds memory/hysteresis once contract is stable |
 | **H5** | Explainability surfacing (#6) | ~0.5d | UI/payload polish on top of the new structure |

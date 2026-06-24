@@ -187,3 +187,56 @@ test("15 · neutral news + Brent +12% + BDTI 1900 → ELEVATED", () => {
   }));
   assert.equal(r.verdict, "ELEVATED");
 });
+
+// ─── H2 signal-contract fixtures (2026-06-23) ───────────────────────────────
+
+// 16. Contract shape: every signal exposes {level, direction, confidence, asOf}
+test("16 · stage1_signals present with full contract shape", () => {
+  const r = computeVerdict(fx({}));
+  assert.ok(r.stage1_signals, "stage1_signals must exist");
+  for (const k of Object.keys(r.stage1_inputs)) {
+    const s = r.stage1_signals[k];
+    assert.ok(s, `signal ${k} missing`);
+    assert.ok("level" in s && "direction" in s && "confidence" in s && "asOf" in s, `${k} contract incomplete`);
+    assert.equal(s.level, r.stage1_inputs[k], `${k} level must match numeric stage1_inputs (back-compat)`);
+    assert.ok([-1, 0, 1].includes(s.direction), `${k} direction must be -1|0|+1`);
+    assert.ok(s.confidence >= 0 && s.confidence <= 1, `${k} confidence in [0,1]`);
+  }
+});
+
+// 17. News direction: -1 on de-escalation, +1 on escalation, 0 neutral
+test("17 · news direction tracks sentiment", () => {
+  const de = computeVerdict(fx({ news_count_24h: 50, news_sentiment: "de-escalating", news_net_sentiment: -0.8 }));
+  assert.equal(de.stage1_signals.news.direction, -1);
+  const esc = computeVerdict(fx({ news_count_24h: 50, news_sentiment: "escalating", news_net_sentiment: 0.8 }));
+  assert.equal(esc.stage1_signals.news.direction, 1);
+  const neu = computeVerdict(fx({ news_count_24h: 50, news_sentiment: "neutral", news_net_sentiment: 0 }));
+  assert.equal(neu.stage1_signals.news.direction, 0);
+});
+
+// 18. OFAC direction: -1 when net designations negative (waiver-heavy)
+test("18 · OFAC direction is -1 when net designations < 0", () => {
+  const r = computeVerdict(fx({ ofac_iran_actions_30d: 4, ofac_net_designations_30d: -3 }));
+  assert.equal(r.stage1_signals.ofac.direction, -1);
+  const r2 = computeVerdict(fx({ ofac_net_designations_30d: 4 }));
+  assert.equal(r2.stage1_signals.ofac.direction, 1);
+});
+
+// 19. Magnitude-only signal (oil): direction +1 when level>0, 0 when calm
+test("19 · oil direction is magnitude-only (+1 / 0)", () => {
+  const hot = computeVerdict(fx({ brent_price: 110 }));
+  assert.equal(hot.stage1_signals.oil.direction, 1);
+  const calm = computeVerdict(fx({ brent_price: 70, brent_dp_24h: 0 }));
+  assert.equal(calm.stage1_signals.oil.level, 0);
+  assert.equal(calm.stage1_signals.oil.direction, 0);
+});
+
+// 20. Confidence: 0 for absent signal; freshness-scaled for stale feeds
+test("20 · confidence reflects presence + freshness", () => {
+  const missing = computeVerdict(fx({ irr_spread_pct: null }));
+  assert.equal(missing.stage1_signals.currency.confidence, 0, "absent signal → confidence 0");
+  const fresh = computeVerdict(fx({ news_count_24h: 20, news_net_sentiment: 0, news_age_sec: 600 }));
+  assert.equal(fresh.stage1_signals.news.confidence, 1, "fresh news → confidence 1");
+  const stale = computeVerdict(fx({ news_count_24h: 20, news_net_sentiment: 0, news_age_sec: 5400 * 4 }));
+  assert.ok(stale.stage1_signals.news.confidence <= 0.3, "very stale news → low confidence");
+});

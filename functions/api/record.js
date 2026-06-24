@@ -205,6 +205,11 @@ async function _handleRecord({ request, env }) {
     ukmto_hormuz_7d:            snapshotD?.ukmto_hormuz_7d ?? null,
     incidents_30d:              snapshotD?.incidents_30d ?? null,
     transits_source:            vTransit24h != null ? "ais" : (pwTransits != null ? "portwatch_lagged" : null),
+    // Per-signal ages (H2) — drive freshness-based confidence in the contract.
+    // Only the feeds whose age snapshot exposes today; others default fresh.
+    news_age_sec:               snapshotD?.news_age_sec ?? null,
+    currency_age_sec:           snapshotD?.currency_age_sec ?? null,
+    ofac_age_sec:               snapshotD?.ofac_age_sec ?? null,
   };
 
   const verdictResult = computeVerdict(verdictInput);
@@ -216,6 +221,7 @@ async function _handleRecord({ request, env }) {
     structural_verdict: verdictResult.structural_verdict,
     structural_score:   verdictResult.structural_score,
     stage1_inputs:      verdictResult.stage1_inputs,
+    stage1_signals:     verdictResult.stage1_signals,   // H2 typed contract
     stage1_weights:     verdictResult.weights,
     stage2_triggers:    verdictResult.stage2_triggers,
     stage2_fired_count: verdictResult.stage2_fired_count,

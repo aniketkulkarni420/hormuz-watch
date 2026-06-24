@@ -110,6 +110,32 @@ auto-feed; sourcing decision still open. The 185-vs-148 scraper reconciliation
 
 ---
 
+## 2026-06-23 — Batch H2 DONE: typed signal contract (additive, behaviour-locked)
+
+Second phase of Verdict Engine v2. Introduced the per-signal contract
+`{level, direction, confidence, asOf}` without changing any verdict output.
+- `functions/_lib/verdict.js`: each of the 13 signals now also produces a rich
+  contract object, surfaced as `stage1_signals` (numeric `stage1_inputs` kept
+  for back-compat + the weighted average → all behaviour locked).
+  - `direction`: +1 escalatory / 0 neutral / -1 de-escalatory. Magnitude-only
+    signals are +1/0; genuinely bidirectional NEWS + OFAC can be -1.
+  - `confidence`: 0 when absent; freshness-scaled (news/currency/ofac ages
+    threaded from snapshot; `SIGNAL_MAX_AGE_SEC`); 1.0 when no age available.
+  - `newsDirection()` is now the SINGLE SOURCE OF TRUTH used by both the
+    contract and the de-escalation de-trigger (was duplicated logic → DRY).
+- `record.js`: threads news/currency/ofac `*_age_sec` into the verdict input;
+  surfaces `stage1_signals` in the `verdict_latest` payload.
+- `tests/verdict.test.mjs`: +5 contract fixtures (16→21), all pass. Original 16
+  unchanged + green.
+- **Equivalence proven**: H2 vs pre-H2 = 5000/5000 verdict outputs identical
+  (verdict/structural/score/fired-count) → purely additive.
+
+Next: H3 (rolling baselines — kill PREWAR_BRENT=72 / 22-42-140). Note H5/G14
+will consume `stage1_signals` to show per-signal direction arrows + confidence
+in the UI (the verdict tile still reads numeric `stage1_inputs`, unchanged).
+
+---
+
 ## 2026-06-23 — Batch H1 DONE: verdict extracted to pure module + golden fixtures
 
 First phase of Verdict Engine v2 shipped (the "do first" item).
