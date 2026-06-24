@@ -329,12 +329,19 @@ async function _handleRecord({ request, env }) {
   };
 
   try {
-    // Store full breakdown as JSON in D1 verdict column (legacy column kept)
+    // Store breakdown as JSON in the D1 verdict column (legacy column kept).
+    // 2026-06-24: now ALSO persist the per-signal levels + regime so the
+    // backtest can validate EACH signal over time, not just the band. The
+    // backtest revealed 10 of 13 signals were never persisted → unvalidatable;
+    // this starts the historical record (can't recover the past, builds forward).
     const verdictColumnPayload = JSON.stringify({
       verdict,
       structural_verdict: verdictResult.structural_verdict,
       structural_score:   verdictResult.structural_score,
       triggers_fired:     verdictResult.stage2_fired_count,
+      inputs:             verdictResult.stage1_inputs,   // signed per-signal levels
+      confidence:         verdictResult.confidence,
+      regime:             regime ? regime.regime : null,
     });
     await env.DB.prepare(`
       INSERT OR REPLACE INTO snapshots (
