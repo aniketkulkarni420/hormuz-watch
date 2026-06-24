@@ -1,12 +1,13 @@
 // Cloudflare Pages Function — full-system diagnostic dump.
 // Token-gated. Returns freshness/preview for every KV feed + D1 last snapshot.
 //
-// Usage: curl "https://.../api/_diag?token=$SNAPSHOT_TOKEN"
-//   or:  curl -H "X-Snapshot-Token: $SNAPSHOT_TOKEN" https://.../api/_diag
+// Usage: curl -H "X-Snapshot-Token: $SNAPSHOT_TOKEN" https://.../api/diag
+//   (?token= query also accepted for back-compat, but it leaks to logs — prefer the header)
+import { safeEqual } from "../_lib/auth.js";
 
 export async function onRequestGet({ request, env }) {
   const token = request.headers.get("X-Snapshot-Token") || new URL(request.url).searchParams.get("token");
-  if (token !== env.SNAPSHOT_TOKEN) return new Response("forbidden", { status: 403 });
+  if (!safeEqual(token, env.SNAPSHOT_TOKEN)) return new Response("forbidden", { status: 403 });
 
   const now = Math.floor(Date.now() / 1000);
   const out = { ts: now, feeds: {} };

@@ -6,6 +6,7 @@
 // Storage: KV key "bdti_latest" → { value, asOf, source, wow_pct, ts }
 // Falls back to env.HORMUZ_BDTI legacy default if KV empty.
 import { reportError } from "../_lib/sentry.js";
+import { safeEqual } from "../_lib/auth.js";
 
 export async function onRequestGet(ctx) {
   try { return await _handleBdtiGet(ctx); }
@@ -77,8 +78,7 @@ async function _handleBdtiPost({ request, env }) {
   if (!env.OIL_KV) return json({ error: "KV binding missing" }, 500);
   const token = request.headers.get("X-Admin-Token") || request.headers.get("X-Snapshot-Token");
   // Accept either ADMIN_TOKEN (manual via /admin/bdti form) or SNAPSHOT_TOKEN (scraper)
-  const valid = (env.ADMIN_TOKEN && token === env.ADMIN_TOKEN) ||
-                (env.SNAPSHOT_TOKEN && token === env.SNAPSHOT_TOKEN);
+  const valid = safeEqual(token, env.ADMIN_TOKEN) || safeEqual(token, env.SNAPSHOT_TOKEN);
   if (!valid) return json({ error: "unauthorized" }, 401);
 
   let body;
@@ -100,7 +100,7 @@ async function _handleBdtiPost({ request, env }) {
 
   // Confidence gate: scraper (SNAPSHOT_TOKEN) writes must not overwrite a high-quality
   // manual entry with a low-confidence auto-scrape. Manual entries (ADMIN_TOKEN) always win.
-  const isAdminWrite = env.ADMIN_TOKEN && token === env.ADMIN_TOKEN;
+  const isAdminWrite = safeEqual(token, env.ADMIN_TOKEN);
   const isScraperWrite = !isAdminWrite;
   const newConfidence = body.confidence || (isAdminWrite ? "manual" : "unknown");
   if (isScraperWrite && prev && prev.source === "manual-verified-BDTI" && newConfidence === "low") {

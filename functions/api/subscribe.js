@@ -82,7 +82,15 @@ async function _handleSubscribePost({ request, env }) {
           '</div>',
       });
       emailSent = r.ok;
-    } catch (e) { /* swallow */ }
+      if (!r.ok) {
+        // G10 (2026-06-24): surface Resend failures instead of swallowing —
+        // a send error was indistinguishable from "not configured".
+        await reportError(new Error("Resend send failed: HTTP " + r.status), env,
+          { tags: { endpoint: "/api/subscribe", op: "confirm-email" } });
+      }
+    } catch (e) {
+      await reportError(e, env, { tags: { endpoint: "/api/subscribe", op: "confirm-email" } });
+    }
   }
 
   return json({

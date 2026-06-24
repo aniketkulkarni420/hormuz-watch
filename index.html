@@ -5554,6 +5554,20 @@ function renderVerdictBlock(v){
         + firedReasons.map(function(r){ return '<span style="color:'+hex+'">'+r+'</span>'; }).join(' · ')
         + '</div>';
     }
+    // G14 (2026-06-24): surface verdict CONFIDENCE so a thin read (few live
+    // signals) doesn't look as authoritative as a full one.
+    if(v.confidence){
+      var confColor = v.confidence === "high" ? "var(--green)"
+        : v.confidence === "medium" ? "var(--amber)" : "var(--red)";
+      var cov = (v.inputs_used_count != null && v.inputs_total != null)
+        ? v.inputs_used_count + "/" + v.inputs_total + " signals"
+        : (v.coverage_pct != null ? v.coverage_pct + "% coverage" : "");
+      line += '<div style="margin-top:4px;font-size:10px;color:var(--muted)">Confidence: '
+        + '<b style="color:'+confColor+'">' + v.confidence.toUpperCase() + '</b>'
+        + (cov ? ' <span style="color:var(--muted2)">(' + cov + ')</span>' : '')
+        + (v.anchor_review_suggested ? ' · <span style="color:var(--amber)" title="Trailing Brent has run well above the $72 pre-war anchor — consider re-baselining HORMUZ_PREWAR_BRENT when the conflict ends">⚑ anchor review</span>' : '')
+        + '</div>';
+    }
     sumEl.innerHTML = line;
   }
 

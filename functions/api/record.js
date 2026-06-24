@@ -5,8 +5,11 @@
 //
 // ─── DATA WRITES (for grepability) ────────────────────────────────────────
 // KV: writes "verdict_latest" = full two-stage breakdown (see end of file)
-// KV: writes "last_snapshot_ts" = unix seconds (used by scraper's maybe_snapshot guard)
 // D1: INSERT INTO snapshots(...) — verdict column stores JSON.stringify(verdict_latest)
+// NOTE (G6 · 2026-06-24): this endpoint does NOT write "last_snapshot_ts" —
+// scrape_oil.py owns that key (its maybe_snapshot guard). Single D1 writer:
+// scrape_oil.py calls POST /api/record, which is the only path that INSERTs
+// into snapshots. (Corrected a stale comment that claimed otherwise.)
 // ──────────────────────────────────────────────────────────────────────────
 //
 // 2026-05-14 — Two-stage verdict:
@@ -14,6 +17,7 @@
 //   Stage 2: override triggers — OFAC/currency/news/aircraft/seismic; each +1 level
 
 import { reportError } from "../_lib/sentry.js";
+import { safeEqual } from "../_lib/auth.js";
 
 // ─── Verdict engine ─────────────────────────────────────────────────────
 // All per-signal scorers, override triggers, and the two-stage computeVerdict
@@ -32,7 +36,7 @@ export async function onRequestPost(ctx) {
 
 async function _handleRecord({ request, env }) {
   const token = request.headers.get("X-Snapshot-Token");
-  if (!env.SNAPSHOT_TOKEN || token !== env.SNAPSHOT_TOKEN) {
+  if (!safeEqual(token, env.SNAPSHOT_TOKEN)) {
     return json({ error: "unauthorized" }, 401);
   }
   if (!env.DB) {

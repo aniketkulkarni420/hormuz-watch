@@ -94,7 +94,11 @@ var SIGNALS = [
     desc: "Weekly Brent history powers the 4-week sparkline." },
   { key: "gfw",   name: "Satellite vessel detection",        url: "/api/gfw",
     method: "POST",
-    body: { datasets:["public-global-encounters-events:latest"], startDate: "2026-04-05", endDate: "2026-05-05",
+    // G9 (2026-06-24): date window is now relative (trailing 30d), was frozen
+    // at 2026-04-05..05-05 so the health check queried an ever-staler window.
+    body: { datasets:["public-global-encounters-events:latest"],
+      startDate: new Date(Date.now() - 30*86400*1000).toISOString().slice(0,10),
+      endDate:   new Date().toISOString().slice(0,10),
       geometry:{ type:"Polygon", coordinates:[[[52,24],[59.5,24],[59.5,28.5],[52,28.5],[52,24]]] } },
     desc: "Dark traffic encounters + loitering events within Hormuz region." },
   { key: "history", name: "Historical data store",           url: "/api/history?metric=brent_price&range=24h",

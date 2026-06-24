@@ -9,6 +9,7 @@
 // 2-3 sentences; this stores them; the dashboard reads. Future enhancement:
 // Claude-drafted button that posts a generated draft for one-click approval.
 import { reportError } from "../_lib/sentry.js";
+import { safeEqual } from "../_lib/auth.js";
 
 const MIN_LEN = 20;
 const MAX_LEN = 800;
@@ -54,7 +55,7 @@ export async function onRequestPost(ctx) {
 async function _handleBriefPost({ request, env }) {
   if (!env.OIL_KV) return _json({ error: "KV binding missing" }, 500);
   const token = request.headers.get("X-Admin-Token") || request.headers.get("X-Snapshot-Token");
-  const valid = (env.ADMIN_TOKEN && token === env.ADMIN_TOKEN);
+  const valid = safeEqual(token, env.ADMIN_TOKEN);
   if (!valid) return _json({ error: "unauthorized" }, 401);
 
   let body;

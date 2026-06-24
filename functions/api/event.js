@@ -43,8 +43,14 @@ export async function onRequestPost({ request, env }) {
     return [m?.[1] || "Other", p?.[1] || "Unknown"].join("/");
   })();
 
-  // IP hash for daily-unique counting; salt makes rainbow tables useless
+  // IP hash for daily-unique counting; salt makes rainbow tables useless —
+  // but ONLY if it's a real secret. G11 (2026-06-24): warn loudly while the
+  // public default is in use so the "rainbow tables useless" claim is honest.
+  // ACTION: set IP_HASH_SALT in CF Pages env to a random value.
   const salt = env.IP_HASH_SALT || "default-salt-rotate-me";
+  if (!env.IP_HASH_SALT) {
+    console.warn("SECURITY: IP_HASH_SALT not set — using public default; IP hashes are NOT rainbow-table-resistant. Set the env var.");
+  }
   const ipHash = await sha256(ip + salt);
   const props = body.props ? JSON.stringify(body.props).slice(0, 500) : null;
 

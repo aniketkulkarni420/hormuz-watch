@@ -110,6 +110,44 @@ auto-feed; sourcing decision still open. The 185-vs-148 scraper reconciliation
 
 ---
 
+## 2026-06-24 — Batches E / F / G (cleanup, config, catch-all)
+
+Many items were already resolved by the May–June architecture migration; each
+was verified against current code before acting (stale-spec discipline).
+
+**Batch E (delete the rot) — done:** MyShipTracking ripped out of
+scrape_vessels_web.py (PORTS→2-tuples, VF-only, parse_mst_port deleted),
+confidence rebased on per-port success (was capped at "medium" once MST died);
+dead scraper functions deleted (yahoo_irr/xe_irr/yahoo_aed, TE/yahoo oil);
+migrate-secrets-to-pages.yml deleted; handoff_hormuzwatch.md + HANDOFF_2026-05-14.md
+deleted; index.html SIM_FLEET array + lerp/posOnPath/mkVIcon orphans removed.
+
+**Batch F (unify config) — done:** F1 transit baseline unified 22/42/140 → 42
+(verdict BASELINE_TRANSITS + snapshot default; matches regions.json + methodology
++ derivation; fixture-guarded). F4 stooq.js stale "cache disabled" comment →
+cf.cacheTtl. F2 already fixed (oilD.tier). F3 obsolete (watchdog/seismic crons
+removed, oil weekend-throttle gone). F5 stale-doc only — skipped.
+
+**Batch G (14-item bucket):**
+- DONE earlier by other sessions: G4 (Stooq→Yahoo cross-verify), G5 (tier0 oil
+  accepted via LIVE_TIERS), G8 (gfw cache key fixed), G12 (package.json, H1),
+  G13 (GDELT tone via bins), G3 (BDTI→StockQ propagates asOf).
+- DONE now: G6 (corrected record.js stale last_snapshot_ts comment), G7
+  (constant-time safeEqual in functions/_lib/auth.js, applied to diag/record/
+  bdti/brief — same accept set, zero lockout risk; ?token= query kept for
+  back-compat with a leak note), G9 (health GFW date window → trailing-30d
+  relative), G10 (subscribe.js Resend errors → reportError, not swallowed),
+  G11 (event.js loud warn when IP_HASH_SALT is the public default), G14
+  (verdict tile now shows confidence + N/total signals + anchor-review flag).
+- DEFERRED (need user/external): G1 (AIS key in client JS → needs a WS-proxy
+  Worker + key rotation on aisstream.io), G2 (EIA OPEC series swap → needs a
+  live EIA key to verify the right series ID; verdict already protected via MoM%),
+  G11-env (set IP_HASH_SALT in CF Pages).
+
+All verdict fixtures (28) green throughout; JS files node --check clean.
+
+---
+
 ## 2026-06-24 — Batch H3 DONE: rolling baselines (with a critical correction)
 
 Killed the frozen magic-constant anchors — but the planned naive "rolling
