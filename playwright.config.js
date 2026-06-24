@@ -5,6 +5,10 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
+  // Only Playwright UI specs. Excludes tests/verdict.test.mjs (a node:test unit
+  // suite run via `npm test` / tests.yml) — Playwright's default glob would pick
+  // up *.test.mjs and choke on its ESM import of verdict.js. (Fixed 2026-06-24.)
+  testMatch: '**/*.spec.js',
   timeout: 60_000,
   retries: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
