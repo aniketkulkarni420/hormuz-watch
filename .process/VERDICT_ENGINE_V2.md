@@ -129,7 +129,8 @@ the auditability *is* the product.
 | Phase | Work | Effort | Why this order |
 |-------|------|--------|----------------|
 | **H1 ✅ DONE** | Golden-fixture regression tests (#5) + extract verdict to pure module | ~0.5d | Protects everything else; lets v2 refactor proceed safely |
-| **H2 ✅ DONE** | Signal contract {level,direction,confidence,asOf} (#1) — additive, behaviour-locked (5000/5000 equivalent). Symmetry (#2) realized via the contract-driven de-escalation de-trigger; full signed-average deferred. | ~1.5d | The core correctness refactor; fixtures catch regressions |
+| **H2 ✅ DONE** | Signal contract {level,direction,confidence,asOf} (#1) — additive, behaviour-locked (5000/5000 equivalent). | ~1.5d | The core correctness refactor; fixtures catch regressions |
+| **H2.5 ✅ DONE** | Signed weighted average (#2, symmetric-by-construction). De-escalatory news/OFAC carry negative level → proportional offset; blunt -1-level de-trigger retired. Hard fundamentals dominate weak de-escalation. 25 fixtures; moves bounded ±1 level. | ~1d | Replaces ad-hoc de-trigger with principled symmetry |
 | **H3** | Rolling baselines (#4) | ~1d | Removes the frozen-anchor failure mode |
 | **H4** | Regime state machine (#3) | ~2d | Larger; adds memory/hysteresis once contract is stable |
 | **H5** | Explainability surfacing (#6) | ~0.5d | UI/payload polish on top of the new structure |

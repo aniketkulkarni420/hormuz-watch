@@ -62,16 +62,11 @@ export function newsDirection(snapshot) {
   return 0;
 }
 
-function signalDirection(key, level, snapshot) {
-  if (level == null) return 0;
-  if (key === "news") return newsDirection(snapshot);
-  if (key === "ofac") {
-    const nd = snapshot.ofac_net_designations_30d;
-    if (nd != null && isFinite(nd)) return nd < 0 ? -1 : (nd > 0 ? +1 : 0);
-    return level > 0 ? +1 : 0;
-  }
-  // Magnitude-only signals: escalatory when they carry any level, else neutral.
-  return level > 0 ? +1 : 0;
+function signalDirection(level) {
+  // H2.5: signed `level` now carries the sign itself (news/OFAC can be < 0);
+  // direction is simply its sign. Magnitude-only signals are ≥ 0 → +1/0.
+  if (level == null || level === 0) return 0;
+  return level > 0 ? +1 : -1;
 }
 
 export function scoreTransits(t, baseline) {
@@ -148,18 +143,20 @@ export function scoreBdti(bdti, wow) {
 // ─── NEW SCORERS (2026-05-14) ────────────────────────────────────────────
 export function scoreOfac(netDesignations, totalActions) {
   // 2026-06-23: score NET designations (designations − waivers), not raw
-  // action volume. A wave of sanctions WAIVERS used to score as rising
-  // pressure — inverting the signal during a thaw. When the direction split
-  // is unavailable (older payloads), fall back to total actions.
+  // action volume. When the direction split is unavailable (older payloads),
+  // fall back to total actions.
+  // H2.5 (2026-06-24): SIGNED. Net designations > 0 → positive (escalation
+  // pressure, same magnitudes as before). Net < 0 (waiver-heavy thaw) →
+  // NEGATIVE, so unwinding sanctions actively offsets risk in the weighted
+  // average rather than just scoring 0. Escalation side is unchanged.
   const v = (netDesignations != null && isFinite(netDesignations))
     ? netDesignations
     : (isFinite(totalActions) ? totalActions : null);
   if (v == null) return null;
-  if (v <= 0) return 0;       // net de-escalatory or neutral
-  if (v >= 10) return 4;
-  if (v >= 6) return 3;
-  if (v >= 3) return 2;
-  return 1;
+  if (v === 0) return 0;
+  const a = Math.abs(v);
+  const mag = a >= 10 ? 4 : a >= 6 ? 3 : a >= 3 ? 2 : 1;
+  return v < 0 ? -mag : mag;
 }
 export function scoreCurrency(spread) {
   if (spread == null || !isFinite(spread)) return null;
@@ -170,31 +167,32 @@ export function scoreCurrency(spread) {
   return 0;
 }
 export function scoreNews(count24h, netSentiment) {
-  // 2026-06-23 DIRECTION-AWARE rewrite. The old scorer was pure VOLUME: 59
-  // headlines scored 3 whether they were about a tanker war or a peace deal.
-  // News volume spikes during de-escalation too — so a US-Iran rapprochement
-  // (sanctions waivers, funds unfrozen, talks) lit this up like an escalation.
-  // Now: volume sets the ceiling (a quiet news day can't be a crisis), but
-  // DIRECTION sets the actual level.
+  // 2026-06-23 DIRECTION-AWARE / 2026-06-24 H2.5 SIGNED. Volume sets the
+  // MAGNITUDE (a quiet news day can't be a crisis); net sentiment sets the
+  // SIGN. Returns a signed effective level in [-4, +4]:
+  //   strongly escalating  (net ≥ +0.33) → +ceiling  (adds risk; same as H2)
+  //   strongly de-escalating (net ≤ -0.33) → -ceiling (OFFSETS risk; was 0 in H2)
+  //   neutral (-0.33..+0.33) → linear through 0
+  // The escalation half is IDENTICAL to H2 — only the de-escalation half moves
+  // (0 → negative), so war/blockade verdicts are unchanged while a thaw now
+  // pulls the weighted average down instead of merely not contributing.
   if (count24h == null || !isFinite(count24h)) return null;
-  // Volume ceiling — how much news attention the strait is getting.
   let ceiling;
   if (count24h >= 50) ceiling = 4;
   else if (count24h >= 25) ceiling = 3;
   else if (count24h >= 10) ceiling = 2;
   else if (count24h >= 3) ceiling = 1;
   else ceiling = 0;
-  // No direction data → fall back to the old volume-only behaviour.
-  if (netSentiment == null || !isFinite(netSentiment)) return ceiling;
-  // Direction maps the [-1,+1] net sentiment onto the [0, ceiling] range.
-  //   strongly de-escalating (≤ -0.33) → 0 (a peace surge is NOT risk)
-  //   neutral                          → ~half ceiling (background tension)
-  //   strongly escalating  (≥ +0.33)   → full ceiling
-  let frac;
-  if (netSentiment <= -0.33) frac = 0;
-  else if (netSentiment >= 0.33) frac = 1;
-  else frac = 0.5 + (netSentiment / 0.33) * 0.5;   // -0.33..0.33 → 0..1 around 0.5
-  return Math.round(ceiling * frac);
+  // H2.5 SIGNED & SYMMETRIC. Strong escalation (net ≥ +0.33) → +ceiling
+  // (IDENTICAL to H2 — real escalation verdicts don't move). Strong
+  // de-escalation (net ≤ -0.33) → -ceiling (was 0; a thaw now OFFSETS risk).
+  // The neutral band maps linearly THROUGH ZERO, so genuinely neutral news
+  // contributes ~0 — H2's "neutral = +half-ceiling background tension" is
+  // dropped as an always-on upward bias that inflated the verdict.
+  if (netSentiment == null || !isFinite(netSentiment)) return Math.round(ceiling * 0.5); // unknown direction → mild caution
+  if (netSentiment <= -0.33) return -ceiling;
+  if (netSentiment >= 0.33) return ceiling;
+  return Math.round(ceiling * (netSentiment / 0.33));   // -0.33..+0.33 → -ceiling..+ceiling through 0
 }
 export function scoreInventory(sprWow) {
   if (sprWow == null || !isFinite(sprWow)) return null;
@@ -330,27 +328,19 @@ export function computeOverrides(snapshot) {
     triggers.push({ id: "ukmto", reason: "UKMTO feed unavailable", fires: false });
   }
 
-  // ── De-escalation DE-TRIGGER (2026-06-23) — the symmetric counterpart ──────
-  // Every trigger above can only push the verdict UP. That asymmetry is how a
-  // clear thaw (sanctions waivers, $12B unfrozen, successful talks) still read
-  // as HIGH: nothing could pull it down. This trigger pulls the verdict DOWN
-  // one level when news is decisively de-escalating AND no hard conflict signal
-  // contradicts it (no UKMTO attack in 72h, war premium not extreme). A real
-  // attack always wins — de-escalation chatter must never mask live hostilities.
-  const ukmtoFired = triggers.some(t => t.id === "ukmto" && t.fires);
-  const bpDe = snapshot.brent_price;
-  const premDe = (isFinite(bpDe) && PREWAR_BRENT > 0) ? (bpDe - PREWAR_BRENT) / PREWAR_BRENT * 100 : 0;
-  if (newsDeescalating && !ukmtoFired && premDe < 25) {
+  // ── De-escalation (2026-06-24, H2.5) ───────────────────────────────────────
+  // The blunt -1-level de-trigger (2026-06-23) is RETIRED: the weighted average
+  // is now symmetric by construction (de-escalatory news + OFAC waivers carry
+  // NEGATIVE level, so a thaw pulls the structural score down proportionally —
+  // a graduated offset, not an all-or-nothing step). We keep an INFORMATIONAL
+  // (non-acting) marker so the UI can still say "news de-escalating" without it
+  // moving the band a second time. A real UKMTO attack still wins via its own
+  // +level trigger, which outweighs the negative news contribution.
+  if (newsDeescalating) {
     triggers.push({
       id: "deescalation",
-      reason: "News decisively de-escalating + no active UKMTO attack + war premium contained → -1 level",
-      fires: true, delevel: true,
-    });
-  } else if (newsDeescalating && (ukmtoFired || premDe >= 25)) {
-    triggers.push({
-      id: "deescalation",
-      reason: "News de-escalating but a hard conflict signal contradicts it — not applied",
-      fires: false, delevel: true,
+      reason: "News de-escalating — already reflected as a negative contribution in the structural score",
+      fires: false, informational: true,
     });
   }
 
@@ -358,9 +348,11 @@ export function computeOverrides(snapshot) {
 }
 
 export function applyOverrides(baseVerdict, triggers) {
-  // Escalation triggers add levels; the de-escalation de-trigger subtracts one.
-  const firedCount = triggers.filter(t => t.fires && !t.delevel).length;
-  const delevelCount = triggers.filter(t => t.fires && t.delevel).length;
+  // Escalation triggers add levels. De-escalation is no longer a -level step
+  // (H2.5): it lives in the symmetric weighted average as a negative
+  // contribution, so there is nothing to subtract here. `informational`
+  // triggers never move the band.
+  const firedCount = triggers.filter(t => t.fires && !t.informational).length;
   const levels = ["NORMAL", "ELEVATED", "HIGH", "CRITICAL"];
   let idx = levels.indexOf(baseVerdict);
   if (idx < 0) idx = 0;
@@ -368,8 +360,6 @@ export function applyOverrides(baseVerdict, triggers) {
   // uncapped stacking pegs the scale at CRITICAL and destroys its meaning.
   // CRITICAL should require a HIGH structural base plus corroboration.
   idx = idx + Math.min(firedCount, 2);
-  // De-escalation pulls down one level (2026-06-23), floored at NORMAL.
-  idx = idx - Math.min(delevelCount, 1);
   idx = Math.max(0, Math.min(idx, levels.length - 1));
   return levels[idx];
 }
@@ -445,7 +435,7 @@ export function computeVerdict(snapshot) {
     const ageSec = ageOf[k];
     signals[k] = {
       level: lvl,
-      direction: signalDirection(k, lvl, snapshot),
+      direction: signalDirection(lvl),
       confidence: lvl == null ? 0 : freshnessConfidence(k, ageSec),
       asOf: (ageSec != null && isFinite(ageSec)) ? nowSec - ageSec : null,
     };
@@ -475,6 +465,10 @@ export function computeVerdict(snapshot) {
                    : (used < 0.8 || usedCount < 7) ? "medium"
                    : "high";
 
+  // H2.5: `weighted` is now SIGNED (range ~ -4..+4). A net-negative score means
+  // de-escalatory signals outweigh escalatory ones → NORMAL (there is no band
+  // below NORMAL; the negative value's job is to offset, not to create a
+  // "calmer than calm" tier). Escalation thresholds are unchanged.
   const structural = weighted >= 3.0 ? "CRITICAL"
                    : weighted >= 2.0 ? "HIGH"
                    : weighted >= 1.0 ? "ELEVATED"

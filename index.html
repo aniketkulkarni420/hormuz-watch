@@ -5513,18 +5513,21 @@ function _renderTrigger(t){
              '<div class="verdict-trigger">' + (t.reason || "—") + firedTxt + '</div></div>';
   return html;
 }
-// Build one driver-bar row for the verdict v2 layout. Bar width = signal
-// level (0–4 → 0–100%). Right-column value = weight × signal (the actual
-// contribution this component is making to the score right now).
+// Build one driver-bar row for the verdict v2 layout. Bar width = |signal
+// level| (0–4 → 0–100%). Right-column value = weight × signal (the actual
+// contribution to the score). H2.5: `input` can be NEGATIVE (de-escalatory
+// news/OFAC offsetting risk) — render those green with a "−" so the de-escalation
+// reads clearly instead of producing a broken/zero-width bar.
 function _v2Row(c){
-  var pct = Math.max(0, Math.min(100, Math.round((c.input / 4) * 100)));
-  // Colour the bar by the signal LEVEL, not the weight — visually consistent
-  // with the dot-coding used elsewhere.
-  var fillColor = c.input >= 3 ? "#ff6b35" : c.input >= 2 ? "#f09014" : c.input >= 1 ? "#38aaff" : "#627a95";
+  var mag = Math.abs(c.input);
+  var pct = Math.max(0, Math.min(100, Math.round((mag / 4) * 100)));
+  var fillColor = c.input < 0 ? "#1dd47e"               // de-escalatory → green
+    : c.input >= 3 ? "#ff6b35" : c.input >= 2 ? "#f09014" : c.input >= 1 ? "#38aaff" : "#627a95";
+  var val = (c.contribution >= 0 ? "" : "−") + Math.abs(c.contribution).toFixed(2);
   return '<div class="v2-row">'
     + '<div class="v2-row-label">'+c.name+'</div>'
     + '<div class="v2-row-bar"><div class="v2-row-fill" style="width:'+pct+'%;background:'+fillColor+'"></div></div>'
-    + '<div class="v2-row-val">'+c.contribution.toFixed(2)+'</div></div>';
+    + '<div class="v2-row-val">'+val+'</div></div>';
 }
 
 function renderVerdictBlock(v){

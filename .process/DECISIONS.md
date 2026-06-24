@@ -110,6 +110,40 @@ auto-feed; sourcing decision still open. The 185-vs-148 scraper reconciliation
 
 ---
 
+## 2026-06-24 — Batch H2.5 DONE: signed weighted average (symmetric by construction)
+
+Replaced the blunt -1-level de-escalation DE-TRIGGER with a genuinely signed
+weighted average. De-escalatory signals now carry NEGATIVE level and offset risk
+PROPORTIONALLY in the structural score, instead of an all-or-nothing step.
+
+- `scoreNews`: SIGNED & symmetric. net ≥ +0.33 → +ceiling (IDENTICAL to H2 —
+  real escalation verdicts don't move). net ≤ -0.33 → -ceiling (was 0). Neutral
+  band maps linearly through 0 (H2's "+half-ceiling background tension" dropped
+  as an always-on upward bias; unknown-direction news 4→2, also less alarmist).
+- `scoreOfac`: SIGNED. net designations < 0 (waiver wave) → negative (offsets);
+  > 0 unchanged from H2.
+- De-escalation de-trigger RETIRED → kept as an `informational` (non-acting)
+  marker. `applyOverrides` no longer subtracts levels.
+- `signalDirection` derives sign from the (now signed) level.
+- `index.html _v2Row`: renders negative contributions green with "−" (was
+  0–4 only → would break on negative input).
+
+**Design call (flagged to user):** HARD fundamentals DOMINATE weak de-escalation.
+When oil/BDTI/tone are severe, a few peace headlines only partially offset (stays
+HIGH+) — soft news can't mask a hard market crisis. The original complaint case
+(weak fundamentals: Brent +8%, structural 0.36 + strong de-escalation) still
+correctly → ELEVATED via floor. Fixtures 2 vs 24 encode both sides.
+
+**Verified:** 25 fixtures pass. Move analysis vs pre-H2.5 (12k random inputs):
+all moves bounded to ±1 level; strong-escalation (net ≥ +0.33) news contribution
+unchanged; UP moves are the de-trigger→proportional transition (weak
+de-escalation no longer over-credited a full level). Live data → ELEVATED
+(structural 0.36, news -4, ofac +2), unchanged headline.
+
+Next: H3 (rolling baselines).
+
+---
+
 ## 2026-06-23 — Batch H2 DONE: typed signal contract (additive, behaviour-locked)
 
 Second phase of Verdict Engine v2. Introduced the per-signal contract

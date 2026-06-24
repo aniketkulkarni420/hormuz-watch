@@ -60,7 +60,13 @@ test("2 · de-escalation thaw with residual premium → ELEVATED (not HIGH)", ()
     irr_spread_pct: 28,
   }));
   assert.equal(r.verdict, "ELEVATED");
-  assert.ok(firedIds(r).includes("deescalation"), "de-escalation de-trigger should fire");
+  // H2.5: de-escalation is now a NEGATIVE contribution (not a -level trigger).
+  // The thaw drives the structural score negative; the residual-risk floor
+  // (Brent +8% / BDTI > 1800) holds the verdict at ELEVATED.
+  assert.ok(r.structural_score < 0, "de-escalation should push structural score negative");
+  assert.equal(r.residual_risk_floor, true, "floor should hold ELEVATED");
+  assert.equal(r.stage1_signals.news.direction, -1);
+  assert.ok(r.stage1_inputs.news < 0, "de-escalatory news contributes negatively");
   assert.ok(!firedIds(r).includes("news"), "news volume trigger must NOT fire on de-escalation");
 });
 
@@ -93,11 +99,14 @@ test("5 · UKMTO Hormuz incident → escalated above baseline", () => {
   assert.ok(["ELEVATED", "HIGH", "CRITICAL"].includes(r.verdict), `expected raised, got ${r.verdict}`);
 });
 
-// ── 6. High news VOLUME but de-escalatory → volume must NOT raise verdict ────
-test("6 · 60 de-escalatory headlines → news score 0, volume trigger idle", () => {
+// ── 6. High news VOLUME but de-escalatory → NEGATIVE (offsets), never raises ──
+test("6 · 60 de-escalatory headlines → news score negative, volume trigger idle", () => {
   const r = computeVerdict(fx({ news_count_24h: 60, news_sentiment: "de-escalating", news_net_sentiment: -0.8 }));
-  assert.equal(r.stage1_inputs.news, 0, "de-escalatory news scores 0 regardless of volume");
+  // H2.5: de-escalatory high-volume news is a strong NEGATIVE contribution
+  // (offsets risk), not 0. It can never raise the verdict.
+  assert.ok(r.stage1_inputs.news < 0, "de-escalatory news offsets (negative), regardless of volume");
   assert.ok(!firedIds(r).includes("news"));
+  assert.equal(r.verdict, "NORMAL");
 });
 
 // ── 7. High news VOLUME and escalatory → volume trigger fires ───────────────
@@ -107,10 +116,12 @@ test("7 · 60 escalatory headlines → news volume trigger fires", () => {
   assert.equal(r.stage1_inputs.news, 4, "escalatory high-volume news → full ceiling");
 });
 
-// ── 8. OFAC waiver wave (net negative) → OFAC score 0 ───────────────────────
-test("8 · OFAC waiver-heavy (net -3) → score 0", () => {
+// ── 8. OFAC waiver wave (net negative) → OFAC score NEGATIVE (offsets) ───────
+test("8 · OFAC waiver-heavy (net -3) → score negative", () => {
   const r = computeVerdict(fx({ ofac_iran_actions_30d: 4, ofac_net_designations_30d: -3 }));
-  assert.equal(r.stage1_inputs.ofac, 0, "net de-escalatory OFAC must not score as pressure");
+  // H2.5: a waiver wave is de-escalation — it OFFSETS risk (negative), not 0.
+  assert.ok(r.stage1_inputs.ofac < 0, "net de-escalatory OFAC offsets risk (negative)");
+  assert.equal(r.stage1_signals.ofac.direction, -1);
 });
 
 // ── 9. OFAC fresh designation (<48h) → OFAC trigger fires ───────────────────
@@ -239,4 +250,56 @@ test("20 · confidence reflects presence + freshness", () => {
   assert.equal(fresh.stage1_signals.news.confidence, 1, "fresh news → confidence 1");
   const stale = computeVerdict(fx({ news_count_24h: 20, news_net_sentiment: 0, news_age_sec: 5400 * 4 }));
   assert.ok(stale.stage1_signals.news.confidence <= 0.3, "very stale news → low confidence");
+});
+
+// ─── H2.5 signed-average fixtures (2026-06-24) ──────────────────────────────
+
+// 21. Graduated offset: de-escalation PARTIALLY cancels escalation (the thing
+// the blunt -1-level de-trigger could not do). Same escalatory base, two news
+// directions → strictly lower structural score when news de-escalates.
+test("21 · de-escalation offsets escalation in the structural score", () => {
+  const escBase = { brent_price: 88, gdelt_neg_tone: 60, bdti: 2000, news_count_24h: 50 };
+  const withEsc = computeVerdict(fx({ ...escBase, news_sentiment: "escalating", news_net_sentiment: 0.8 }));
+  const withDe  = computeVerdict(fx({ ...escBase, news_sentiment: "de-escalating", news_net_sentiment: -0.8 }));
+  assert.ok(withDe.structural_score < withEsc.structural_score,
+    `de-escalation must lower the score: de=${withDe.structural_score} esc=${withEsc.structural_score}`);
+  // And the offset is graduated, not all-or-nothing: the de-escalation case is
+  // strictly below the escalation case by roughly 2×(news contribution).
+  assert.ok(withEsc.structural_score - withDe.structural_score > 0.3, "offset should be material");
+});
+
+// 22. De-escalation NEVER masks a live attack: UKMTO attack + de-escalating
+// news still escalates (the attack trigger outweighs the negative news).
+test("22 · UKMTO attack wins over de-escalating news", () => {
+  const r = computeVerdict(fx({
+    brent_price: 92, ukmto_latest_attack_ts: nowSec() - 5 * 3600,
+    news_count_24h: 55, news_sentiment: "de-escalating", news_net_sentiment: -1,
+  }));
+  assert.ok(firedIds(r).includes("ukmto"), "ukmto must fire");
+  assert.ok(["HIGH", "CRITICAL"].includes(r.verdict), `attack must not be masked, got ${r.verdict}`);
+});
+
+// 23. The retired de-trigger is now informational only (never moves the band).
+test("23 · deescalation marker is informational, not acting", () => {
+  const r = computeVerdict(fx({ news_count_24h: 50, news_sentiment: "de-escalating", news_net_sentiment: -1 }));
+  const de = r.stage2_triggers.find((t) => t.id === "deescalation");
+  assert.ok(de, "informational deescalation marker present");
+  assert.equal(de.fires, false, "must not fire / move the band");
+  assert.equal(de.informational, true);
+});
+
+// 24. Hard fundamentals DOMINATE weak de-escalation (the H2.5 design call):
+// severe oil + freight + tone with a few de-escalating headlines stays HIGH+ —
+// proportional offset means soft news can't mask a hard market crisis. Contrast
+// with fixture 2 (weak fundamentals + strong de-escalation → ELEVATED).
+test("24 · severe fundamentals + weak de-escalating news → not masked (HIGH+)", () => {
+  const r = computeVerdict(fx({
+    brent_price: 100,        // ~+39% premium → oil 3
+    bdti: 2600,              // → bdti 3
+    gdelt_neg_tone: 85,      // → events 4
+    irr_spread_pct: 180,     // → currency 3
+    news_count_24h: 5, news_sentiment: "de-escalating", news_net_sentiment: -0.5,  // weak/low-volume
+  }));
+  assert.ok(["HIGH", "CRITICAL"].includes(r.verdict),
+    `hard fundamentals must dominate weak de-escalation, got ${r.verdict}`);
 });
