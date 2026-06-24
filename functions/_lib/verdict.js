@@ -546,3 +546,68 @@ export function computeVerdict(snapshot) {
     mode: transitsScore !== null ? "ais-primary" : "composite-fallback"
   };
 }
+
+// ─── H4 · Regime state machine (hysteresis) ─────────────────────────────────
+// The verdict above is INSTANTANEOUS (recomputed each run). On its own it can
+// flap band-to-band hour to hour, and it has no memory. computeRegime layers a
+// slower "regime" on top with ASYMMETRIC hysteresis:
+//   • Escalation is IMMEDIATE — a HIGH/CRITICAL read raises the regime at once
+//     (never dampen an emerging crisis).
+//   • De-escalation is DAMPED — the regime only steps down after the lower band
+//     has held continuously for `dwellSec` (default 12 h). A single calm hour
+//     during a war can't flip the regime to all-clear; a real UKMTO attack
+//     still wins instantly via the escalation path.
+// This kills whipsaw, gives the dashboard memory ("HIGH for 3 days, now
+// de-escalating — confirms in 9 h"), and is what H5 surfaces as the headline.
+//
+// PURE: pass `nowSec` in (no Date.now) so it's deterministic + testable.
+// `prev` is the persisted regime_state object (or null on cold start).
+const _BAND_RANK = { NORMAL: 0, ELEVATED: 1, HIGH: 2, CRITICAL: 3 };
+export const REGIME_DEESC_DWELL_SEC = 12 * 3600;
+
+export function computeRegime(prev, band, nowSec, dwellSec = REGIME_DEESC_DWELL_SEC) {
+  const rank = _BAND_RANK[band];
+  if (rank == null) {
+    // Unknown band — don't move the regime; echo prev or seed NORMAL.
+    return prev && _BAND_RANK[prev.regime] != null
+      ? { ...prev, instantaneous: band, trajectory: "stable", pending: null }
+      : { regime: "NORMAL", regime_since: nowSec, candidate: null, candidate_since: null, instantaneous: band, trajectory: "stable", pending: null };
+  }
+  // Cold start.
+  if (!prev || _BAND_RANK[prev.regime] == null) {
+    return { regime: band, regime_since: nowSec, candidate: null, candidate_since: null, instantaneous: band, trajectory: "stable", pending: null };
+  }
+  const regRank = _BAND_RANK[prev.regime];
+
+  // Escalation or unchanged → snap up immediately, clear any de-escalation timer.
+  if (rank >= regRank) {
+    return {
+      regime: band,
+      regime_since: rank > regRank ? nowSec : prev.regime_since,
+      candidate: null, candidate_since: null,
+      instantaneous: band,
+      trajectory: rank > regRank ? "escalating" : "stable",
+      pending: null,
+    };
+  }
+
+  // De-escalation → require the lower band to hold continuously for dwellSec.
+  // candidate_since is set when we FIRST drop below the regime and persists
+  // across further drops (sustained-below-regime clock); cleared only by a
+  // re-escalation (above branch) or a confirmed step-down (below).
+  const candidate_since = (prev.candidate == null) ? nowSec : prev.candidate_since;
+  const held = nowSec - candidate_since;
+  if (held >= dwellSec) {
+    return {
+      regime: band, regime_since: nowSec,
+      candidate: null, candidate_since: null,
+      instantaneous: band, trajectory: "de-escalating", pending: null,
+    };
+  }
+  return {
+    regime: prev.regime, regime_since: prev.regime_since,
+    candidate: band, candidate_since,
+    instantaneous: band, trajectory: "de-escalating",
+    pending: { to: band, dwell_needed_sec: dwellSec, dwell_so_far_sec: held },
+  };
+}

@@ -14,7 +14,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeVerdict } from "../functions/_lib/verdict.js";
+import { computeVerdict, computeRegime, REGIME_DEESC_DWELL_SEC } from "../functions/_lib/verdict.js";
 
 const nowSec = () => Math.floor(Date.now() / 1000);
 const hoursAgo = (h) => nowSec() - h * 3600;
@@ -339,4 +339,70 @@ test("24 · severe fundamentals + weak de-escalating news → not masked (HIGH+)
   }));
   assert.ok(["HIGH", "CRITICAL"].includes(r.verdict),
     `hard fundamentals must dominate weak de-escalation, got ${r.verdict}`);
+});
+
+// ─── H4 regime state-machine fixtures (2026-06-24) ──────────────────────────
+const HR = 3600;
+
+// 28. Cold start: regime seeds to the first band.
+test("28 · regime cold start seeds to the band", () => {
+  const r = computeRegime(null, "HIGH", 1000);
+  assert.equal(r.regime, "HIGH");
+  assert.equal(r.regime_since, 1000);
+  assert.equal(r.trajectory, "stable");
+});
+
+// 29. Escalation is IMMEDIATE — never dampen an emerging crisis.
+test("29 · escalation raises the regime at once", () => {
+  let s = computeRegime(null, "NORMAL", 0);
+  s = computeRegime(s, "CRITICAL", 100);
+  assert.equal(s.regime, "CRITICAL");
+  assert.equal(s.trajectory, "escalating");
+  assert.equal(s.pending, null);
+});
+
+// 30. De-escalation is DAMPED — regime holds until the lower band persists dwellSec.
+test("30 · de-escalation holds the regime until the dwell elapses", () => {
+  let s = computeRegime(null, "HIGH", 0);          // regime HIGH @0
+  s = computeRegime(s, "NORMAL", 1 * HR);          // drops — but only 0h held
+  assert.equal(s.regime, "HIGH", "regime must NOT drop immediately");
+  assert.equal(s.trajectory, "de-escalating");
+  assert.ok(s.pending && s.pending.to === "NORMAL");
+  // Still within dwell window (11h < 12h) → still HIGH.
+  s = computeRegime(s, "NORMAL", 11 * HR);
+  assert.equal(s.regime, "HIGH");
+  // Past dwell (12h+) → confirmed step down.
+  s = computeRegime(s, "NORMAL", 13 * HR);
+  assert.equal(s.regime, "NORMAL", "regime steps down after sustained calm");
+  assert.equal(s.pending, null);
+});
+
+// 31. A blip back up RESETS the de-escalation clock (no premature all-clear).
+test("31 · re-escalation during the dwell resets the clock", () => {
+  let s = computeRegime(null, "HIGH", 0);
+  s = computeRegime(s, "NORMAL", 1 * HR);          // start de-escalating
+  s = computeRegime(s, "HIGH", 6 * HR);            // blip back to HIGH → snap up, clear timer
+  assert.equal(s.regime, "HIGH");
+  assert.equal(s.candidate, null, "de-escalation timer cleared by re-escalation");
+  // Drops again at 7h; dwell restarts → still HIGH at 7+11=18h.
+  s = computeRegime(s, "NORMAL", 7 * HR);
+  s = computeRegime(s, "NORMAL", 18 * HR);
+  assert.equal(s.regime, "HIGH", "clock restarted at the blip, so 11h < 12h dwell");
+  s = computeRegime(s, "NORMAL", 20 * HR);          // 13h since restart → confirms
+  assert.equal(s.regime, "NORMAL");
+});
+
+// 32. A real attack during de-escalation wins instantly (escalation path).
+test("32 · escalation interrupts a pending de-escalation immediately", () => {
+  let s = computeRegime(null, "CRITICAL", 0);
+  s = computeRegime(s, "ELEVATED", 2 * HR);        // de-escalating, pending
+  assert.equal(s.regime, "CRITICAL");
+  s = computeRegime(s, "CRITICAL", 3 * HR);        // attack → instant
+  assert.equal(s.regime, "CRITICAL");
+  assert.equal(s.pending, null);
+});
+
+// 33. Default dwell is 12h.
+test("33 · default de-escalation dwell is 12h", () => {
+  assert.equal(REGIME_DEESC_DWELL_SEC, 12 * HR);
 });

@@ -23,7 +23,7 @@ import { safeEqual } from "../_lib/auth.js";
 // All per-signal scorers, override triggers, and the two-stage computeVerdict
 // live in functions/_lib/verdict.js (pure, no I/O) so they are unit-testable
 // in isolation — see tests/verdict.test.mjs. (Batch H1, 2026-06-23)
-import { computeVerdict } from "../_lib/verdict.js";
+import { computeVerdict, computeRegime } from "../_lib/verdict.js";
 
 export async function onRequestPost(ctx) {
   try {
@@ -260,8 +260,27 @@ async function _handleRecord({ request, env }) {
   const verdict = verdictResult.verdict;
   const now = Math.floor(Date.now() / 1000);
 
+  // ── H4 regime state machine (2026-06-24) ───────────────────────────────────
+  // Layer a hysteresis-smoothed "regime" over the instantaneous verdict:
+  // escalate immediately, de-escalate only after the lower band holds 12 h.
+  // Persisted in KV (regime_state) across runs. Best-effort — if KV is
+  // unavailable the dashboard simply falls back to the instantaneous verdict.
+  let regime = null;
+  if (env.OIL_KV) {
+    try {
+      const prevRaw = await env.OIL_KV.get("regime_state");
+      const prevRegime = prevRaw ? JSON.parse(prevRaw) : null;
+      regime = computeRegime(prevRegime, verdict, now);
+      await env.OIL_KV.put("regime_state", JSON.stringify(regime));
+    } catch (e) {
+      regime = null;   // non-fatal — verdict still ships
+    }
+  }
+
   const verdictPayload = {
     verdict,
+    regime,   // H4: { regime, regime_since, instantaneous, trajectory, pending }
+
     structural_verdict: verdictResult.structural_verdict,
     structural_score:   verdictResult.structural_score,
     stage1_inputs:      verdictResult.stage1_inputs,
