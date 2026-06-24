@@ -110,6 +110,35 @@ auto-feed; sourcing decision still open. The 185-vs-148 scraper reconciliation
 
 ---
 
+## 2026-06-24 — Reposition + backtest (#1) + signal rebalance (#2)
+
+After a devil's-advocate review, three moves:
+
+**Backtest (#1):** `scripts/backtest.mjs` + `/api/backtest` + `analysis/
+backtest_2026-06-24.md`. Findings (n=44 days, one event → directional only):
+verdict does NOT predict oil (it MEAN-REVERTS — high verdict → oil falls next),
+does NOT beat naive oil-watching for oil; the one positive is freight (BDTI),
+where the full composite pointed the right way (HIGH/CRITICAL → BDTI rises) and
+beat naive oil. Conclusion: the verdict is a COINCIDENT risk-state read, not a
+forecaster. Also: 10 of 13 signals were never persisted → record.js now stores
+the per-signal vector + confidence + regime in the D1 verdict column so future
+validation is possible (can't recover the past).
+
+**Reposition (honest framing):** index.html title/meta/OG → "Oil · Freight ·
+Sentiment Risk Monitor"; onboarding rewritten to lead with oil/freight/sentiment
+and state plainly "not a forecaster" + "live per-vessel tracking is degraded";
+"Live vessel feed" label → "Vessel feed (AIS)"; map gets an honest caption
+("Schematic context… NOT live per-vessel tracking, strait AIS degraded").
+
+**Signal rebalance (#2, quality grounds — backtest can only see oil/bdti/
+transits):** W_COMPOSITE + W_AIS — events (GDELT tone) weight → 0 (proven can't
+tell sanctions-on from -off; kept only as the gated war_tone override); aircraft
+0.13→0.05 (US/NATO posture, not Iranian threat); weather → 0; seismic → 0.02;
+freight (bdti) weighted UP (0.07→0.16 composite, the validated signal); news/
+ofac kept high. 34 fixtures still green (bands coarse; offset relationships hold).
+
+---
+
 ## 2026-06-24 — Batch H4 + H5 DONE: regime state machine + explainability (engine v2 COMPLETE)
 
 **H4 — regime state machine** (`computeRegime` in verdict.js, pure/tested):

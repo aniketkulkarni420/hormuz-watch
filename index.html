@@ -3,7 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HORMUZ WATCH</title>
+<title>Hormuz Watch — Oil, Freight & Sentiment Risk Monitor</title>
+<meta name="description" content="A coincident risk-state monitor for the Strait of Hormuz — reads the oil premium, tanker freight, sanctions and news flow. For equity analysts watching Indian OMCs and tanker stocks. Describes risk now; not a price forecaster. Live per-vessel tracking is degraded.">
+<meta property="og:title" content="Hormuz Watch — Oil, Freight & Sentiment Risk Monitor">
+<meta property="og:description" content="Coincident Strait-of-Hormuz risk read from oil premium, freight, sanctions and news. Not a forecaster; live vessel tracking degraded.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Hormuz Watch — Oil, Freight & Sentiment Risk Monitor">
+<meta name="twitter:description" content="Coincident Strait-of-Hormuz risk read from oil premium, freight, sanctions and news. Not a forecaster.">
+<!-- robots.txt no longer points crawlers at a vessel-tracking product; this is an oil/freight/sentiment monitor. -->
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://hormuz-watch-2.pages.dev/">
+
 <!-- Sentry error tracking (Loader Script — auto-init, no DSN exposed in code) -->
 <script src="https://js.sentry-cdn.com/07d90d9f0dd1a39a8f97458454dd542f.min.js" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -865,7 +876,7 @@ header{
   <div class="lpanel">
     <div class="ais-bar">
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <div class="ais-label2">Live vessel feed &mdash; Hormuz region</div>
+        <div class="ais-label2">Vessel feed (AIS) &mdash; Hormuz region</div>
         <div style="display:flex;align-items:center;gap:4px">
           <div class="ldot connecting" id="aisDot2"></div>
           <span id="aisLabel2" style="font-family:var(--mono);font-size:9px;color:var(--amber);letter-spacing:.08em">CONNECTING</span>
@@ -887,6 +898,14 @@ header{
   <!-- MAP -->
   <div class="mapwrap">
     <div id="map"></div>
+    <!-- Honest caption (2026-06-24 reposition): the map is a schematic context
+         view, NOT live vessel tracking — AIS through the strait is degraded. -->
+    <div style="position:absolute;top:8px;left:8px;z-index:900;background:rgba(7,9,14,.78);
+                border:1px solid var(--border2);border-radius:5px;padding:5px 9px;max-width:300px;
+                font-family:var(--mono);font-size:9px;line-height:1.45;color:var(--muted);pointer-events:none">
+      Schematic context — ports (by 24h activity), aircraft &amp; seismic when available.
+      <b style="color:var(--text)">Not live per-vessel tracking</b> (strait AIS degraded).
+    </div>
     <div class="layers" id="layerCtrl"></div>
     <div class="tiles">
       <button class="tbtn active" data-tile="dark">Dark</button>
@@ -5671,30 +5690,30 @@ setInterval(fetchVerdict, 5 * 60 * 1000); // every 5 min
   <div class="onboard-card">
     <div class="onboard-hex">⚓</div>
     <div class="onboard-title">HORMUZ WATCH</div>
-    <div class="onboard-sub">Multi-signal intelligence · Strait of Hormuz</div>
+    <div class="onboard-sub">Oil · Freight · Sentiment monitor — Strait of Hormuz</div>
     <div class="onboard-body">
-      A live dashboard for the chokepoint that moves 20% of the world's seaborne oil. Built for equity analysts watching Indian OMCs, tanker stocks, and Middle East tension as a macro signal.
+      A risk-state monitor for the chokepoint that moves ~20% of the world's seaborne oil. Built for equity analysts watching Indian OMCs, tanker stocks, and Middle East tension. It reads the <b>oil premium, tanker freight, sanctions, and news flow</b> to gauge the risk temperature <b>right now</b> — it is not a forecaster, and live per-vessel tracking is degraded (see below).
     </div>
     <div class="onboard-list">
       <div class="onboard-item">
-        <div class="onboard-icon">🚢</div>
-        <div class="onboard-item-text"><b>Port arrivals / 24h</b> — measured vessel arrivals at 9 Gulf ports (strait AIS is dark in wartime; arrivals are the honest flow proxy, in-port count alongside)</div>
-      </div>
-      <div class="onboard-item">
         <div class="onboard-icon">💵</div>
-        <div class="onboard-item-text"><b>Brent + WTI</b> — multi-source live futures with daily reference fallback. Lag clearly labeled when degraded.</div>
+        <div class="onboard-item-text"><b>Oil premium (Brent + WTI)</b> — multi-source live futures vs the pre-war anchor. The clearest read of how the market is pricing strait risk. Lag labeled when degraded.</div>
       </div>
       <div class="onboard-item">
-        <div class="onboard-icon">🛰</div>
-        <div class="onboard-item-text"><b>Dark traffic</b> — satellite-detected vessels operating without standard maritime broadcasts</div>
+        <div class="onboard-icon">🚢</div>
+        <div class="onboard-item-text"><b>Tanker freight (BDTI)</b> + Gulf port activity — the most Hormuz-specific signals. <b>Note:</b> live per-vessel AIS through the strait is dark (provider outage); port arrivals are the honest flow proxy, not real-time strait tracking.</div>
+      </div>
+      <div class="onboard-item">
+        <div class="onboard-icon">📰</div>
+        <div class="onboard-item-text"><b>Sentiment + sanctions</b> — direction-aware news (escalation vs de-escalation), OFAC designations vs waivers, and UKMTO incident reports.</div>
       </div>
       <div class="onboard-item">
         <div class="onboard-icon">📊</div>
-        <div class="onboard-item-text"><b>Conclusions</b> — verdict badges on every panel (NORMAL · ELEVATED · HIGH · CRITICAL) using research-backed thresholds</div>
+        <div class="onboard-item-text"><b>Risk verdict</b> — a coincident NORMAL · ELEVATED · HIGH · CRITICAL read with a smoothed regime + confidence. Describes the state now; it does not predict prices.</div>
       </div>
       <div class="onboard-item">
         <div class="onboard-icon">⚡</div>
-        <div class="onboard-item-text"><b>Health bar at the bottom</b> shows freshness of every signal. Real data, not stale numbers dressed as live.</div>
+        <div class="onboard-item-text"><b>Health bar at the bottom</b> shows freshness of every signal. Real data, clearly labeled — never stale numbers dressed as live.</div>
       </div>
     </div>
     <div class="onboard-cta">

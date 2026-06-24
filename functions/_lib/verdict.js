@@ -416,26 +416,31 @@ export function computeVerdict(snapshot) {
   const inventoryScore  = scoreInventory(snapshot.spr_wow_pct);
   const productionScore = scoreProduction(snapshot.opec_production_mbpd, snapshot.opec_production_mom_pct);
 
-  // AIS-primary weights (when AIS working — adds transits, reduces others proportionally)
-  // Composite-fallback weights (when AIS down — current state)
+  // ── Weights (#2 quality rebalance · 2026-06-24) ────────────────────────────
+  // After the backtest (analysis/backtest_2026-06-24.md): freight (BDTI) is the
+  // only signal with right-direction forward skill, oil is a coincident
+  // descriptor, and the non-oil Hormuz-specific signals (news/ofac/ukmto) carry
+  // what little forward value exists. On QUALITY grounds (backtest can only see
+  // oil/bdti/transits; the rest judged on the devil's-advocate audit):
+  //   • events (GDELT tone) → 0: proven unable to tell sanctions-on from -off.
+  //     Kept ONLY as the gated war_tone override (Stage 2), not a raw weight.
+  //   • aircraft 0.13→0.05: it counts US/NATO ADS-B callsigns, i.e. coalition
+  //     posture, not Iranian threat. Useful-ish, but never a headline driver.
+  //   • weather → 0: rough seas are an operational nuisance, not strait-closure
+  //     risk. seismic trimmed to 0.02 (kept tiny; mag-5.5 override still fires).
+  //   • freight (bdti) weighted UP (the validated signal); news/ofac kept high.
+  // The per-signal persistence added today will let a FUTURE rebalance be
+  // evidence-based instead of quality-judgement-based.
   const W_AIS = {
-    transits: 0.30, oil: 0.13, stocks: 0.09, bdti: 0.05,
-    aircraft: 0.09, events: 0.07, seismic: 0.02, weather: 0.02,
-    ofac: 0.07, currency: 0.04, news: 0.04, inventory: 0.04, production: 0.04
+    transits: 0.30, oil: 0.13, stocks: 0.07, bdti: 0.10,
+    aircraft: 0.03, events: 0, seismic: 0.02, weather: 0,
+    ofac: 0.07, currency: 0.04, news: 0.08, inventory: 0.04, production: 0.02
   };
   const W_COMPOSITE = {
-    // 2026-06-23 REBALANCE: GDELT neg-tone ("events") cut 0.18 → 0.07. Its tone
-    // is conflict-VOCABULARY, not direction — "U.S. waives Iran oil sanctions"
-    // scores as negative tone because "sanctions/Iran/oil" are conflict words,
-    // so it read a de-escalation as a crisis. The freed weight goes to the now
-    // direction-aware `news` signal (0.05 → 0.14), which is the most direct
-    // read of escalation-vs-de-escalation we hold while AIS is dark.
-    // (2026-06-10 had raised events to 0.18 during the active war; the war has
-    // since de-escalated and tone-without-direction became the top false driver.)
     transits: 0,
-    oil: 0.18, stocks: 0.08, bdti: 0.07,
-    aircraft: 0.13, events: 0.07, seismic: 0.03, weather: 0.03,
-    ofac: 0.10, currency: 0.06, news: 0.14, inventory: 0.05, production: 0.02
+    oil: 0.20, stocks: 0.09, bdti: 0.16,
+    aircraft: 0.05, events: 0, seismic: 0.02, weather: 0,
+    ofac: 0.11, currency: 0.07, news: 0.15, inventory: 0.06, production: 0.03
   };
   const weights = transitsScore !== null ? W_AIS : W_COMPOSITE;
 
