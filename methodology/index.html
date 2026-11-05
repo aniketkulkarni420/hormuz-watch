@@ -37,6 +37,15 @@ code{font-family:var(--mono);font-size:12px;background:var(--panel);padding:2px 
 .foot{margin-top:60px;padding-top:30px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--muted2);letter-spacing:.04em;text-align:center}
 a{color:var(--blue);text-decoration:none}
 a:hover{text-decoration:underline}
+/* 2026-11-05: tables were 476px wide at phone width and scrolled the page
+   sideways. Cells now wrap; anything still wider scrolls inside the table. */
+@media (max-width:600px){
+  .wrap{padding:40px 16px 60px}
+  h1{font-size:30px}
+  table{display:block;overflow-x:auto;max-width:100%;font-size:11px !important}
+  th,td{padding:8px 6px !important;overflow-wrap:anywhere}
+  td.metric{white-space:normal}
+}
 .tag{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:.06em;margin-left:6px;text-transform:uppercase;font-weight:700}
 .tag.live{color:var(--green);background:rgba(29,212,126,.1);border:1px solid rgba(29,212,126,.25)}
 .tag.lag{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.3)}
@@ -66,7 +75,7 @@ a:hover{text-decoration:underline}
 <p><b>Accuracy first, recency second, inference third.</b> Every metric on the dashboard either comes from a verified live data feed, or is explicitly labelled as a reference/baseline. Where a feed has a known lag, the dashboard says so.</p>
 <p>We avoid trade calls. The dashboard is an <em>intelligence aggregator</em>, not a recommendation engine. Verdict labels like "Long FRO" reference the historical playbook in a closure scenario, not present advice.</p>
 <div class="callout">
-<b>Honest source ranking:</b> when a feed has multiple tiers (e.g. live commodity → daily reference), the dashboard's source badge tells you which tier is active. If you see <code>EIA DAILY</code> instead of <code>LIVE FEED</code>, the price is up to 2 trading days stale by design — not pretending to be live.
+<b>Honest source ranking:</b> when a feed has multiple tiers (e.g. live commodity → daily reference), the dashboard's source badge tells you which tier is active. If you see <code>EIA DAILY</code> instead of <code>LIVE FEED</code>, the price is up to 2 trading days stale by design - not pretending to be live.
 </div>
 </section>
 
@@ -76,8 +85,8 @@ a:hover{text-decoration:underline}
 <thead><tr><th>Signal</th><th>Used for</th><th>Refresh</th><th>Status</th></tr></thead>
 <tbody>
 <tr><td>Live vessel-tracking feed (AIS)</td><td>Per-vessel positions + gate-crossing counts in the Hormuz region</td><td>Streaming when available</td><td><span class="tag disabled">degraded</span></td></tr>
-<tr><td>Port-level vessel activity</td><td>Per-port arrival/departure counts — fallback when AIS is degraded</td><td>~4 hours (web scrape)</td><td><span class="tag lag">fallback</span></td></tr>
-<tr><td>Commodity quotes</td><td>Brent + WTI front-month, intraday — cross-verified across providers</td><td>15 min during market hours</td><td><span class="tag live">live</span></td></tr>
+<tr><td>Port-level vessel activity</td><td>Per-port arrival/departure counts - fallback when AIS is degraded</td><td>~4 hours (web scrape)</td><td><span class="tag lag">fallback</span></td></tr>
+<tr><td>Commodity quotes</td><td>Brent + WTI front-month, intraday - cross-verified across providers</td><td>15 min during market hours</td><td><span class="tag live">live</span></td></tr>
 <tr><td>Daily reference oil prices</td><td>Anchor when intraday feed is degraded; 4-week sparkline history</td><td>Daily publish, 1-2 day lag</td><td><span class="tag lag">reference</span></td></tr>
 <tr><td>Satellite vessel detection</td><td>Dark-vessel encounter + loitering event counts</td><td>~4 hours</td><td><span class="tag live">live</span></td></tr>
 <tr><td>Freight index (Baltic Dirty Tanker)</td><td>BDTI level + weekly change as fear-premium signal</td><td>Weekly</td><td><span class="tag manual">weekly</span></td></tr>
@@ -93,7 +102,7 @@ a:hover{text-decoration:underline}
 
 <h3>Transits / 24h</h3>
 <p>A <b>gate-crossing count</b>, not a snapshot. We define a virtual line at the strait's narrowest point. Every time a unique vessel crosses this line in either direction within the valid latitude band, it counts as one transit. Counter rolls forward 24 hours.</p>
-<p>Why this matters: pre-existing dashboards typically count "vessels in a bounding box" — which includes anchored vessels at nearby ports as "transits." Those vessels aren't transiting anything. Our metric only counts actual east↔west movement across the chokepoint.</p>
+<p>Why this matters: pre-existing dashboards typically count "vessels in a bounding box" - which includes anchored vessels at nearby ports as "transits." Those vessels aren't transiting anything. Our metric only counts actual east↔west movement across the chokepoint.</p>
 <p><b>Pre-crisis baseline:</b> 42 transits/day (derived from published 21M bbl/day throughput at ~500K bbl/vessel average). The vessel traffic trend chart compares today's 24h count to this baseline.</p>
 
 <h3>Vessel snapshot categories</h3>
@@ -114,14 +123,14 @@ a:hover{text-decoration:underline}
 <h3>Brent and WTI prices</h3>
 <p>The dashboard reads from a tiered source chain. The top working tier is always used; failures degrade silently to the next:</p>
 <ol>
-<li><b>Live commodity feed</b> — refreshed continuously during market hours</li>
-<li><b>Live ETF proxy</b> — applied to a daily reference level when primary degrades</li>
-<li><b>Daily reference</b> — accurate, 1-2 trading day lag</li>
+<li><b>Live commodity feed</b> - refreshed continuously during market hours</li>
+<li><b>Live ETF proxy</b> - applied to a daily reference level when primary degrades</li>
+<li><b>Daily reference</b> - accurate, 1-2 trading day lag</li>
 </ol>
 <p>The pulse tag at the top of the Market Pulse panel always names the current active tier.</p>
 
 <h3>Dark traffic / suspect vessels</h3>
-<p>The intended metric is a ratio — <code>satellite_events / (live_AIS_in_corridor + satellite_events)</code> — but it is <b>not currently computed as a percentage</b>: the live AIS denominator is unavailable during the provider outage. While AIS is degraded, the dashboard surfaces the <b>raw satellite-detected encounter and loitering event counts</b> (vessels appearing in imagery without corresponding AIS broadcasts) rather than a synthetic ratio.</p>
+<p>The intended metric is a ratio - <code>satellite_events / (live_AIS_in_corridor + satellite_events)</code> - but it is <b>not currently computed as a percentage</b>: the live AIS denominator is unavailable during the provider outage. While AIS is degraded, the dashboard surfaces the <b>raw satellite-detected encounter and loitering event counts</b> (vessels appearing in imagery without corresponding AIS broadcasts) rather than a synthetic ratio.</p>
 <p>The percentage form returns when the AIS feed recovers. Band cut-points (normal / elevated / high / critical) are held in the private threshold config and calibrated against historical enforcement spikes.</p>
 
 <h3>Freight index (BDTI)</h3>
@@ -134,7 +143,7 @@ a:hover{text-decoration:underline}
 
 <section id="thresholds">
 <h2>Verdict thresholds</h2>
-<p>Every conclusion ("NORMAL", "ELEVATED", "HIGH", "CRITICAL") uses thresholds informed by published academic research, operational baselines from historical chokepoint events, and standard maritime analytical frameworks. <b>Calibration constants live in <code>config/verdict_thresholds.json</code></b> and are recalibrated quarterly from the 2019–2024 disruption-episode window. The "crisis-average transit days" anchor (18 d) is one such constant, drawn from the same window and refreshed at each recalibration cycle.</p>
+<p>Every conclusion ("NORMAL", "ELEVATED", "HIGH", "CRITICAL") uses thresholds informed by published academic research, operational baselines from historical chokepoint events, and standard maritime analytical frameworks. <b>Calibration constants live in <code>config/verdict_thresholds.json</code></b> and are recalibrated quarterly from the 2019-2024 disruption-episode window. The "crisis-average transit days" anchor (18 d) is one such constant, drawn from the same window and refreshed at each recalibration cycle.</p>
 <ul>
 <li><b>Traffic vs baseline:</b> tightened versus general chokepoint volatility (Hormuz is steadier than open shipping); calibrated to documented crisis-period drops.</li>
 <li><b>Dark traffic %:</b> aligned with shadow-fleet research and enforcement event analysis.</li>
@@ -179,7 +188,7 @@ switches to a composite-signal mode. The weighting and source list:</p>
 </table>
 <p>Each signal is scored 0 (calm) to 4 (critical). The weighted score maps to a
 verdict band: &gt; 3 CRITICAL, &gt; 2 HIGH, &gt; 1 ELEVATED, otherwise NORMAL.
-Missing signals do not bias the score downward — the active weights are
+Missing signals do not bias the score downward - the active weights are
 re-normalised across whichever sources are alive.</p>
 <p><b>Why this exists:</b> the primary AIS feed has been degraded for multiple
 weeks. Rather than show zeros, the dashboard surfaces an honest composite
@@ -194,8 +203,8 @@ sustained disruption, not point events.</p>
 <h2>What we don't claim</h2>
 <ul>
 <li>We don't claim our verdicts predict equity moves with statistical certainty. They reflect industry-standard interpretation frameworks.</li>
-<li>We don't claim live conflict-event data — that tile is hidden until the integration is complete.</li>
-<li>We don't claim every vessel in the bounding box is transiting Hormuz — the 24h gate count and the snapshot categories are separately labeled.</li>
+<li>We don't claim live conflict-event data - that tile is hidden until the integration is complete.</li>
+<li>We don't claim every vessel in the bounding box is transiting Hormuz - the 24h gate count and the snapshot categories are separately labeled.</li>
 <li>We don't make trade calls. This is intelligence + interpretation, not financial advice.</li>
 </ul>
 </section>
@@ -211,7 +220,7 @@ sustained disruption, not point events.</p>
 </div>
 </div>
 <script>
-// FIX #8 — feature analytics page-load ping
+// FIX #8 - feature analytics page-load ping
 try {
   fetch("/api/event", {
     method: "POST",

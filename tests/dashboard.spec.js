@@ -21,11 +21,16 @@ test.describe('dashboard smoke', () => {
   test('vessel transit count is visible', async ({ page }) => {
     const el = page.locator('#mvTransit24h');
     await expect(el).toBeVisible({ timeout: 30_000 });
-    // Any value (including 0) is acceptable — we just need it rendered
-    await expect.poll(async () => (await el.textContent() || '').trim(), {
+    // Any number (including 0) is acceptable. Since 2026-11-05 a stopped
+    // vessel feed renders "-" with a "FEED PAUSED" badge instead of a count.
+    await expect.poll(async () => {
+      const v = (await el.textContent() || '').trim();
+      const badge = (await page.locator('#moveSrc').textContent() || '').trim();
+      return /\d/.test(v) || (v === '-' && /PAUSED/.test(badge)) ? 'ok' : v + ' / ' + badge;
+    }, {
       timeout: 30_000,
-      message: 'mvTransit24h never received a value',
-    }).toMatch(/\d/);
+      message: 'mvTransit24h never received a value or a paused state',
+    }).toBe('ok');
   });
 
   test('verdict badge appears', async ({ page }, testInfo) => {
