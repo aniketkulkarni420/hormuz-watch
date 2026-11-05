@@ -75,3 +75,14 @@ test("integrity: PortWatch data 6 days old is ok with a positive age", async () 
   assert.equal(d.feeds.portwatch.status, "ok");
   assert.equal(d.feeds.portwatch.ageMin, 60);
 });
+
+test("integrity: BDTI age counts from the publish date", async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const asOf = new Date((now - 90 * 86400) * 1000).toISOString().slice(0, 10);
+  const r = await integrityGet({ env: { OIL_KV: kvWith({
+    bdti_latest: { value: 2631, asOf, ts: now - 86 * 86400 },
+  }) } });
+  const d = await r.json();
+  assert.equal(d.feeds.bdti.status, "stale");
+  assert.equal(d.feeds.bdti.reason, "90d old");
+});

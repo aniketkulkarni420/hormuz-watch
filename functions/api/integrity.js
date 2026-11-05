@@ -61,7 +61,11 @@ export async function onRequestGet({ env }) {
   (() => {
     const b = bdtiLatest;
     if (!b || !b.value) return feeds.bdti = F("dead", "none", "no bdti_latest");
-    const ageDays = b.ts ? Math.floor((now - b.ts) / 86400) : null;
+    // 2026-11-05: age from the PUBLISH date when known (the dashboard tile and
+    // footer count from it too); scrape time only as a fallback.
+    const pubMs = b.asOf ? Date.parse(String(b.asOf).slice(0, 10) + "T00:00:00Z") : NaN;
+    const ageDays = Number.isFinite(pubMs) ? Math.floor((now * 1000 - pubMs) / 86400000)
+                  : b.ts ? Math.floor((now - b.ts) / 86400) : null;
     if (ageDays != null && ageDays > 9) return feeds.bdti = F("stale", "low", `${ageDays}d old`);
     if (!(b.value >= 500 && b.value <= 6000)) return feeds.bdti = F("suspect", "low", `value ${b.value} out of 500-6000`);
     feeds.bdti = F("ok", "high", `${b.value} asOf ${b.asOf || "?"}`, { ageDays });
@@ -136,7 +140,7 @@ export async function onRequestGet({ env }) {
     if (dataAgeD == null || dataAgeD > 12) return feeds.portwatch = F("stale", "low", `data as-of ${portwatch.as_of} (${dataAgeD}d)`);
     const t = portwatch.latest?.total;
     if (!(t >= 0 && t <= 500)) return feeds.portwatch = F("suspect", "low", `count ${t} out of bounds`);
-    feeds.portwatch = F("ok", "high", `${t} transits/d as-of ${portwatch.as_of} · ${portwatch.pct_of_prewar}% of pre-war`, { ageMin: portwatch.fetchedAt ? Math.round((now - portwatch.fetchedAt) / 60) : null });
+    feeds.portwatch = F("ok", "high", `${t} transit${t === 1 ? "" : "s"}/d as of ${portwatch.as_of} · ${Math.round(portwatch.pct_of_prewar)}% of pre-war`, { ageMin: portwatch.fetchedAt ? Math.round((now - portwatch.fetchedAt) / 60) : null });
   })();
 
   // ── WEATHER ── fresh<360m
