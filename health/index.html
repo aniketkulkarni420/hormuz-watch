@@ -54,6 +54,9 @@ h1{font-size:32px;font-weight:900;letter-spacing:-.01em;margin-bottom:6px}
 .refresh button{background:transparent;border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:10px;padding:7px 14px;border-radius:4px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase}
 .refresh button:hover{border-color:var(--amber);color:var(--amber)}
 .foot{margin-top:48px;padding-top:26px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--muted2);letter-spacing:.04em;text-align:center}
+.sec{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:8px 0 4px}
+.sec-sub{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:12px}
+@media (max-width:600px){.overall{flex-wrap:wrap}.overall-detail{margin-left:0}.cards{grid-template-columns:1fr}}
 a{color:var(--blue);text-decoration:none}
 a:hover{text-decoration:underline}
 </style>
@@ -72,6 +75,12 @@ a:hover{text-decoration:underline}
   <div class="overall-detail" id="overallDetail"></div>
 </div>
 
+<h2 class="sec">Data freshness</h2>
+<div class="sec-sub">Is each feed's data current? From /api/integrity (age, plausibility and cross-checks per feed).</div>
+<div class="cards" id="feedCards"></div>
+
+<h2 class="sec">Endpoints</h2>
+<div class="sec-sub">Does each API answer? An endpoint can answer while serving old data; see the section above.</div>
 <div class="cards" id="cards"></div>
 
 <div class="refresh">
@@ -152,10 +161,15 @@ function renderCard(s, result) {
   } else if (s.key === "stooq" && result.data && result.data.today) {
     freshness = "Last: $" + result.data.today + " (" + (result.data.todayDate || "—") + ")";
   } else if (s.key === "history" && result.data && Number.isInteger(result.data.count)) {
-    freshness = result.data.count + " D1 points last 24h";
+    freshness = result.data.count + " D1 point" + (result.data.count === 1 ? "" : "s") + " in last 24h";
   } else if (s.key === "gfw" && result.data && result.data.entries) {
     freshness = result.data.entries.length + " events in last 30d window";
   }
+  // 2026-11-05: an endpoint that answers with old or empty data is not "OK".
+  var dataWarn = dataWarning(s, result);
+  if (statusKey === "ok" && dataWarn) { statusKey = "warn"; statusLabel = "DATA STALE"; }
+  if (dataWarn) freshness = (freshness ? freshness + " · " : "") + dataWarn;
+  result.dataWarn = dataWarn;
   return '<div class="card">'
     + '<div class="card-head">'
     +   '<div class="card-dot dot-' + statusKey + '"></div>'
@@ -168,23 +182,83 @@ function renderCard(s, result) {
     + '</div>';
 }
 
+// Data-level check on top of "did it answer". Returns a short reason or "".
+function dataWarning(s, result) {
+  if (!result.ok || !result.data) return "";
+  var d = result.data;
+  if (s.key === "history" && Number.isInteger(d.count) && d.count === 0) return "recorder wrote nothing in 24h";
+  if (s.key === "oil" && d.tier && d.tier !== "primary") return "live feed stale, fallback tier in use";
+  if (s.key === "stooq" && d.todayDate) {
+    var ageD = Math.floor((Date.now() - Date.parse(d.todayDate + "T00:00:00Z")) / 86400000);
+    if (ageD > 4) return "newest print " + ageD + " days old";
+  }
+  if (s.key === "snapshot" && d.as_of) {
+    var ageM = (Date.now() - Date.parse(d.as_of)) / 60000;
+    if (ageM > 180) return "snapshot " + Math.round(ageM / 60) + "h old";
+  }
+  return "";
+}
+
+// "age 106559m > 360" -> "74 days"; keeps other reasons as they are.
+function humanReason(r) {
+  return String(r || "").replace(/age (-?\d+)m(\s*>\s*\d+)?/, function(_, m){
+    m = +m;
+    if (m >= 2880) return "last update " + Math.floor(m / 1440) + " days ago";
+    if (m >= 120) return "last update " + Math.round(m / 60) + " hours ago";
+    return "last update " + m + " min ago";
+  }).replace(/^(\d+)d old$/, "last update $1 days ago");
+}
+
+var FEED_NAMES = { oil:"Oil (Brent + WTI scrape)", bdti:"Tanker freight (BDTI)", currency:"Iran rial (currency)",
+  vessel:"Port calls (vessel scrape)", aircraft:"Aircraft (ADS-B)", news:"News headlines", ofac:"OFAC sanctions",
+  ukmto:"UKMTO incidents", portwatch:"IMF PortWatch transits", weather:"Weather", seismic:"Seismic",
+  gdelt:"GDELT news tone", verdict:"Risk verdict", ais:"Per-ship AIS" };
+
+function renderFeedCard(k, f) {
+  var key = f.status === "ok" ? "ok" : (f.status === "stale" || f.status === "known-degraded") ? "warn" : "fail";
+  var label = f.status === "known-degraded" ? "DEGRADED" : String(f.status || "?").toUpperCase();
+  return '<div class="card">'
+    + '<div class="card-head"><div class="card-dot dot-' + key + '"></div>'
+    + '<div class="card-name">' + (FEED_NAMES[k] || k) + '</div>'
+    + '<div class="card-status ' + key + '">' + label + '</div></div>'
+    + '<div class="card-row"><span>Detail</span><b>' + humanReason(f.reason) + '</b></div>'
+    + '</div>';
+}
+
 function refreshAll() {
   document.getElementById("overallLabel").textContent = "Checking…";
   document.getElementById("overallDetail").textContent = "";
-  Promise.all(SIGNALS.map(pingSignal)).then(function(results){
+  var integP = fetch("/api/integrity?_=" + Date.now()).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+  Promise.all([Promise.all(SIGNALS.map(pingSignal)), integP]).then(function(both){
+    var results = both[0], integ = both[1];
     var cards = document.getElementById("cards");
     cards.innerHTML = SIGNALS.map(function(s, i){ return renderCard(s, results[i]); }).join("");
+    var feedCards = document.getElementById("feedCards");
+    var feeds = (integ && integ.feeds) || {};
+    var keys = Object.keys(feeds).sort(function(a, b){
+      var rank = function(f){ return f.status === "ok" ? 2 : f.status === "known-degraded" ? 1 : 0; };
+      return rank(feeds[a]) - rank(feeds[b]);
+    });
+    feedCards.innerHTML = keys.length ? keys.map(function(k){ return renderFeedCard(k, feeds[k]); }).join("")
+      : '<div class="card"><div class="card-row"><span>Integrity check unavailable</span></div></div>';
+    var feedsOk = keys.filter(function(k){ return feeds[k].status === "ok"; }).length;
+    var feedsBad = integ ? (integ.blocking_count || 0) : null;
+    var dataWarns = results.filter(function(r){ return r.dataWarn; }).length;
     // Compute overall
-    var ok = results.filter(function(r){ return r.ok && r.elapsed < 5000; }).length;
+    var ok = results.filter(function(r){ return r.ok && r.elapsed < 5000 && !r.dataWarn; }).length;
     var slow = results.filter(function(r){ return r.ok && r.elapsed >= 5000; }).length;
     var fail = results.filter(function(r){ return !r.ok; }).length;
     var overall = document.getElementById("overall");
     var label = document.getElementById("overallLabel");
     var detail = document.getElementById("overallDetail");
     overall.classList.remove("ok","degraded","down");
-    if (fail === 0 && slow === 0) {
+    if (fail === 0 && slow === 0 && feedsBad === 0 && dataWarns === 0) {
       overall.classList.add("ok");
       label.textContent = "All systems operational";
+    } else if (fail === 0 && (feedsBad || dataWarns || feedsBad === null)) {
+      overall.classList.add("degraded");
+      label.textContent = feedsBad === null ? "Endpoints up · data check unavailable"
+        : feedsBad ? (feedsBad + " data feed" + (feedsBad === 1 ? "" : "s") + " stale") : "Some data stale";
     } else if (fail === 0) {
       overall.classList.add("degraded");
       label.textContent = "Some signals slow";
@@ -195,7 +269,8 @@ function refreshAll() {
       overall.classList.add("down");
       label.textContent = "Major outage";
     }
-    detail.textContent = ok + " OK · " + slow + " slow · " + fail + " fail · checked " + new Date().toLocaleTimeString();
+    detail.textContent = (integ ? feedsOk + " of " + keys.length + " feeds current · " : "")
+      + "endpoints: " + ok + " OK, " + dataWarns + " stale data, " + slow + " slow, " + fail + " fail · checked " + new Date().toLocaleTimeString();
   });
 }
 refreshAll();
