@@ -599,8 +599,8 @@ header{
   .infocard.show{transform:translateY(0)}
 
   /* 2026-11-05: the layer buttons (top right) covered the schematic note
-     (top left) at phone width. Note moves to the bottom-left corner. */
-  .map-note{top:auto !important;bottom:8px;max-width:calc(100% - 80px) !important}
+     (top left) at phone width. The note now stops short of the button column. */
+  .map-note{max-width:calc(100% - 172px) !important}
   /* ----- MAP CONTROLS - compact ----- */
   .layers{padding:6px;gap:4px}
   .lbtn{padding:6px 8px;font-size:10px}

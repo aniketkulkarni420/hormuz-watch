@@ -4,6 +4,22 @@ Append-only. Each entry follows the template. Sorted newest-first.
 
 ---
 
+## 2026-11-05 - Stale feeds show "paused since <date>", never a current-looking number
+
+**Context:** 10 scheduled GitHub workflows were auto-disabled for 60 days of
+repo inactivity (23 to 30 Aug 2026). The page kept showing their last values
+under "last 30 days", "LIVE" and "HIGH confidence" labels, and drew
+conclusions from missing data ("TRAFFIC DROP: 0 vs 42").
+
+**Decision:** Every panel checks the age of its own source. Past its budget it
+says "paused since <date>" or "as of <date>" and makes no reading from it.
+Budgets: verdict 3h, vessel scrape 24h, OFAC and UKMTO 2 days, oil scrape and
+blends 2 days, EIA weekly stocks 14 days, IMF PortWatch 14 days, OPEC monthly
+75 days. Verdict confidence displays at most MEDIUM while /api/integrity lists
+any degraded feed. Price changes are computed inside one source only.
+
+**Not changed:** verdict scores, weights, thresholds and trigger rules.
+
 ## 2026-05-15 — Design showcase + overflow tripwire (`/showcase/`)
 
 **Context:** Two design bugs shipped to production back-to-back — the Vessel
