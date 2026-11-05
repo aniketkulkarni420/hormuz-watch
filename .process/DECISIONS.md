@@ -20,6 +20,8 @@ any degraded feed. Price changes are computed inside one source only.
 
 **Not changed:** verdict scores, weights, thresholds and trigger rules.
 
+---
+
 ## 2026-05-15 — Design showcase + overflow tripwire (`/showcase/`)
 
 **Context:** Two design bugs shipped to production back-to-back — the Vessel
