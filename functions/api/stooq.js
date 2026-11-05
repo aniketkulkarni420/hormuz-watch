@@ -12,9 +12,10 @@ export async function onRequestGet({ env }) {
     + "&frequency=daily"
     + "&data%5B0%5D=value"
     + "&facets%5Bseries%5D%5B%5D=RBRTE"
+    + "&facets%5Bseries%5D%5B%5D=RWTC"
     + "&sort%5B0%5D%5Bcolumn%5D=period"
     + "&sort%5B0%5D%5Bdirection%5D=desc"
-    + "&offset=0&length=5";
+    + "&offset=0&length=12";
   try {
     // EIA weekly series changes at most weekly; the CDN caches the RESPONSE
     // (cache-control max-age=1800 below) so this upstream fetch isn't hit every
@@ -24,21 +25,29 @@ export async function onRequestGet({ env }) {
     const data = await r.json();
     const rows = data && data.response && data.response.data;
     if (!rows || rows.length < 2) return json({ error: "eia: not enough rows" }, 502);
-    // Filter null values
+    // Filter null values. Rows hold both series (RBRTE Brent, RWTC WTI), newest first.
     const valid = rows.filter(x => x.value !== null && x.value !== "" && isFinite(parseFloat(x.value)));
-    if (valid.length < 2) return json({ error: "eia: insufficient valid points" }, 502);
-    const today = parseFloat(valid[0].value);
-    const yest = parseFloat(valid[1].value);
+    const brentRows = valid.filter(x => (x.series || "RBRTE") === "RBRTE");
+    const wtiRows = valid.filter(x => x.series === "RWTC");
+    if (brentRows.length < 2) return json({ error: "eia: insufficient valid points" }, 502);
+    const today = parseFloat(brentRows[0].value);
+    const yest = parseFloat(brentRows[1].value);
     const change = today - yest;
     const pct = (change / yest) * 100;
+    // WTI spot for the SAME day as the Brent print, so the Brent-WTI spread
+    // compares like with like (2026-11-05). Null when EIA has no WTI that day.
+    const wtiSame = wtiRows.find(x => x.period === brentRows[0].period);
+    const wti = wtiSame ? parseFloat(wtiSame.value) : null;
     return json({
       today: today,
       yesterday: yest,
-      todayDate: valid[0].period,
-      yesterdayDate: valid[1].period,
+      todayDate: brentRows[0].period,
+      yesterdayDate: brentRows[1].period,
       change: change,
       pct: pct,
-      source: "EIA:RBRTE:daily"
+      wti: wti,
+      wtiDate: wtiSame ? wtiSame.period : null,
+      source: "EIA:RBRTE+RWTC:daily"
     });
   } catch (e) {
     return json({ error: "upstream fetch failed", detail: String(e) }, 502);

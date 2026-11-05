@@ -334,7 +334,7 @@ export function computeOverrides(snapshot) {
     if (atkAgeH <= 72) {
       triggers.push({ id: "ukmto", reason: "UKMTO-reported ATTACK " + atkAgeH.toFixed(0) + "h ago", fires: true });
     } else if ((hormuz7 || 0) >= 1) {
-      triggers.push({ id: "ukmto", reason: hormuz7 + " Hormuz-region incident(s) in 7d (UKMTO)", fires: true });
+      triggers.push({ id: "ukmto", reason: hormuz7 + " Hormuz-region incident" + (hormuz7 === 1 ? "" : "s") + " in 7d (UKMTO)", fires: true });
     } else {
       triggers.push({ id: "ukmto", reason: "no recent UKMTO attack/Hormuz incident", fires: false });
     }

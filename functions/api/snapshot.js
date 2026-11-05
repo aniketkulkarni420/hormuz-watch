@@ -227,6 +227,9 @@ export async function onRequestGet({ request, env }) {
     murban_premium:         blends?.murban_premium ?? null,
     murban_quote_age_h:     blends?.blends?.murban?.stamp_age_h ?? null,
     blends_age_sec:         blends?.fetchedAt ? Math.floor(Date.now()/1000 - blends.fetchedAt) : null,
+    // 2026-11-05: age of the oil scrape that carries Henry Hub / OVX / India VIX,
+    // so the page can date those rows when the scraper stops.
+    oil_scraped_age_sec:    (oilScraped?.fetchedAt || oilScraped?.ts) ? Math.floor(Date.now()/1000 - (oilScraped.fetchedAt || oilScraped.ts)) : null,
     // Henry Hub gas (P1-5) — optional leg of the oil scraper; null until deployed scraper runs
     henry_hub_usd:          oilScraped?.henry_hub?.value ?? null,
     henry_hub_change_pct:   oilScraped?.henry_hub?.changePct ?? null,

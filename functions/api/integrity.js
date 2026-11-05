@@ -130,11 +130,13 @@ export async function onRequestGet({ env }) {
   (() => {
     if (!portwatch) return feeds.portwatch = F("dead", "none", "no portwatch_state");
     const asOf = portwatch.as_of ? Date.parse(portwatch.as_of) : null;
-    const dataAgeD = asOf ? Math.round((now - asOf) / 86400000) : null;
+    // 2026-11-05: `now` is seconds, Date.parse is ms. The old (now - asOf)
+    // was always negative, so a 3-month-old PortWatch file read "ok".
+    const dataAgeD = asOf ? Math.round((now * 1000 - asOf) / 86400000) : null;
     if (dataAgeD == null || dataAgeD > 12) return feeds.portwatch = F("stale", "low", `data as-of ${portwatch.as_of} (${dataAgeD}d)`);
     const t = portwatch.latest?.total;
     if (!(t >= 0 && t <= 500)) return feeds.portwatch = F("suspect", "low", `count ${t} out of bounds`);
-    feeds.portwatch = F("ok", "high", `${t} transits/d as-of ${portwatch.as_of} · ${portwatch.pct_of_prewar}% of pre-war`, { ageMin: Math.round((now - (portwatch.fetchedAt*1000||now))/60000) });
+    feeds.portwatch = F("ok", "high", `${t} transits/d as-of ${portwatch.as_of} · ${portwatch.pct_of_prewar}% of pre-war`, { ageMin: portwatch.fetchedAt ? Math.round((now - portwatch.fetchedAt) / 60) : null });
   })();
 
   // ── WEATHER ── fresh<360m
