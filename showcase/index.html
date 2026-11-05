@@ -103,15 +103,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .xv-body{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.7}
 /* END-MIRRORED */
 
-/* BEGIN-MIRRORED: tanker plays */
-.tanker-rows{display:flex;flex-direction:column;gap:0}
-.tanker-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)}
-.tanker-row:last-child{border-bottom:none}
-.tk-ticker{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--green);width:38px;flex-shrink:0}
-.tk-name{font-family:var(--mono);font-size:9px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tk-upside{font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;white-space:nowrap}
-/* END-MIRRORED */
-
 /* BEGIN-MIRRORED: verdict v2 (inverted pyramid) */
 .v2-band{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px}
 .v2-band-name{font-family:var(--sans);font-size:28px;font-weight:800;letter-spacing:.01em;line-height:1}
@@ -510,21 +501,6 @@ function renderXVCard(mount, data){
   mount.innerHTML = html;
 }
 
-// ── Tanker Plays ────────────────────────────────────────────────────────
-function renderTankerCard(mount, data){
-  var html = '<div class="rblock"><div class="rhead">Global tanker tension play</div>'
-    + '<div class="tanker-rows">';
-  data.rows.forEach(function(r){
-    html += '<div class="tanker-row">'
-      + '<div class="tk-ticker">'+r.ticker+'</div>'
-      + '<div class="tk-name">'+r.name+'</div>'
-      + '<div class="tk-upside" style="color:'+(r.upsidePos===false?"var(--red)":"var(--green)")+'">'+r.upside+'</div>'
-      + '</div>';
-  });
-  html += '</div></div>';
-  mount.innerHTML = html;
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // PERMUTATION DATA — six per card spanning the failure-mode space:
 //   1. Typical            2. Empty/loading      3. Single dominant
@@ -799,39 +775,6 @@ var CARDS = [
     ]
   },
 
-  {
-    name: "Tanker Plays",
-    hint: "Ticker (38px col) · name (flex) · upside (right). Name must truncate with ellipsis — never bleed into the upside column.",
-    render: renderTankerCard,
-    perms: [
-      { label: "Typical", data: { rows: [
-        { ticker:"FRO",  name:"Frontline Plc",                  upside:"+18%" },
-        { ticker:"INSW", name:"International Seaways",          upside:"+14%" },
-        { ticker:"DHT",  name:"DHT Holdings",                   upside:"+11%" },
-        { ticker:"TNK",  name:"Teekay Tankers",                 upside:"+9%"  },
-        { ticker:"STNG", name:"Scorpio Tankers",                upside:"+6%"  },
-      ] } },
-      { label: "Negative upside", data: { rows: [
-        { ticker:"FRO",  name:"Frontline Plc",                  upside:"-4%",  upsidePos:false },
-        { ticker:"INSW", name:"International Seaways",          upside:"-2%",  upsidePos:false },
-        { ticker:"DHT",  name:"DHT Holdings",                   upside:"-7%",  upsidePos:false },
-      ] } },
-      { label: "Long names (ellipsis)", data: { rows: [
-        { ticker:"FRO",  name:"Frontline Plc · VLCC + Suezmax operator", upside:"+18%" },
-        { ticker:"INSW", name:"International Seaways Inc Holdings",       upside:"+14%" },
-        { ticker:"DHT",  name:"DHT Holdings · VLCC pure-play",            upside:"+11%" },
-      ] } },
-      { label: "Two-digit ticker", data: { rows: [
-        { ticker:"NAT",  name:"Nordic American Tankers",         upside:"+22%" },
-        { ticker:"EURN", name:"Euronav NV",                      upside:"+19%" },
-      ] } },
-      { label: "Large upside", data: { rows: [
-        { ticker:"FRO",  name:"Frontline Plc",                   upside:"+187%" },
-        { ticker:"INSW", name:"International Seaways",           upside:"+142%" },
-      ] } },
-      { label: "Empty (no plays)", data: { rows: [] } },
-    ]
-  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1021,12 +964,6 @@ var CARD_ASSERTIONS = {
     R.push({ok: statusOk || rows.length === 0, msg: "Every row carries a status"});
     return R;
   },
-  "Tanker Plays": function(mount, data){
-    var R = [];
-    var rows = mount.querySelectorAll(".tanker-row");
-    R.push({ok: rows.length === data.rows.length, msg: "Tanker row count matches data"});
-    return R;
-  }
 };
 function _tileAssert(mount, data, name){
   var R = [];
