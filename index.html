@@ -317,14 +317,6 @@ header{
 .ir-tag.high{color:var(--red);background:rgba(255,62,82,.1);border:1px solid rgba(255,62,82,.25)}
 .ir-tag.med{color:var(--amber);background:rgba(240,144,20,.1);border:1px solid rgba(240,144,20,.25)}
 
-/* TANKERS */
-.tanker-rows{display:flex;flex-direction:column;gap:0}
-.tanker-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)}
-.tanker-row:last-child{border-bottom:none}
-.tk-ticker{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--green);width:38px;flex-shrink:0}
-.tk-name{font-family:var(--mono);font-size:9px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tk-upside{font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;white-space:nowrap}
-
 /* LEAFLET */
 .leaflet-container{background:#050810!important}
 .leaflet-control-attribution{background:rgba(5,8,16,.8)!important;color:#2a3a4a!important;font-size:8px!important}
@@ -1120,19 +1112,10 @@ header{
       <div class="conclusion" id="concMix" style="display:none"></div>
     </div>
 
-    <!-- TANKER PLAYS (moved up into Signals) -->
-    <div class="rblock">
-      <div class="rhead">Global tanker tension play</div>
-      <div class="tanker-rows" id="tankerRows"></div>
-      <div style="margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5">
-        <abbr title="Baltic Dirty Tanker Index - weekly freight rate index for crude oil tankers">BDTI</abbr> leads tanker stocks by 2-3 days in escalation events. Watch for rate spikes while vessel count holds (<span title="Freight rates rising while vessel traffic holds - suggests pricing in risk, not actual disruption">fear premium</span>).
-      </div>
-    </div>
-
     <!-- CAPE OF GOOD HOPE REROUTING · 2026-05-17 Phase-1 build #6 (4.5)
          Where the cargo went. Static seed for now (no live AIS bbox yet - that's
          the Phase-2 scraper-extension work). Pairs with Vessel Type Mix above
-         (what stayed) and the Tanker Plays card (the equity beneficiaries).
+         (what stayed).
          Uses existing .tbar-row pattern from Vessel Type Mix - no new CSS. -->
     <div class="rblock" id="capeBlock">
       <div class="rhead">
@@ -1365,8 +1348,8 @@ header{
       <b>Educational analysis only.</b> The information below is general market
       commentary, not personalized investment advice. Past stock-price behaviour
       does not predict future returns. Holding period, position sizing,
-      leverage, and personal risk tolerance are not considered. ·
-      <a href="https://kamayakya.com/disclosures" target="_blank" rel="noopener noreferrer">Full disclosure</a>.
+      leverage, and personal risk tolerance are not considered.
+      Information only, not investment advice.
     </div>
 
     <div class="rblock" id="indiaBlock">
@@ -1404,7 +1387,7 @@ header{
           Past behaviour does not predict future returns. Position sizing, holding
           period, and personal risk tolerance not considered. This dashboard does not
           capture your suitability profile. <b>Discuss with a qualified advisor before
-          acting.</b> See <a href="https://kamayakya.com/disclosures" target="_blank" rel="noopener noreferrer">full RA disclosure</a>.
+          acting.</b> Information only, not investment advice.
         </div>
       </div>
     </div>
@@ -1753,14 +1736,6 @@ var INDIA = [
   {name:"GAIL",     ticker:"GAIL",       sector:"gas / LNG",  exposure:"LNG mostly non-Hormuz", risk:"med"},
   {name:"Reliance", ticker:"RELIANCE",   sector:"integrated", exposure:"~35% Hormuz (Russia/US hedge)", risk:"med"},
   {name:"SCI",      ticker:"SCI",        sector:"tanker",     exposure:"Indian-flag tanker beneficiary on freight spike", risk:"med"}
-];
-
-var TANKERS = [
-  {ticker:"FRO",  name:"Frontline",       upside:"+40-80%"},
-  {ticker:"INSW", name:"Intl Seaways",    upside:"+35-75%"},
-  {ticker:"TNK",  name:"Teekay Tankers",  upside:"+30-60%"},
-  {ticker:"NAT",  name:"Nordic American", upside:"+20-45%"},
-  {ticker:"DHT",  name:"DHT Holdings",    upside:"+25-50%"}
 ];
 
 // TODAY_LOG removed (Batch A \u00B7 2026-05-14) - was a hardcoded 19-vessel array
@@ -3085,14 +3060,6 @@ setInterval(renderHistoricalEvents, 5 * 60 * 1000);
   });
 })();
 
-var tr=document.getElementById("tankerRows");
-TANKERS.forEach(function(s){
-  var row=document.createElement("div");row.className="tanker-row";
-  // P9 - link ticker to TradingView (NYSE for these names)
-  var tvHref = "https://www.tradingview.com/symbols/NYSE-" + encodeURIComponent(s.ticker) + "/";
-  row.innerHTML='<div class="tk-ticker"><a href="'+tvHref+'" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted2)" title="Open '+s.ticker+' on TradingView">'+s.ticker+'</a></div><div class="tk-name">'+s.name+'</div><div class="tk-upside">'+s.upside+'</div>';
-  tr.appendChild(row);
-});
 
 // ═══════════════════════════════════════════════════
 // AISSTREAM - HARDCODED KEY, AUTO-CONNECT, AUTO-RECONNECT
@@ -5041,7 +5008,7 @@ function vCargo(todayDollars){
   if(pct < 5)   return _verdict("normal",   "Oil flow at pre-crisis baseline. No risk premium pricing in.");
   if(pct < 15)  return _verdict("elevated", "Oil priced ~"+pct.toFixed(0)+"% above baseline. Mild risk premium.");
   if(pct < 30)  return _verdict("high",     "Oil "+pct.toFixed(0)+"% above baseline. OMC import bill stress.");
-  return         _verdict("critical", "Crisis pricing. Hedge OMC exposure.");
+  return         _verdict("critical", "Oil "+pct.toFixed(0)+"% above baseline. Crisis pricing.");
 }
 
 // 2. Vessels live - snapshot count (Hormuz typical 30-60 in box at any moment)
@@ -5128,10 +5095,10 @@ function vCross(states){
   var maxS = Math.max.apply(null, states);
   var elevCount = states.filter(function(s){return s>=1;}).length;
   var highCount = states.filter(function(s){return s>=2;}).length;
-  if(highCount >= states.length) return _verdict("critical", "All signals high. Crisis pricing in. Hedged positioning only.");
-  if(highCount >= 1 || elevCount >= 3) return _verdict("high", "Risk-on signal. Long FRO/INSW; short BPCL/IOC tactically.");
-  if(elevCount >= 1 && elevCount <= 2) return _verdict("elevated", "Watching. Tighten OMC stops.");
-  return _verdict("normal", "No anomaly across signals. Trade structurally.");
+  if(highCount >= states.length) return _verdict("critical", "All signals high. Crisis pricing in.");
+  if(highCount >= 1 || elevCount >= 3) return _verdict("high", "At least one signal high, or three or more elevated.");
+  if(elevCount >= 1 && elevCount <= 2) return _verdict("elevated", "One or two signals elevated.");
+  return _verdict("normal", "No anomaly across signals.");
 }
 
 // Render a verdict into a target element as colored badge + one-liner
