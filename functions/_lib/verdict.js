@@ -273,7 +273,7 @@ export function computeOverrides(snapshot) {
     const dir = (newsNet != null && newsNet >= 0.33) ? "escalatory" : "mixed";
     triggers.push({ id: "news", reason: news24 + " headlines in 24h (" + dir + ")", fires: true });
   } else if (news24 >= 40 && newsDeescalating) {
-    triggers.push({ id: "news", reason: news24 + " headlines in 24h but DE-ESCALATORY — not fired", fires: false });
+    triggers.push({ id: "news", reason: news24 + " headlines in 24h but DE-ESCALATORY - not fired", fires: false });
   } else {
     triggers.push({ id: "news", reason: news24 + " headlines in 24h (threshold 40)", fires: false });
   }
@@ -305,7 +305,7 @@ export function computeOverrides(snapshot) {
   if (tone >= 70 && !newsDeescalating) {
     triggers.push({ id: "war_tone", reason: tone.toFixed(0) + "% negative tone (war-level coverage)", fires: true });
   } else if (tone >= 70 && newsDeescalating) {
-    triggers.push({ id: "war_tone", reason: tone.toFixed(0) + "% negative tone but news DE-ESCALATORY — not fired", fires: false });
+    triggers.push({ id: "war_tone", reason: tone.toFixed(0) + "% negative tone but news DE-ESCALATORY - not fired", fires: false });
   } else {
     triggers.push({ id: "war_tone", reason: tone.toFixed(0) + "% negative tone (threshold 70)", fires: false });
   }
@@ -353,7 +353,7 @@ export function computeOverrides(snapshot) {
   if (newsDeescalating) {
     triggers.push({
       id: "deescalation",
-      reason: "News de-escalating — already reflected as a negative contribution in the structural score",
+      reason: "News de-escalating - already reflected as a negative contribution in the structural score",
       fires: false, informational: true,
     });
   }

@@ -233,15 +233,15 @@ def main():
     interpretation = "insufficient data"
     if spread_pct is not None:
         if spread_pct >= 80:
-            interpretation = "extreme spread — currency-crisis territory (run-on-rial)"
+            interpretation = "extreme spread - currency-crisis territory (run-on-rial)"
         elif spread_pct >= 40:
-            interpretation = "wide spread — significant parallel-market dislocation"
+            interpretation = "wide spread - significant parallel-market dislocation"
         elif spread_pct >= 15:
-            interpretation = "moderate spread — visible FX stress"
+            interpretation = "moderate spread - visible FX stress"
         else:
-            interpretation = "narrow spread — mid-market and parallel aligned"
+            interpretation = "narrow spread - mid-market and parallel aligned"
     elif official_irr or black_irr:
-        interpretation = "partial data — only one IRR rate available"
+        interpretation = "partial data - only one IRR rate available"
 
     payload = {
         "fetchedAt": int(time.time()),

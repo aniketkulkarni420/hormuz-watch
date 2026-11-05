@@ -93,7 +93,7 @@ a:hover{text-decoration:underline}
 </div>
 
 <script>
-// Signal definitions — what to ping + how to interpret response
+// Signal definitions - what to ping + how to interpret response
 var SIGNALS = [
   { key: "oil",   name: "Live commodity feed (Brent + WTI)", url: "/api/oil",
     desc: "Live futures with multi-tier fallback. Refreshes every 15 min via scheduled scrape." },
@@ -159,7 +159,7 @@ function renderCard(s, result) {
       freshness = "Tier: " + (result.data.tier || "unknown");
     }
   } else if (s.key === "stooq" && result.data && result.data.today) {
-    freshness = "Last: $" + result.data.today + " (" + (result.data.todayDate || "—") + ")";
+    freshness = "Last: $" + result.data.today + " (" + (result.data.todayDate || "-") + ")";
   } else if (s.key === "history" && result.data && Number.isInteger(result.data.count)) {
     freshness = result.data.count + " D1 point" + (result.data.count === 1 ? "" : "s") + " in last 24h";
   } else if (s.key === "gfw" && result.data && result.data.entries) {
