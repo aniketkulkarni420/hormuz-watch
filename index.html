@@ -257,6 +257,7 @@ header{
 .v2-band-name{font-family:var(--sans);font-size:28px;font-weight:800;letter-spacing:.01em;line-height:1}
 .v2-band-meta{text-align:right;font-family:var(--mono)}
 .v2-score{font-size:11px;color:var(--muted)}
+#verdictBlock.v2-paused .v2-rows,#verdictBlock.v2-paused .v2-details,#verdictBlock.v2-paused .v2-section-title{opacity:.55}
 .v2-trend{font-size:9px;color:var(--muted2);margin-top:2px}
 .v2-summary{font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.55;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
 .v2-summary b{font-weight:700}
@@ -597,6 +598,9 @@ header{
     transform:translateY(120%);transition:transform .35s cubic-bezier(.16,1,.3,1)}
   .infocard.show{transform:translateY(0)}
 
+  /* 2026-11-05: the layer buttons (top right) covered the schematic note
+     (top left) at phone width. Note moves to the bottom-left corner. */
+  .map-note{top:auto !important;bottom:8px;max-width:calc(100% - 80px) !important}
   /* ----- MAP CONTROLS — compact ----- */
   .layers{padding:6px;gap:4px}
   .lbtn{padding:6px 8px;font-size:10px}
@@ -687,6 +691,7 @@ header{
   padding:6px 0;font-family:var(--mono);font-size:10px;border-bottom:1px solid var(--border)}
 .un-row > *{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .un-row:last-child{border-bottom:0}
+.un-row > .un-scenario{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
 .un-row.head{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.05em;
   font-weight:700;border-bottom-color:var(--border2)}
 .un-scenario{color:var(--text)}
@@ -700,6 +705,8 @@ header{
   border-bottom:1px solid var(--border)}
 .hc-row > *{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .hc-row:last-child{border-bottom:0}
+/* 2026-11-05: event + impact text wraps instead of truncating ("Kuwait / G...") */
+.hc-row > .hc-event,.hc-row > .hc-trade{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
 .hc-row.head{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.05em;
   font-weight:700;border-bottom-color:var(--border2)}
 .hc-row.now{background:rgba(240,144,20,.05);margin:0 -4px;padding-left:4px;padding-right:4px;
@@ -783,8 +790,8 @@ header{
       <span id="integrityLabel" style="color:var(--muted)">checking…</span>
     </div>
     <div class="live-badge">
-      <div class="ldot connecting" id="aisDot"></div>
-      <span id="aisLabel" style="color:var(--amber)">CONNECTING</span>
+      <div class="ldot sim" id="aisDot"></div>
+      <span id="aisLabel" style="color:var(--muted)">AIS PAUSED</span>
     </div>
     <div id="clock">00:00:00 UTC</div>
   </div>
@@ -853,7 +860,7 @@ header{
       <span class="sig-dir" id="sigIncidentsDir" style="color:var(--red)"></span>
     </div>
     <div class="sig-bot">
-      <span class="sig-label" title="UKMTO-reported maritime incidents (attacks, suspicious activity, advisories) in the last 30 days">Incidents / 30d</span>
+      <span class="sig-label" id="sigIncidentsLabel" title="UKMTO-reported maritime incidents (attacks, suspicious activity, advisories) in the last 30 days">Incidents / 30d</span>
       <span class="sig-src src-est" id="sigIncidentsSrc">ROYAL NAVY</span>
     </div>
     <div class="sig-tooltip" id="ttipIncidents"></div>
@@ -878,11 +885,11 @@ header{
       <div style="display:flex;align-items:center;justify-content:space-between">
         <div class="ais-label2">Vessel feed (AIS) &mdash; Hormuz region</div>
         <div style="display:flex;align-items:center;gap:4px">
-          <div class="ldot connecting" id="aisDot2"></div>
-          <span id="aisLabel2" style="font-family:var(--mono);font-size:9px;color:var(--amber);letter-spacing:.08em">CONNECTING</span>
+          <div class="ldot sim" id="aisDot2"></div>
+          <span id="aisLabel2" style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em">PAUSED</span>
         </div>
       </div>
-      <div class="ais-status" id="aisStatus">Connecting to live feed&hellip;</div>
+      <div class="ais-status" id="aisStatus">Live per-ship AIS paused: provider outage.</div>
     </div>
     <div class="log-header">
       <span class="log-title">Ships in Hormuz today</span>
@@ -900,7 +907,7 @@ header{
     <div id="map"></div>
     <!-- Honest caption (2026-06-24 reposition): the map is a schematic context
          view, NOT live vessel tracking — AIS through the strait is degraded. -->
-    <div style="position:absolute;top:8px;left:8px;z-index:900;background:rgba(7,9,14,.78);
+    <div class="map-note" style="position:absolute;top:8px;left:8px;z-index:900;background:rgba(7,9,14,.78);
                 border:1px solid var(--border2);border-radius:5px;padding:5px 9px;max-width:300px;
                 font-family:var(--mono);font-size:9px;line-height:1.45;color:var(--muted);pointer-events:none">
       Schematic context — ports (by 24h activity), aircraft &amp; seismic when available.
@@ -1044,11 +1051,11 @@ header{
 
     <!-- VESSEL MOVEMENT — explicit transit/anchored/approach + east/west flow -->
     <div class="rblock">
-      <div class="rhead">Vessel movement <span class="rhead-src src-est" id="moveSrc">INITIALISING</span></div>
+      <div class="rhead">Vessel movement <span class="rhead-src src-est" id="moveSrc">LOADING</span></div>
       <!-- Headline: 24h transits with direction split -->
       <div style="margin-bottom:14px">
         <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
-          <span style="font-family:var(--mono);font-size:30px;font-weight:700;color:var(--amber)" id="mvTransit24h">0</span>
+          <span style="font-family:var(--mono);font-size:30px;font-weight:700;color:var(--amber)" id="mvTransit24h">—</span>
           <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">crossings · last 24h</span>
         </div>
         <!-- Direction split bar -->
@@ -1859,8 +1866,20 @@ function fmtAge(ms){
   if (ms < 60*1000) return Math.round(ms/1000)+"s";
   if (ms < 3600*1000) return Math.round(ms/60000)+"m";
   if (ms < 86400*1000) return Math.round(ms/3600000)+"h";
-  return Math.round(ms/86400000)+"d";
+  return Math.floor(ms/86400000)+"d";
 }
+// "2026-08-20" or epoch-seconds -> "20 Aug" (adds year when not this year).
+// One date formatter for every "paused since" / "as of" label (2026-11-05).
+function _fmtDayMon(v){
+  var d = (typeof v === "number") ? new Date(v * 1000) : new Date(String(v).slice(0,10) + "T00:00:00Z");
+  if (isNaN(d.getTime())) return String(v || "");
+  var mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getUTCMonth()];
+  var y = d.getUTCFullYear();
+  return d.getUTCDate() + " " + mon + (y !== new Date().getUTCFullYear() ? " " + y : "");
+}
+// True when a feed's age (seconds) is beyond its budget: the panel must say
+// "paused since <date>" instead of presenting the number as current.
+function _isPaused(ageSec, budgetSec){ return Number.isFinite(ageSec) && ageSec > budgetSec; }
 function ageLabel(key){
   var d = dataAge[key]; if (!d || !d.lastFetch) return "—";
   return fmtAge(Date.now() - d.lastFetch) + " ago";
@@ -1903,6 +1922,8 @@ if(document.readyState === "loading"){
 
 var DOLLARS_PER_SEC = (21000000 * 80) / 86400;
 var _brentPrice = 80;         // updated by EIA
+var _brentLoaded = false;     // 2026-11-05: true once a real Brent print is in; the
+                              // historical table must not read the 80 placeholder
 var _wtiPrice = null;         // headline WTI — set by renderEIA() alongside _brentPrice so the
                               // Brent-WTI spread verdict uses the SAME source as the panel header
 var _yesterdayDollars = null; // derived from DOLLARS_PER_SEC at yesterday's close (86400s)
@@ -1959,7 +1980,7 @@ var PRECRISIS_BRENT  = 80;
   if(subEl){
     var todayMb = (BASELINE_BBL_DAY * todayRatio / 1e6).toFixed(1);
     subEl.textContent = todayVess>0
-      ? (todayVess + " tankers · ~" + todayMb + "M bbl/day · $" + _brentPrice.toFixed(1) + "/bbl")
+      ? (todayVess + " tankers · ~" + todayMb + "M bbl/day · $" + Math.round(_brentPrice) + "/bbl")
       : ("Awaiting AIS · pre-crisis " + (BASELINE_BBL_DAY/1e6) + "M bbl/day baseline");
   }
 
@@ -2002,7 +2023,7 @@ var PRECRISIS_BRENT  = 80;
 
   // Brent in tooltip
   var ttBrent=document.getElementById("ttBrent");
-  if(ttBrent) ttBrent.textContent="$"+_brentPrice.toFixed(1)+"/bbl";
+  if(ttBrent) ttBrent.textContent = _brentLoaded ? ("$"+Math.round(_brentPrice)+"/bbl") : "—";
 
   setTimeout(tick,1000);
 })();
@@ -2212,8 +2233,8 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
   var baseline = (snapshot && isFinite(snapshot.baseline_30d)) ? snapshot.baseline_30d : 140;
   var flowRow;
   if(!aisCount){
-    flowRow = { label:"Flow reconciliation", id:"xv-flow", status:"--", statusColor:"var(--muted)",
-                body:"Awaiting first AIS scrape. Baseline (30d rolling): "+baseline+" transits/day."};
+    flowRow = { label:"Flow reconciliation", id:"xv-flow", status:"NO DATA", statusColor:"var(--muted)", paused:true,
+                body:"No live transit count (per-ship AIS paused), so no flow comparison is made. Baseline: "+baseline+" transits/day."};
   } else {
     var ratio = aisCount / baseline;
     if(ratio >= 0.85 && ratio <= 1.15){
@@ -2240,8 +2261,16 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
 
   // Row 3 — Rate-volume divergence: BDTI WoW vs AIS trend
   if(!bdti || !isFinite(bdti.value)){
-    rows.push({ label:"Rate-volume divergence", id:"xv-rate", status:"--", statusColor:"var(--muted)",
-                body:"BDTI feed unavailable. Awaiting next weekly publish." });
+    rows.push({ label:"Rate-volume divergence", id:"xv-rate", status:"NO DATA", statusColor:"var(--muted)", paused:true,
+                body:"BDTI feed unavailable. Awaiting next publish." });
+  } else if(!aisCount){
+    // 2026-11-05: no transit count = no volume side. Never read a missing
+    // count as "0 transits, traffic drop".
+    var bw = isFinite(bdti.wow_pct) ? ((bdti.wow_pct >= 0 ? "+" : "") + Math.round(bdti.wow_pct) + "% WoW") : "WoW n/a";
+    rows.push({ label:"Rate-volume divergence", id:"xv-rate", status: bdti.stale ? "PAUSED" : "NO VOLUME DATA",
+                statusColor: bdti.stale ? "var(--amber)" : "var(--muted)", paused:true,
+                body:"BDTI " + Math.round(bdti.value) + " (" + bw + (bdti.asOf ? ", published " + _fmtDayMon(bdti.asOf) : "") + "). "
+                  + "No live transit count to compare it with, so no rate-volume reading is made." });
   } else {
     var bdtiV = bdti.value;
     var wow = isFinite(bdti.wow_pct) ? bdti.wow_pct : null;
@@ -2249,7 +2278,7 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
     var aisDirDown = baseline ? (aisCount < baseline * 0.85) : false;
     var aisHolding = !aisDirUp && !aisDirDown;
     var status, color, body;
-    var wowStr = (wow != null) ? ((wow >= 0 ? "+" : "") + wow.toFixed(1) + "%") : "WoW n/a";
+    var wowStr = (wow != null) ? ((wow >= 0 ? "+" : "") + Math.round(wow) + "%") : "WoW n/a";
     if(wow != null && wow > 1.5 && aisHolding){
       status = "FEAR PREMIUM"; color = "var(--amber)";
       body = "BDTI "+wowStr+" WoW (value "+bdtiV+"). AIS transits holding near baseline. Rates rising while traffic steady = fear premium only — watch for traffic drop as equity catalyst.";
@@ -2274,8 +2303,8 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
 
   // Row 4 — Aerial activity (OpenSky ADS-B)
   if(!aircraft || aircraft.error || aircraft.count == null){
-    rows.push({ label:"Aerial activity", id:"xv-air", status:"--", statusColor:"var(--muted)",
-                body:"Aircraft feed initialising. ADS-B sweep runs every 15 min." });
+    rows.push({ label:"Aerial activity", id:"xv-air", status:"NO DATA", statusColor:"var(--muted)", paused:true,
+                body:"Aircraft feed returned no data. ADS-B sweep runs every 15 min." });
   } else {
     var mil = aircraft.militaryCount || 0;
     var total = aircraft.count || 0;
@@ -2296,9 +2325,15 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
   }
 
   // Row 5 — Geopolitical pressure (GDELT)
-  if(!events || events.error || events.neg_tone_pct == null){
-    rows.push({ label:"Geopolitical pressure", id:"xv-geo", status:"--", statusColor:"var(--muted)",
-                body:"GDELT feed initialising. Hourly sweep of Hormuz/Iran news tone." });
+  if(!events || events.error){
+    rows.push({ label:"Geopolitical pressure", id:"xv-geo", status:"NO DATA", statusColor:"var(--muted)", paused:true,
+                body:"GDELT feed returned no data. Hourly sweep of Hormuz/Iran news tone." });
+  } else if(events.neg_tone_pct == null){
+    // 2026-11-05: the feed answers, but GDELT returned no tone. Say that,
+    // instead of "initialising" for ever.
+    var nArt = events.article_count_24h || 0;
+    rows.push({ label:"Geopolitical pressure", id:"xv-geo", status:"NO TONE", statusColor:"var(--muted)", paused:true,
+                body: nArt + " GDELT article" + (nArt === 1 ? "" : "s") + " in the last 24h; GDELT returned no tone score, so no pressure reading is made." });
   } else {
     var negPct = events.neg_tone_pct || 0;
     var arts = events.article_count_24h || 0;
@@ -2322,8 +2357,8 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
   var hasWx = weather && !weather.error;
   var hasSe = seismic && !seismic.error;
   if(!hasWx && !hasSe){
-    rows.push({ label:"Environmental conditions", id:"xv-env", status:"--", statusColor:"var(--muted)",
-                body:"Weather + seismic feeds initialising." });
+    rows.push({ label:"Environmental conditions", id:"xv-env", status:"NO DATA", statusColor:"var(--muted)", paused:true,
+                body:"Weather and seismic feeds returned no data." });
   } else {
     var rough = hasWx && weather.roughConditions;
     var maxMag = hasSe ? (seismic.max_mag || 0) : 0;
@@ -2354,8 +2389,14 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
   // Row 7 — Sanctions activity (OFAC Iran actions / 30d)
   var ofacActions = (snap.ofac_iran_actions_30d != null) ? snap.ofac_iran_actions_30d : null;
   if(ofacActions == null){
-    rows.push({ label:"Sanctions activity", id:"xv-sanctions", status:"—", statusColor:"var(--muted)",
+    rows.push({ label:"Sanctions activity", id:"xv-sanctions", status:"—", statusColor:"var(--muted)", paused:true,
                 body:"OFAC scraper has not run yet." });
+  } else if(_isPaused(snap.ofac_age_sec, 2 * 86400)){
+    var ofacSince = _fmtDayMon(Math.floor(Date.now()/1000 - snap.ofac_age_sec));
+    rows.push({ label:"Sanctions activity", id:"xv-sanctions", status:"PAUSED", statusColor:"var(--amber)", paused:true,
+                body:"OFAC feed paused since " + ofacSince + ". Its last 30-day window held " + ofacActions
+                  + " Iran-related action" + (ofacActions === 1 ? "" : "s")
+                  + (snap.ofac_latest_action_date ? " (latest " + _fmtDayMon(snap.ofac_latest_action_date) + ")" : "") + "." });
   } else {
     var ofacColor, ofacStatus;
     if(ofacActions === 0){ ofacColor = "var(--green)"; ofacStatus = "QUIET"; }
@@ -2370,17 +2411,23 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
   var spr = snap.spr_level_kbbl;
   var sprWow = snap.spr_wow_pct;
   var crudeWow = snap.inventory_wow_pct;
+  var stocksAgeSec = snap.weekly_stocks_as_of ? (Date.now() - Date.parse(snap.weekly_stocks_as_of + "T00:00:00Z")) / 1000 : null;
   if(spr == null){
-    rows.push({ label:"Inventory pressure", id:"xv-inventory", status:"—", statusColor:"var(--muted)",
+    rows.push({ label:"Inventory pressure", id:"xv-inventory", status:"—", statusColor:"var(--muted)", paused:true,
                 body:"EIA weekly stocks unavailable." });
+  } else if(_isPaused(stocksAgeSec, 14 * 86400)){
+    rows.push({ label:"Inventory pressure", id:"xv-inventory", status:"PAUSED", statusColor:"var(--amber)", paused:true,
+                body:"EIA weekly stocks feed paused. Last week on file: " + _fmtDayMon(snap.weekly_stocks_as_of)
+                  + " (SPR " + Math.round(spr/1000) + "M bbl)." });
   } else {
     var invColor = "var(--green)", invStatus = "STABLE";
     if(sprWow != null && sprWow < -1.0){ invColor = "var(--red)"; invStatus = "DRAW DETECTED"; bump(3, "HIGH", "var(--red)"); }
     else if(sprWow != null && sprWow < -0.5){ invColor = "var(--amber)"; invStatus = "MILD DRAW"; bump(2, "ELEVATED", "var(--amber)"); }
     var sprWowSafe = (sprWow == null) ? 0 : sprWow;
     var crudeWowSafe = (crudeWow == null) ? 0 : crudeWow;
-    var invBody = "SPR " + (spr/1000).toFixed(0) + "M bbl (" + (sprWowSafe > 0 ? "+" : "") + sprWowSafe.toFixed(1) + "% WoW). " +
-                  "Commercial crude " + (crudeWowSafe > 0 ? "+" : "") + crudeWowSafe.toFixed(1) + "% WoW.";
+    var invBody = "SPR " + (spr/1000).toFixed(0) + "M bbl (" + (sprWowSafe > 0 ? "+" : "") + Math.round(sprWowSafe) + "% WoW). " +
+                  "Commercial crude " + (crudeWowSafe > 0 ? "+" : "") + Math.round(crudeWowSafe) + "% WoW" +
+                  (snap.weekly_stocks_as_of ? ", week of " + _fmtDayMon(snap.weekly_stocks_as_of) : "") + ".";
     rows.push({ label:"Inventory pressure", id:"xv-inventory", status:invStatus, statusColor:invColor, body:invBody });
   }
 
@@ -2390,7 +2437,16 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
   // (~20 mbpd). Apples-to-oranges → permanently red "BELOW TARGET" row.
   // Aligned target to PAPR_OPEC's actual quota baseline (~21 mbpd).
   var opec = snap.opec_production_mbpd;
-  if(opec == null){
+  // 2026-11-05: monthly series; older than ~2 months means the feed stopped.
+  var opecMs = snap.opec_production_as_of ? Date.parse(snap.opec_production_as_of + "-01T00:00:00Z") : NaN;
+  if(opec != null && isFinite(opecMs) && (Date.now() - opecMs) > 75 * 86400000){
+    rows.push({ label:"Production stability", id:"xv-production", status:"PAUSED", statusColor:"var(--amber)", paused:true,
+                body:"OPEC production feed paused. Last month on file: " + snap.opec_production_as_of + " (OPEC-9 " + Math.round(opec) + " mbpd)." });
+    opec = undefined;
+  }
+  if(opec === undefined){
+    // handled above
+  } else if(opec == null){
     rows.push({ label:"Production stability", id:"xv-production", status:"—", statusColor:"var(--muted)",
                 body:"OPEC production data unavailable." });
   } else {
@@ -2400,7 +2456,7 @@ function _computeXvRows(aisCount, snapshot, bdti, aircraft, events, weather, sei
     if(Math.abs(diff) < 0.5){ prodColor = "var(--green)"; prodStatus = "ON-TARGET"; }
     else if(diff < -1.0){ prodColor = "var(--red)"; prodStatus = "BELOW TARGET"; bump(3, "HIGH", "var(--red)"); }
     else { prodColor = "var(--amber)"; prodStatus = "DEVIATION"; bump(2, "ELEVATED", "var(--amber)"); }
-    var prodBody = "OPEC-9 quota members " + opec.toFixed(1) + " mbpd vs target ~" + target + " mbpd (EIA STEO). " +
+    var prodBody = "OPEC-9 quota members " + Math.round(opec) + " mbpd vs target ~" + target + " mbpd (EIA STEO" + (snap.opec_production_as_of ? ", " + snap.opec_production_as_of : "") + "). " +
                    (diff > 0 ? "Output above target." : diff < -0.5 ? "Output below target — supply concern." : "Output broadly aligned.");
     rows.push({ label:"Production stability", id:"xv-production", status:prodStatus, statusColor:prodColor, body:prodBody });
   }
@@ -2473,6 +2529,13 @@ async function renderXV(aisCount){
     xv.appendChild(row);
   });
   _wireTensionGauge(out.severity);
+  var xvSrc = document.getElementById("xvSrc");
+  if(xvSrc){
+    var nPaused = out.rows.filter(function(r){ return r.paused; }).length;
+    xvSrc.textContent = (out.rows.length - nPaused) + " of " + out.rows.length + " signals current"
+      + (nPaused ? " · " + nPaused + " paused" : "");
+    xvSrc.style.color = nPaused ? "var(--amber)" : "var(--blue)";
+  }
 }
 renderXV(0);
 
@@ -2910,7 +2973,12 @@ function updateTypeBars(){
   var mixBlock = document.getElementById("mixBlock");
   var mixBadge = document.getElementById("mixSrc");
   if(mixBadge){
-    if(scrapedMode){
+    if(scrapedMode && window._vesselPaused && _snapshotData && Number.isFinite(_snapshotData.scraped_age_sec)){
+      var mixSince = _fmtDayMon(Math.floor(Date.now()/1000 - _snapshotData.scraped_age_sec));
+      mixBadge.textContent = "PAUSED · " + mixSince.toUpperCase();
+      mixBadge.style.color = "var(--amber)";
+      if(subhead) subhead.textContent = "Last scrape " + mixSince + ": " + subhead.textContent;
+    } else if(scrapedMode){
       mixBadge.textContent = "WEB FEED · 4h";
       mixBadge.style.color = "var(--blue)";
     } else if(simulated){
@@ -2952,10 +3020,15 @@ function renderHistoricalEvents(){
   if(!hr) return;
   var closureMs = Date.parse(CLOSURE_DATE_ISO + "T00:00:00Z");
   var dayN = isFinite(closureMs) ? Math.floor((Date.now() - closureMs) / 86400000) : null;
-  var brentNow = (typeof _brentPrice === "number" && _brentPrice > 0) ? _brentPrice : null;
-  var oilSpikeNow = (brentNow != null && PRE_CRISIS_BRENT > 0)
-    ? ("+" + Math.round((brentNow - PRE_CRISIS_BRENT) / PRE_CRISIS_BRENT * 100) + "%")
-    : "+49%";
+  // 2026-11-05: this ran at page load against the $80 placeholder and showed
+  // "+11%" for up to 5 minutes. Now it waits for a real print (renderEIA calls
+  // it again) and never falls back to a frozen constant.
+  var brentNow = (_brentLoaded && typeof _brentPrice === "number" && _brentPrice > 0) ? _brentPrice : null;
+  var oilSpikeNow = "—";
+  if (brentNow != null && PRE_CRISIS_BRENT > 0) {
+    var spk = Math.round((brentNow - PRE_CRISIS_BRENT) / PRE_CRISIS_BRENT * 100);
+    oilSpikeNow = (spk >= 0 ? "+" : "") + spk + "%";
+  }
   var html = '<div class="hc-row head">'
     + '<div>Event</div><div>Year</div><div>Duration</div>'
     + '<div style="text-align:right">Oil spike</div>'
@@ -3075,7 +3148,7 @@ dataAge.bdti.status = "loading";
         var wow = isFinite(d.wow_pct) ? d.wow_pct : null;
         if(wow == null){ dirEl.textContent = ""; }
         else {
-          dirEl.textContent = (wow >= 0 ? "▲" : "▼") + Math.abs(wow).toFixed(1) + "%";
+          dirEl.textContent = (wow >= 0 ? "▲" : "▼") + Math.round(Math.abs(wow)) + "%";
           dirEl.style.color = wow > 0 ? "var(--green)" : wow < 0 ? "var(--red)" : "var(--muted)";
         }
       }
@@ -3103,7 +3176,11 @@ dataAge.bdti.status = "loading";
       }
       if(badgeEl){
         if(d.stale){
-          badgeEl.textContent = "STALE" + (isFinite(d.ageDays) ? " · " + d.ageDays + "d" : "");
+          // 2026-11-05: age counted from the publish date, the same base the
+          // footer health bar uses (was scrape date here, publish date there:
+          // "86D" vs "90d" for the same print).
+          var pubAgeD = d.asOf ? Math.floor((Date.now() - Date.parse(d.asOf + "T00:00:00Z")) / 86400000) : d.ageDays;
+          badgeEl.textContent = "STALE" + (isFinite(pubAgeD) ? " · " + pubAgeD + "d" : "");
           badgeEl.style.color = "var(--amber)";
         } else {
           badgeEl.textContent = "FREIGHT";
@@ -3195,6 +3272,9 @@ var _aisServer = null;
 function updateVesselUI(){
   // Determine source — server-side if available, else client B+ engine
   var serverActive = !!(_aisServer && _aisServer.wsConnected);
+  // 2026-11-05: while the vessel feed is paused, applyAisDegradedMode owns
+  // every vessel element; the empty client log must not write "0" back.
+  if (window._vesselPaused && !serverActive) return;
   var t  = serverActive ? (_aisServer.categories?.transit  || 0) : vesselCategoryCount.transit;
   var a  = serverActive ? (_aisServer.categories?.anchored || 0) : vesselCategoryCount.anchored;
   var ap = serverActive ? (_aisServer.categories?.approach || 0) : vesselCategoryCount.approach;
@@ -3233,7 +3313,7 @@ function updateVesselUI(){
 
   // Vessel Movement card
   var setTxt = function(id, v){ var el=document.getElementById(id); if(el) el.textContent = v; };
-  if (!_scrapeLocked) setTxt("mvTransit24h", total24h);
+  if (!_scrapeLocked && !window._vesselPaused) setTxt("mvTransit24h", total24h);
   setTxt("mvWest", west);
   setTxt("mvEast", east);
   setTxt("mvTransit", t);
@@ -3257,7 +3337,9 @@ function updateVesselUI(){
     }
     var totalVessels = (t + a + ap) + total24h;
     var hasNoData = totalVessels === 0;
-    if (_scrapeLocked) {
+    if (window._vesselPaused) {
+      // Paused state (applyAisDegradedMode) owns the badge. 2026-11-05.
+    } else if (_scrapeLocked) {
       // Scrape-mode owns the badge — applyAisDegradedMode() set it to "WEB FEED · 4h"
       // Don't overwrite to INITIALISING just because the AIS transit log is empty.
     } else if (hasNoData) {
@@ -3324,8 +3406,63 @@ function _renderPortActivityBars(perPort){
   }).join("");
 }
 
+// 2026-11-05: Vessel panel "feed paused" state. When there is no live AIS
+// transit count AND the port scrape is older than a day, the panel says so
+// with the date and shows no number: it never shows "0 crossings" or
+// "INITIALISING" for a feed that has simply stopped.
+var VESSEL_PAUSE_SEC = 24 * 3600;
+function _vesselFeedPaused(snap){
+  if(!snap) return false;
+  var aisLive = snap.transits_available === true && Number.isFinite(snap.transits_per_day);
+  return !aisLive && (!Number.isFinite(snap.scraped_age_sec) || snap.scraped_age_sec > VESSEL_PAUSE_SEC);
+}
+function _applyVesselPaused(snap){
+  var since = Number.isFinite(snap.scraped_age_sec)
+    ? _fmtDayMon(Math.floor(Date.now()/1000 - snap.scraped_age_sec)) : null;
+  var sinceTxt = since ? ("since " + since) : "";
+  var moveSrc = document.getElementById("moveSrc");
+  if(moveSrc){ moveSrc.textContent = "FEED PAUSED" + (since ? " · " + since.toUpperCase() : ""); moveSrc.style.color = "var(--amber)"; }
+  var elT = document.getElementById("mvTransit24h");
+  if(elT){ elT.textContent = "—"; elT.style.color = "var(--muted)"; }
+  var subEl = elT && elT.nextElementSibling;
+  if(subEl) subEl.textContent = "no current count";
+  var dirBar = document.getElementById("mvDirBar");
+  if(dirBar){ dirBar.style.display = "none"; if(dirBar.nextElementSibling) dirBar.nextElementSibling.style.display = "none"; }
+  var pb = document.getElementById("mvPortsBars"); if(pb) pb.style.display = "none";
+  var tr = document.getElementById("mvTransit");
+  var grid3 = tr && tr.parentNode.parentNode;
+  if(grid3){
+    Array.prototype.forEach.call(grid3.children, function(c){ if(c.id !== "mvPausedNote") c.style.display = "none"; });
+    grid3.style.gridTemplateColumns = "1fr";
+    var note = document.getElementById("mvPausedNote");
+    if(!note){
+      note = document.createElement("div");
+      note.id = "mvPausedNote";
+      note.style.cssText = "background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.5";
+      grid3.appendChild(note);
+    }
+    note.style.display = "";
+    note.textContent = "Vessel feed paused " + (sinceTxt || "") + ". Live per-ship AIS is down (provider outage) and the port-call scrape stopped updating"
+      + (since ? " on " + since : "") + ". No crossing count is shown until a feed returns.";
+  }
+  // Signal-bar tile: no number from a stopped feed.
+  var sigV = document.getElementById("sigVessels");
+  var sigVDir = document.getElementById("sigVesselsDir");
+  var sigVSrc = document.getElementById("sigVesselsSrc");
+  if(sigV){ sigV.textContent = "—"; sigV.style.color = "var(--muted)"; }
+  if(sigVDir){ sigVDir.textContent = since ? ("paused since " + since) : "paused"; sigVDir.style.color = "var(--muted)"; sigVDir.style.fontSize = "9px"; sigVDir.dataset.scrapeOwned = "1"; }
+  if(sigVSrc){ sigVSrc.textContent = "PAUSED"; sigVSrc.style.color = "var(--amber)"; }
+  var st = document.getElementById("aisStatus");
+  if(st) st.textContent = "Live per-ship AIS paused (provider outage). Port data last updated " + (since || "n/a") + ".";
+  var vc = document.getElementById("vesselCount");
+  if(vc && !(typeof loggedVessels !== "undefined" && loggedVessels.length)) vc.textContent = "-";
+}
+
 function applyAisDegradedMode(snap){
   if(!snap) return;
+  if(_vesselFeedPaused(snap)){ window._vesselPaused = true; _applyVesselPaused(snap); return; }
+  window._vesselPaused = false;
+  var _pn = document.getElementById("mvPausedNote"); if(_pn) _pn.style.display = "none";
   var isStatic = !!snap.is_static;
   var isWebScrape = snap.data_source === "web_scrape";
   var scrapedTotal = isFinite(snap.scraped_vessel_total) ? snap.scraped_vessel_total : null;
@@ -3634,21 +3771,32 @@ function renderPortwatch(snap){
   var el = document.getElementById("sigPortwatch");
   if(!el) return;
   if(snap.portwatch_transits_daily == null){ el.textContent = "—"; return; }
+  // 2026-11-05: IMF publishes weekly with a 5-10 day lag; past 14 days the
+  // tile is a paused feed, not a lagged one.
+  var asOfMs = snap.portwatch_as_of ? Date.parse(snap.portwatch_as_of + "T00:00:00Z") : NaN;
+  var pwPaused = !isFinite(asOfMs) || (Date.now() - asOfMs) > 14 * 86400000;
   el.textContent = snap.portwatch_transits_daily;
+  el.style.color = pwPaused ? "var(--muted)" : "var(--red)";
   var dir = document.getElementById("sigPortwatchDir");
   if(dir && snap.portwatch_pct_prewar != null){
-    dir.textContent = snap.portwatch_pct_prewar + "% of pre-war";
+    dir.textContent = pwPaused ? ("on " + _fmtDayMon(snap.portwatch_as_of)) : (Math.round(snap.portwatch_pct_prewar) + "% of pre-war");
     dir.style.fontSize = "9px";
-    dir.style.color = snap.portwatch_pct_prewar < 50 ? "var(--red)" : "var(--muted)";
+    dir.style.color = (!pwPaused && snap.portwatch_pct_prewar < 50) ? "var(--red)" : "var(--muted)";
   }
   var src = document.getElementById("sigPortwatchSrc");
-  if(src && snap.portwatch_as_of) src.textContent = "IMF · " + snap.portwatch_as_of.slice(5);
+  if(src && snap.portwatch_as_of){
+    src.textContent = pwPaused ? "IMF · PAUSED" : ("IMF · " + _fmtDayMon(snap.portwatch_as_of).toUpperCase());
+    src.style.color = pwPaused ? "var(--amber)" : "";
+  }
   var tip = document.getElementById("ttipPortwatch");
   if(tip){
-    tip.innerHTML = '<div><b>' + (snap.portwatch_transits_daily) + '</b> transits on ' + (snap.portwatch_as_of || '?')
-      + ' (' + (snap.portwatch_tankers_daily ?? '—') + ' tankers) · 7d avg <b>' + (snap.portwatch_avg7 ?? '—')
-      + '</b> vs pre-war <b>' + (snap.portwatch_prewar ?? '~84') + '</b>/day'
-      + '<div style="color:var(--muted2);margin-top:3px">IMF PortWatch · UN Global Platform AIS · weekly update (lagged)</div></div>';
+    var nT = snap.portwatch_transits_daily, nK = snap.portwatch_tankers_daily;
+    tip.innerHTML = '<div><b>' + nT + '</b> transit' + (nT === 1 ? '' : 's') + ' on ' + (snap.portwatch_as_of ? _fmtDayMon(snap.portwatch_as_of) : '?')
+      + ' (' + (nK != null ? nK + ' tanker' + (nK === 1 ? '' : 's') : 'tankers n/a') + ') · 7d avg <b>' + (snap.portwatch_avg7 != null ? Math.round(snap.portwatch_avg7) : '—')
+      + '</b> vs pre-war <b>' + (snap.portwatch_prewar != null ? Math.round(snap.portwatch_prewar) : '~84') + '</b>/day'
+      + (snap.portwatch_pct_prewar != null ? ' (' + Math.round(snap.portwatch_pct_prewar) + '% of pre-war)' : '')
+      + '<div style="color:var(--muted2);margin-top:3px">IMF PortWatch · UN Global Platform AIS · weekly update (lagged)'
+      + (pwPaused ? ' · feed paused, newest day on file ' + _fmtDayMon(snap.portwatch_as_of) : '') + '</div></div>';
   }
 }
 
@@ -3659,16 +3807,27 @@ function renderUkmtoIncidents(snap){
   if(snap.incidents_30d == null){ el.textContent = "—"; return; }
   el.textContent = snap.incidents_30d;
   var dir = document.getElementById("sigIncidentsDir");
+  var latest = (Array.isArray(snap.ukmto_recent) && snap.ukmto_recent[0] && snap.ukmto_recent[0].date) || null;
+  // 2026-11-05: the 30-day window was counted when the feed last ran. If it
+  // stopped, label the window by its end date, not "last 30 days".
+  var paused = _isPaused(snap.ukmto_age_sec, 2 * 86400);
+  var lbl = document.getElementById("sigIncidentsLabel");
+  var src = document.getElementById("sigIncidentsSrc");
+  if(lbl) lbl.textContent = paused ? ("Incidents / 30d to " + (latest ? _fmtDayMon(latest) : "?")) : "Incidents / 30d";
+  if(src){ src.textContent = paused ? "PAUSED" : "ROYAL NAVY"; src.style.color = paused ? "var(--amber)" : ""; }
+  el.style.color = paused ? "var(--muted)" : "var(--red)";
   if(dir && snap.ukmto_attacks_30d != null){
-    dir.textContent = snap.ukmto_attacks_30d + " attacks";
+    dir.textContent = snap.ukmto_attacks_30d + " attack" + (snap.ukmto_attacks_30d === 1 ? "" : "s");
     dir.style.fontSize = "9px";
+    dir.style.color = paused ? "var(--muted)" : "var(--red)";
   }
   var tip = document.getElementById("ttipIncidents");
   if(tip && Array.isArray(snap.ukmto_recent) && snap.ukmto_recent.length){
     tip.innerHTML = snap.ukmto_recent.slice(0,3).map(function(e){
       return '<div style="padding:2px 0"><b>' + (e.type || '') + '</b> · '
         + (e.place || '') + ' · ' + (e.date || '') + '</div>';
-    }).join("") + '<div style="color:var(--muted2);margin-top:3px">UKMTO · Royal Navy</div>';
+    }).join("") + '<div style="color:var(--muted2);margin-top:3px">UKMTO · Royal Navy'
+      + (paused ? ' · feed paused, last report ' + _fmtDayMon(latest) : '') + '</div>';
   }
 }
 
@@ -3676,9 +3835,24 @@ function renderUkmtoIncidents(snap){
 // quote thaws) + Henry Hub rows in Market Pulse, under the WTI row. Built
 // once, refreshed on each snapshot poll. Spreads are vs oilprice.com's OWN
 // delayed Brent — never our live Brent (staleness mismatch).
+// Age (seconds) of the oil scrape behind Henry Hub / OVX / India VIX. Uses the
+// snapshot field, else the integrity validator's "age Nm" reason. 2026-11-05.
+function _oilScrapeAgeSec(snap){
+  if(snap && Number.isFinite(snap.oil_scraped_age_sec)) return snap.oil_scraped_age_sec;
+  var f = window._integrity && window._integrity.feeds && window._integrity.feeds.oil;
+  var m = f && /age (\d+)m/.exec(f.reason || "");
+  return m ? (+m[1]) * 60 : null;
+}
+function _pausedTag(ageSec){
+  return ' <span style="font-weight:400;font-size:9px;color:var(--amber)">as of '
+    + _fmtDayMon(Math.floor(Date.now()/1000 - ageSec)) + ' (feed paused)</span>';
+}
 function renderBlendRows(snap){
   var wtiEl = document.getElementById("wtiPrice");
   if(!wtiEl) return;
+  var oilAge = _oilScrapeAgeSec(snap);
+  var oilPaused = _isPaused(oilAge, 2 * 86400);
+  var blendsPaused = _isPaused(snap.blends_age_sec, 2 * 86400);
   var anchorRow = wtiEl.closest("div");
   if(!anchorRow || !anchorRow.parentNode) return;
   function ensureRow(id, labelHtml){
@@ -3695,11 +3869,13 @@ function renderBlendRows(snap){
   }
   if(snap.iran_heavy_discount != null){
     var v = ensureRow("mpIranHeavy", 'Iran Heavy <span style="color:var(--muted2)" title="Discount vs the same-source delayed Brent quote — how hard sanctions bite Iranian crude pricing">· sanctions bite</span>');
-    if(v) v.innerHTML = '−$' + snap.iran_heavy_discount.toFixed(2) + ' <span style="color:var(--muted2);font-weight:400;font-size:9px">vs Brent · quote ' + (snap.iran_heavy_quote_age_h != null ? snap.iran_heavy_quote_age_h.toFixed(0) + 'h' : 'n/a') + '</span>';
+    if(v) v.innerHTML = '-$' + Math.round(snap.iran_heavy_discount) + (blendsPaused ? _pausedTag(snap.blends_age_sec)
+      : ' <span style="color:var(--muted2);font-weight:400;font-size:9px">vs Brent · quote ' + (snap.iran_heavy_quote_age_h != null ? snap.iran_heavy_quote_age_h.toFixed(0) + 'h' : 'n/a') + '</span>');
   }
   if(snap.murban_premium != null){
     var m = ensureRow("mpMurban", 'Murban <span style="color:var(--muted2)" title="Loads at Fujairah, OUTSIDE the strait — premium vs Brent = market paying to avoid Hormuz transit">· bypass premium</span>');
-    if(m) m.innerHTML = (snap.murban_premium >= 0 ? '+$' : '−$') + Math.abs(snap.murban_premium).toFixed(2) + ' <span style="color:var(--muted2);font-weight:400;font-size:9px">vs Brent · quote ' + (snap.murban_quote_age_h != null ? snap.murban_quote_age_h.toFixed(0) + 'h' : 'n/a') + '</span>';
+    if(m) m.innerHTML = (snap.murban_premium >= 0 ? '+$' : '-$') + Math.round(Math.abs(snap.murban_premium)) + (blendsPaused ? _pausedTag(snap.blends_age_sec)
+      : ' <span style="color:var(--muted2);font-weight:400;font-size:9px">vs Brent · quote ' + (snap.murban_quote_age_h != null ? snap.murban_quote_age_h.toFixed(0) + 'h' : 'n/a') + '</span>');
   }
   // P0-3 (2026-06-11): war-premium line — parses the rendered Brent price so
   // it tracks whatever source the page resolved (live or EIA), no new fetch.
@@ -3717,18 +3893,20 @@ function renderBlendRows(snap){
   if(snap.ovx != null){
     var o = ensureRow("mpOvx", 'OVX <span style="color:var(--muted2)" title="CBOE crude-oil volatility index — the options market pricing oil chaos. Calm ~25-35; war-level 50+">· oil fear gauge</span>');
     if(o){var oc = snap.ovx >= 45 ? "var(--red)" : snap.ovx >= 35 ? "var(--amber)" : "var(--green)";
-      o.innerHTML = '<span style="color:'+oc+'">'+snap.ovx.toFixed(1)+'</span>'
-        + (snap.ovx_change_pct != null ? ' <span style="font-weight:400;font-size:9px;color:var(--muted)">' + (snap.ovx_change_pct>=0?'+':'') + snap.ovx_change_pct.toFixed(1) + '%</span>' : '');}
+      if(oilPaused) oc = "var(--muted)";
+      o.innerHTML = '<span style="color:'+oc+'">'+Math.round(snap.ovx)+'</span>'
+        + (oilPaused ? _pausedTag(oilAge) : (snap.ovx_change_pct != null ? ' <span style="font-weight:400;font-size:9px;color:var(--muted)">' + (snap.ovx_change_pct>=0?'+':'') + Math.round(snap.ovx_change_pct) + '%</span>' : ''));}
   }
   if(snap.india_vix != null){
     var iv = ensureRow("mpIndiaVix", 'India VIX <span style="color:var(--muted2)" title="NSE volatility index — is the Indian market pricing Hormuz risk? Divergence vs OVX is the story">· NSE</span>');
-    if(iv) iv.innerHTML = snap.india_vix.toFixed(1)
-      + (snap.india_vix_change_pct != null ? ' <span style="font-weight:400;font-size:9px;color:var(--muted)">' + (snap.india_vix_change_pct>=0?'+':'') + snap.india_vix_change_pct.toFixed(1) + '%</span>' : '');
+    if(iv) iv.innerHTML = Math.round(snap.india_vix)
+      + (oilPaused ? _pausedTag(oilAge) : (snap.india_vix_change_pct != null ? ' <span style="font-weight:400;font-size:9px;color:var(--muted)">' + (snap.india_vix_change_pct>=0?'+':'') + Math.round(snap.india_vix_change_pct) + '%</span>' : ''));
   }
   if(snap.henry_hub_usd != null){
     var h = ensureRow("mpHenryHub", 'Henry Hub gas');
+    // Henry Hub trades near $3; whole dollars would erase it, so cents stay.
     if(h) h.innerHTML = '$' + snap.henry_hub_usd.toFixed(2)
-      + (snap.henry_hub_change_pct != null ? ' <span style="font-weight:400;font-size:9px;color:' + (snap.henry_hub_change_pct >= 0 ? 'var(--blue)' : 'var(--amber)') + '">' + (snap.henry_hub_change_pct >= 0 ? '+' : '') + snap.henry_hub_change_pct.toFixed(1) + '%</span>' : '');
+      + (oilPaused ? _pausedTag(oilAge) : (snap.henry_hub_change_pct != null ? ' <span style="font-weight:400;font-size:9px;color:' + (snap.henry_hub_change_pct >= 0 ? 'var(--blue)' : 'var(--amber)') + '">' + (snap.henry_hub_change_pct >= 0 ? '+' : '') + Math.round(snap.henry_hub_change_pct) + '%</span>' : ''));
   }
 }
 // 2026-05-20: 90s → 180s. Same rationale as renderConsolidatedTiles.
@@ -3777,6 +3955,15 @@ function renderOfacTimeline(snap){
   var srcEl = document.getElementById("ofacTlSrc");
   if(!box) return;
   var actions = (snap && Array.isArray(snap.ofac_recent_actions)) ? snap.ofac_recent_actions : [];
+  // 2026-11-05: label the window honestly when the scraper has stopped.
+  var ofacPaused = _isPaused(snap && snap.ofac_age_sec, 2 * 86400);
+  var ofacSince = ofacPaused ? _fmtDayMon(Math.floor(Date.now()/1000 - snap.ofac_age_sec)) : null;
+  if(srcEl) srcEl.style.color = ofacPaused ? "var(--amber)" : "var(--blue)";
+  if(ofacPaused && !actions.length){
+    box.innerHTML = '<div class="ofac-act-empty">OFAC feed paused since ' + ofacSince + '.</div>';
+    if(srcEl) srcEl.textContent = "paused since " + ofacSince;
+    return;
+  }
   if(!actions.length){
     box.innerHTML = '<div class="ofac-act-empty">No Iran-related OFAC actions in the last 30 days.</div>';
     if(srcEl) srcEl.textContent = "last 30d · 0 actions";
@@ -3795,8 +3982,14 @@ function renderOfacTimeline(snap){
       + '<div class="ot"><a href="' + url + '" target="_blank" rel="noopener noreferrer">' + title + '</a></div>'
       + '</div>';
   });
+  if(ofacPaused){
+    html = '<div class="ofac-act-empty" style="margin-bottom:6px;color:var(--amber)">Feed paused since ' + ofacSince
+      + '. Actions below are from the 30 days before it stopped.</div>' + html;
+  }
   box.innerHTML = html;
-  if(srcEl) srcEl.textContent = "last 30d · " + actions.length + " action" + (actions.length === 1 ? "" : "s");
+  if(srcEl) srcEl.textContent = ofacPaused
+    ? ("paused since " + ofacSince + " · " + actions.length + " action" + (actions.length === 1 ? "" : "s"))
+    : ("last 30d · " + actions.length + " action" + (actions.length === 1 ? "" : "s"));
 }
 
 // Poll AIS Worker every 30s; degrade silently if unavailable
@@ -4095,11 +4288,16 @@ function renderEIA() {
   } else {
     var refBrent = _stooqDoD && isFinite(_stooqDoD.today) ? _stooqDoD.today : brent;
     headlineBrent = refBrent;
-    // Same rule: no stale fallback for the WTI headline.
-    headlineWti = null;
-    console.warn("/api/oil primaryOil missing (tier likely secondary/tertiary); WTI headline → '—'.");
+    // 2026-11-05: WTI from the SAME EIA daily print as Brent (/api/stooq now
+    // returns RWTC for the Brent print date), so headline, change and spread
+    // all compare one source on one date. Still no weekly fallback.
+    headlineWti = (_stooqDoD && Number.isFinite(_stooqDoD.wti) && _stooqDoD.wtiDate === _stooqDoD.todayDate)
+      ? _stooqDoD.wti : null;
   }
+  // Which source the headline came from, so the change line never mixes two.
+  var headlineFromEiaDaily = !primaryOil && !!(_stooqDoD && isFinite(_stooqDoD.today));
   _brentPrice = headlineBrent;
+  _brentLoaded = Number.isFinite(headlineBrent);
   // Keep the headline WTI in a global so the spread VERDICT (renderConclusions)
   // uses the exact same numbers as the spread shown in the panel header below —
   // never a second source. (Fixed 2026-05-14: header showed 4.2 from the live
@@ -4107,10 +4305,10 @@ function renderEIA() {
   _wtiPrice = Number.isFinite(headlineWti) ? headlineWti : null;
 
   var ctSub = document.getElementById("ctSub");
-  if(ctSub) ctSub.textContent = "21M bbl/day × $" + headlineBrent.toFixed(1) + "/bbl Brent";
+  if(ctSub) ctSub.textContent = "21M bbl/day × $" + Math.round(headlineBrent) + "/bbl Brent";
 
   var brentEl = document.getElementById("brentPrice");
-  if(brentEl) brentEl.textContent = "$" + headlineBrent.toFixed(1);
+  if(brentEl) brentEl.textContent = "$" + Math.round(headlineBrent);
   // Tooltip surfacing the underlying full-precision value + source tier —
   // helps debug "why does WTI show X when source says Y" complaints by
   // making the actual code path inspectable from the DOM. (2026-05-21)
@@ -4167,30 +4365,45 @@ function renderEIA() {
   //   2nd: Yahoo daily history (compute today vs prev close — same day)
   //   3rd: _stooqDoD (EIA daily, labeled "DoD" honestly)
   //   4th: EIA weekly WoW
+  // 2026-11-05: compare like with like. The old ladder put an EIA spot
+  // headline (dated 3 Nov) against a Yahoo futures close (4 Nov) and showed
+  // "+13.12% DoD" while both sources were roughly flat. Now the change is
+  // always computed inside ONE source:
+  //   EIA daily headline  -> EIA daily vs its previous EIA print
+  //   live headline       -> feed changePct, else vs the previous Yahoo close
+  //                          strictly before today (futures vs futures)
+  //   EIA weekly headline -> EIA weekly WoW
   var chgEl = document.getElementById("brentChg");
+  function _pctTxt(p){ var r = Math.round(p); return (r > 0 ? "+" : "") + r + "%"; }
+  function _setChg(p, suffix, tip){
+    var up = p >= 0;
+    chgEl.textContent = (up?"▲":"▼") + " " + _pctTxt(p) + (suffix ? " " + suffix : "");
+    chgEl.style.color = Math.round(p) === 0 ? "var(--muted)" : (up ? "var(--green)" : "var(--red)");
+    chgEl.title = tip || "";
+  }
   if(chgEl) {
-    if(primaryOil && Number.isFinite(primaryOil.brent.changePct)) {
-      var upP = primaryOil.brent.changePct >= 0;
-      chgEl.textContent = (upP?"▲":"▼") + " " + (upP?"+":"") + primaryOil.brent.changePct.toFixed(2) + "%";
-      chgEl.style.color = upP ? "var(--green)" : "var(--red)";
-    } else if(_brentDailyHistory && _brentDailyHistory.length >= 2 && Number.isFinite(headlineBrent)) {
-      // Compute live change% from Yahoo daily history vs prior close
-      var prevClose = _brentDailyHistory[_brentDailyHistory.length - 2].close;
-      var liveChgPct = ((headlineBrent - prevClose) / prevClose) * 100;
-      var upL = liveChgPct >= 0;
-      chgEl.textContent = (upL?"▲":"▼") + " " + (upL?"+":"") + liveChgPct.toFixed(2) + "% DoD";
-      chgEl.style.color = upL ? "var(--green)" : "var(--red)";
-      chgEl.title = "Computed live: " + headlineBrent.toFixed(2) + " vs " + prevClose.toFixed(2)
-                  + " (Yahoo " + _brentDailyHistory[_brentDailyHistory.length - 2].date + ")";
-    } else if(_stooqDoD && isFinite(_stooqDoD.change)) {
-      var up2 = _stooqDoD.change >= 0;
-      chgEl.textContent = (up2?"▲":"▼") + " " + (up2?"+":"") + _stooqDoD.pct.toFixed(1) + "% DoD";
-      chgEl.style.color = up2 ? "var(--green)" : "var(--red)";
-    } else if(brentPrv) {
-      var chg = brent - brentPrv;
-      var upW = chg >= 0;
-      chgEl.textContent = (upW?"▲":"▼") + " " + (upW?"+":"") + ((chg/brentPrv)*100).toFixed(1) + "% WoW";
-      chgEl.style.color = upW ? "var(--green)" : "var(--red)";
+    chgEl.textContent = ""; chgEl.title = "";
+    if(headlineFromEiaDaily) {
+      if(isFinite(_stooqDoD.pct)) _setChg(_stooqDoD.pct, "DoD",
+        "EIA daily spot: " + _stooqDoD.today.toFixed(2) + " (" + _stooqDoD.todayDate + ") vs "
+        + _stooqDoD.yesterday.toFixed(2) + " (" + _stooqDoD.yesterdayDate + ") = " + _stooqDoD.pct.toFixed(2) + "%");
+    } else if(primaryOil && Number.isFinite(primaryOil.brent.changePct)) {
+      _setChg(primaryOil.brent.changePct, "", "Live feed change: " + primaryOil.brent.changePct.toFixed(2) + "%");
+    } else if(primaryOil && _brentDailyHistory && _brentDailyHistory.length >= 2 && Number.isFinite(headlineBrent)) {
+      // Previous futures close strictly before today's date.
+      var todayIso = new Date().toISOString().slice(0,10);
+      var prevRow = null;
+      for (var hi = _brentDailyHistory.length - 1; hi >= 0; hi--) {
+        if (_brentDailyHistory[hi].date < todayIso) { prevRow = _brentDailyHistory[hi]; break; }
+      }
+      if (prevRow && prevRow.close > 0) {
+        var liveChgPct = ((headlineBrent - prevRow.close) / prevRow.close) * 100;
+        _setChg(liveChgPct, "DoD", "Live futures " + headlineBrent.toFixed(2) + " vs Yahoo futures close "
+          + prevRow.close.toFixed(2) + " (" + prevRow.date + ") = " + liveChgPct.toFixed(2) + "%");
+      }
+    } else if(!primaryOil && brentPrv) {
+      var wowPct = (brent - brentPrv) / brentPrv * 100;
+      _setChg(wowPct, "WoW", "EIA weekly spot: " + brent.toFixed(2) + " vs " + brentPrv.toFixed(2) + " = " + wowPct.toFixed(2) + "%");
     }
   }
 
@@ -4202,17 +4415,18 @@ function renderEIA() {
     // isFinite(null) === true because Number(null) === 0. The looser check
     // let headlineWti=null through and crashed at .toFixed.
     if (Number.isFinite(headlineWti)) {
-      wtiEl.textContent = "$" + headlineWti.toFixed(1);
-      if(spreadEl) spreadEl.textContent = "B–W spread: $" + (headlineBrent - headlineWti).toFixed(1);
+      wtiEl.textContent = "$" + Math.round(headlineWti);
+      if(spreadEl) spreadEl.textContent = "B-W spread: $" + Math.round(headlineBrent - headlineWti);
       wtiEl.style.color = "";   // restore default color when value is live
-      wtiEl.title = "Source: " + (_liveOil ? _liveOil.tier : "n/a")
-                  + " · raw: $" + headlineWti.toFixed(4);
+      wtiEl.title = (headlineFromEiaDaily ? "EIA daily spot (RWTC) " + _stooqDoD.wtiDate : "Source: " + (_liveOil ? _liveOil.tier : "n/a"))
+                  + " · raw: $" + headlineWti.toFixed(2)
+                  + " · spread raw: $" + (headlineBrent - headlineWti).toFixed(2);
     } else {
       // Live WTI missing — show honest "—" + a tooltip with the diagnosis.
       // Never silently render EIA stale weekly under "WTI" label.
-      wtiEl.textContent = "$—";
+      wtiEl.textContent = "n/a";
       wtiEl.style.color = "var(--muted)";
-      if(spreadEl) spreadEl.textContent = "B–W spread: —";
+      if(spreadEl) spreadEl.textContent = "";
       wtiEl.title = "Live WTI unavailable from /api/oil. Tier: "
                   + (_liveOil ? _liveOil.tier : "no_response")
                   + ". Not falling back to EIA weekly (stale by days).";
@@ -4242,15 +4456,16 @@ function renderEIA() {
       var liveAgeStr = (_liveOil && _liveOil.ageMin) ? Math.round(_liveOil.ageMin) + "m ago" : "recent";
       srcLine = "Live: " + liveSrc + " · " + liveAgeStr;
       if(officialBrent && officialBrent.asOf) srcLine += " · EIA spot " + officialBrent.asOf;
-    } else if (secondaryEtf) {
-      srcLine = "Level: EIA weekly · ETF est: BNO " + (secondaryEtf.brent.proxyDp >= 0 ? "+" : "") + secondaryEtf.brent.proxyDp.toFixed(2) + "%";
+    } else if (headlineFromEiaDaily) {
+      // 2026-11-05: say exactly what the headline is and when it printed.
+      srcLine = "Brent + WTI: EIA daily spot, " + _fmtDayMon(_stooqDoD.todayDate) + " (EIA publishes 1-2 days late)";
     } else {
-      srcLine = "EIA weekly spot · live feed pending";
+      srcLine = "EIA weekly spot, week of " + period + " · live feed pending";
     }
-    var stooqDate = _stooqDoD && _stooqDoD.todayDate ? " · daily close: " + _stooqDoD.todayDate : "";
-    noteEl.textContent = srcLine + stooqDate
-      + " · Sparkline: wk of " + period
-      + (sixWkChg ? " · 6-wk: " + (parseFloat(sixWkChg) >= 0 ? "+" : "") + sixWkChg + "%" : "");
+    var trendLine = (_brentDailyHistory && _brentDailyHistory.length >= 2)
+      ? " · Trend chart: Brent futures daily closes (Yahoo) to " + _fmtDayMon(_brentDailyHistory[_brentDailyHistory.length-1].date)
+      : (sixWkChg ? " · 6-wk: " + (parseFloat(sixWkChg) >= 0 ? "+" : "") + Math.round(parseFloat(sixWkChg)) + "%" : "");
+    noteEl.textContent = srcLine + trendLine;
   }
 
   // ── Pulse tag ────────────────────────────────────────────────────────────
@@ -4262,6 +4477,11 @@ function renderEIA() {
       pulseTag.style.color      = isStale ? "var(--amber)" : "var(--green)";
       pulseTag.style.background = isStale ? "rgba(240,144,20,.1)" : "rgba(29,212,126,.1)";
       pulseTag.style.borderColor= isStale ? "rgba(240,144,20,.3)" : "rgba(29,212,126,.2)";
+    } else if (headlineFromEiaDaily) {
+      pulseTag.textContent      = "EIA DAILY · " + _fmtDayMon(_stooqDoD.todayDate).toUpperCase();
+      pulseTag.style.color      = "var(--amber)";
+      pulseTag.style.background = "rgba(240,144,20,.1)";
+      pulseTag.style.borderColor= "rgba(240,144,20,.3)";
     } else if (secondaryEtf) {
       pulseTag.textContent      = "ETF PROXY";
       pulseTag.style.color      = "var(--blue)";
@@ -4282,6 +4502,7 @@ function renderEIA() {
   eiaState.loaded = true;
   markFetched("eia");
   if (typeof updateVolRow === "function") updateVolRow();
+  try { renderHistoricalEvents(); } catch(e){}
 }
 
 /**
@@ -4351,7 +4572,7 @@ function drawBrentTrendArea(data, svgId) {
   // Build candidate markers in render priority (latest first → highest stack rank)
   // Each carries: x, y, color, label text, default vertical anchor ("above"|"below")
   var raw = [
-    { id: "latest", i: iLatest, color: "#f09014", label: "$" + vals[iLatest].toFixed(1), anchor: "above" },
+    { id: "latest", i: iLatest, color: "#f09014", label: "$" + vals[iLatest].toFixed(0), anchor: "above" },
     { id: "max",    i: iMax,    color: "#f09014", label: "↑$" + vals[iMax].toFixed(0),    anchor: "above" },
     { id: "min",    i: iMin,    color: "#4aa0f0", label: "↓$" + vals[iMin].toFixed(0),    anchor: "below" },
   ];
@@ -4442,6 +4663,11 @@ function drawBrentTrendArea(data, svgId) {
           + pts[n-1].period.slice(5) + '</text>';
   }
 
+  // 2026-11-05: reset the canvas. drawSparkline (weekly fallback) may have
+  // drawn first and left viewBox "0 0 238 62"; this 280x78 chart then got
+  // clipped on the right and top (the "$118" peak label was cut off).
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("height", H);
   svg.innerHTML = html;
 }
 
@@ -4557,6 +4783,9 @@ function fetchIntegrity(){
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(d){
       if(!d) return;
+      window._integrity = d;
+      if(_lastVerdict) try { renderVerdictBlock(_lastVerdict); } catch(e){}
+      if(_snapshotData) try { renderBlendRows(_snapshotData); } catch(e){}
       var badge = document.getElementById("integrityBadge");
       var dot   = document.getElementById("integrityDot");
       var lbl   = document.getElementById("integrityLabel");
@@ -4656,6 +4885,7 @@ setInterval(fetchStooq, 30*60*1000); // 30-minute refresh
 
 var gfwMarkers = [];
 var gfwState = { encounters:[], loitering:[], gaps:[], sar:null, loaded:false };
+var GFW_SAR_ENABLED = false;
 
 function gfwDates(days){
   return {
@@ -4697,6 +4927,11 @@ function fetchGFW(){
   gfwPost("public-global-gaps-events:latest",function(err,rows){gfwState.gaps=err?[]:rows;check();},7);
   // SAR radar presence (2026-06-12): AIS-independent detections, 7d window.
   // Response shape differs (4wings report) — count entries server-side shape.
+  // 2026-11-05: GFW answers 404 "This feature is temporarily unavailable
+  // because of infrastructure constraints and an upstream data dependency
+  // issue" for SAR presence. Not requested until GFW restores it; set
+  // GFW_SAR_ENABLED = true to resume (the tile already handles sar=null).
+  if(!GFW_SAR_ENABLED){ gfwState.sar = null; check(); } else
   gfwPost("public-global-sar-presence:latest",function(err,rows){
     if(err){gfwState.sar=null;}
     else{
@@ -4870,10 +5105,11 @@ function vTrend(today){
 function vSpread(brent, wti){
   if(!brent || !wti) return null;
   var spread = brent - wti;
-  if(spread < 4)        return _verdict("low",      "Brent-WTI spread $"+spread.toFixed(1)+". Atlantic basin loose.");
-  if(spread <= 7)       return _verdict("normal",   "Brent-WTI spread $"+spread.toFixed(1)+". Normal range.");
-  if(spread <= 10)      return _verdict("elevated", "Brent-WTI spread $"+spread.toFixed(1)+". Atlantic tightness or Hormuz risk pricing in.");
-  return                  _verdict("high", "Brent-WTI spread $"+spread.toFixed(1)+". Real disruption being priced.");
+  var spR = Math.round(spread);
+  if(spread < 4)        return _verdict("low",      "Brent-WTI spread $"+spR+". Atlantic basin loose.");
+  if(spread <= 7)       return _verdict("normal",   "Brent-WTI spread $"+spR+". Normal range.");
+  if(spread <= 10)      return _verdict("elevated", "Brent-WTI spread $"+spR+". Atlantic tightness or Hormuz risk pricing in.");
+  return                  _verdict("high", "Brent-WTI spread $"+spR+". Real disruption being priced.");
 }
 
 // 8. Vessel type mix — VLCC %
@@ -5512,6 +5748,11 @@ function _renderTrigger(t){
 // contribution to the score). H2.5: `input` can be NEGATIVE (de-escalatory
 // news/OFAC offsetting risk) — render those green with a "−" so the de-escalation
 // reads clearly instead of producing a broken/zero-width bar.
+// Display names for signal keys (CSS capitalises the first letter, which
+// turned "bdti" into "Bdti" and "ofac" into "Ofac"). 2026-11-05.
+var V2_LABELS = { bdti:"BDTI", ofac:"OFAC", oil:"Oil", transits:"Transits", inventory:"Inventory",
+  news:"News", stocks:"Tanker stocks", currency:"Currency", aircraft:"Aircraft", production:"Production",
+  seismic:"Seismic", weather:"Weather", events:"Events" };
 function _v2Row(c){
   var mag = Math.abs(c.input);
   var pct = Math.max(0, Math.min(100, Math.round((mag / 4) * 100)));
@@ -5526,13 +5767,26 @@ function _v2Row(c){
   var lowConf = (c.confidence != null && c.confidence < 0.6)
     ? ' <span title="low-confidence / stale signal" style="color:var(--muted2)">·?</span>' : '';
   return '<div class="v2-row">'
-    + '<div class="v2-row-label">'+c.name+' '+arrow+lowConf+'</div>'
+    + '<div class="v2-row-label">'+(V2_LABELS[c.name] || c.name)+' '+arrow+lowConf+'</div>'
     + '<div class="v2-row-bar"><div class="v2-row-fill" style="width:'+pct+'%;background:'+fillColor+'"></div></div>'
     + '<div class="v2-row-val">'+val+'</div></div>';
 }
 
+// 2026-11-05: a verdict older than this is "paused", not current. The
+// recorder runs hourly; /api/integrity calls it stale after 120 min.
+var VERDICT_PAUSE_SEC = 3 * 3600;
+var _lastVerdict = null;
 function renderVerdictBlock(v){
   if(!v) return;
+  _lastVerdict = v;
+  var vAgeSec = Number.isFinite(v.ts) ? (Date.now()/1000 - v.ts) : null;
+  var paused = vAgeSec == null || vAgeSec > VERDICT_PAUSE_SEC;
+  var blk = document.getElementById("verdictBlock");
+  if(blk) blk.classList.toggle("v2-paused", paused);
+  // Feeds the integrity validator flags (stale/suspect/dead). Confidence can
+  // never read HIGH while any of these are degraded.
+  var integ = window._integrity || null;
+  var degradedFeeds = (integ && integ.blocking_count) ? integ.blocking_count : 0;
   var lvl    = v.verdict || "ELEVATED";
   var struct = v.structural_verdict || lvl;
   var score  = v.structural_score != null ? v.structural_score : v.score;
@@ -5543,8 +5797,13 @@ function renderVerdictBlock(v){
   var bandEl  = document.getElementById("v2BandName");
   var scoreEl = document.getElementById("v2Score");
   var sumEl   = document.getElementById("v2Summary");
-  if(bandEl){ bandEl.textContent = lvl; bandEl.style.color = hex; }
-  if(scoreEl){ scoreEl.textContent = (score != null ? score.toFixed(1) : "—") + " / 4.0"; }
+  if(bandEl){ bandEl.textContent = paused ? "PAUSED" : lvl; bandEl.style.color = paused ? "var(--muted)" : hex; }
+  if(scoreEl){
+    var scoreTxt = (score != null ? score.toFixed(1) : "—") + " / 4.0";
+    scoreEl.textContent = paused
+      ? ("Last reading " + (v.ts ? _fmtDayMon(v.ts) : "n/a") + ": " + lvl + " " + scoreTxt)
+      : (scoreTxt + (v.ts ? " · as of " + new Date(v.ts*1000).toISOString().slice(11,16) + " UTC" : ""));
+  }
 
   // ── Tension gauge — single source of truth (2026-06-23) ──────────────────
   // Previously the gauge SVG was left to the old _wireTensionGauge() path,
@@ -5566,7 +5825,17 @@ function renderVerdictBlock(v){
   if(gArcEl){ gArcEl.setAttribute("d", gp.path); gArcEl.setAttribute("stroke", hex); }
   if(gDotEl){ gDotEl.setAttribute("cx", gp.dot[0]); gDotEl.setAttribute("cy", gp.dot[1]); gDotEl.setAttribute("fill", hex); }
   if(gDescEl && gMap[lvl]){ gDescEl.innerHTML = gMap[lvl].desc; }
-  if(sumEl){
+  if(sumEl && paused){
+    // Never present an old reading as the current risk state.
+    var dStr = v.ts ? _fmtDayMon(v.ts) : "an unknown date";
+    var pLine = '<b style="color:var(--amber)">Verdict paused.</b> Its input feeds stopped updating; the last verdict was computed on '
+      + dStr + '. It is shown below for reference only and is not a current reading.';
+    pLine += '<div style="margin-top:4px;font-size:10px;color:var(--muted)">Confidence: <b style="color:var(--red)">LOW</b>'
+      + ' <span style="color:var(--muted2)">(verdict ' + Math.floor((vAgeSec||0)/86400) + ' days old'
+      + (degradedFeeds ? ' · ' + degradedFeeds + ' feed' + (degradedFeeds===1?'':'s') + ' stale' : '') + ')</span></div>';
+    sumEl.innerHTML = pLine;
+  }
+  if(sumEl && !paused){
     var structColor = VERDICT_HEX[struct] || hex;
     var line = "Structural <b style=\"color:"+structColor+"\">"+struct+"</b>";
     if(fired > 0) line += " + <b>"+fired+"</b> override"+(fired>1?"s":"")+" fired → <b style=\"color:"+hex+"\">"+lvl+"</b>.";
@@ -5583,14 +5852,17 @@ function renderVerdictBlock(v){
     // G14 (2026-06-24): surface verdict CONFIDENCE so a thin read (few live
     // signals) doesn't look as authoritative as a full one.
     if(v.confidence){
-      var confColor = v.confidence === "high" ? "var(--green)"
-        : v.confidence === "medium" ? "var(--amber)" : "var(--red)";
+      // Display confidence is capped at MEDIUM while any feed is degraded.
+      var confShown = (v.confidence === "high" && degradedFeeds > 0) ? "medium" : v.confidence;
+      var confColor = confShown === "high" ? "var(--green)"
+        : confShown === "medium" ? "var(--amber)" : "var(--red)";
       var cov = (v.inputs_used_count != null && v.inputs_total != null)
         ? v.inputs_used_count + "/" + v.inputs_total + " signals"
         : (v.coverage_pct != null ? v.coverage_pct + "% coverage" : "");
       line += '<div style="margin-top:4px;font-size:10px;color:var(--muted)">Confidence: '
-        + '<b style="color:'+confColor+'">' + v.confidence.toUpperCase() + '</b>'
-        + (cov ? ' <span style="color:var(--muted2)">(' + cov + ')</span>' : '')
+        + '<b style="color:'+confColor+'">' + confShown.toUpperCase() + '</b>'
+        + (cov ? ' <span style="color:var(--muted2)">(' + cov
+             + (degradedFeeds ? ' · ' + degradedFeeds + ' feed' + (degradedFeeds===1?'':'s') + ' degraded' : '') + ')</span>' : '')
         + (v.anchor_review_suggested ? ' · <span style="color:var(--amber)" title="Trailing Brent has run well above the $72 pre-war anchor — consider re-baselining HORMUZ_PREWAR_BRENT when the conflict ends">⚑ anchor review</span>' : '')
         + '</div>';
     }
@@ -5659,7 +5931,15 @@ function renderVerdictBlock(v){
   if(trigEl) trigEl.innerHTML = triggers.length ? triggers.map(_renderTrigger).join("") : "";
 
   var modeEl  = document.getElementById("verdictMode");
-  if(modeEl) modeEl.textContent = (v.mode || "composite") + " · 2-stage";
+  if(modeEl){
+    modeEl.textContent = paused ? ("PAUSED SINCE " + (v.ts ? _fmtDayMon(v.ts).toUpperCase() : "?")) : ((v.mode || "composite") + " · 2-stage");
+    modeEl.style.color = paused ? "var(--amber)" : "var(--muted)";
+  }
+  var secTitle = document.querySelector("#verdictBlock .v2-section-title");
+  if(secTitle){
+    if(!secTitle.dataset.orig) secTitle.dataset.orig = secTitle.innerHTML;
+    secTitle.innerHTML = paused ? ("Last reading (" + (v.ts ? _fmtDayMon(v.ts) : "?") + "): top contributors") : secTitle.dataset.orig;
+  }
 
   // P1-4 (2026-06-11): war-risk insurance BAND (indicative — no free live
   // premium feed exists, so a labelled band from the same audited triggers,
@@ -5669,6 +5949,11 @@ function renderVerdictBlock(v){
   if(wrEl){
     var ids = {}; (v.stage2_triggers || []).forEach(function(t){ ids[t.id] = !!t.fires; });
     var band = ids.ukmto ? "HIGH" : (ids.war_tone || ids.war_premium) ? "ELEVATED" : "NORMAL";
+    if(paused){
+      wrEl.innerHTML = '<span style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--muted)">PAUSED</span>'
+        + ' <span style="font-size:9px;color:var(--muted)">derived from the verdict triggers, which last ran on ' + (v.ts ? _fmtDayMon(v.ts) : "?") + '</span>';
+      return;
+    }
     var bandColor = band === "HIGH" ? "var(--red)" : band === "ELEVATED" ? "var(--amber)" : "var(--green)";
     wrEl.innerHTML = '<span style="font-family:var(--mono);font-size:16px;font-weight:700;color:' + bandColor + '">' + band + '</span>'
       + ' <span style="font-size:9px;color:var(--muted)">indicative · from UKMTO attacks + war tone + Brent premium</span>';
