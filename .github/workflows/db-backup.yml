@@ -1,7 +1,7 @@
 name: db-backup
 on:
   schedule:
-    - cron: "0 4 * * 0"      # Sunday 04:00 UTC — quiet window
+    - cron: "0 4 * * 0"      # Sunday 04:00 UTC - quiet window
   workflow_dispatch:
 
 jobs:
@@ -12,14 +12,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"   # 2026-11-06: wrangler 4 needs Node >= 22 (30 Aug run failed on Node 20)
       - name: Install wrangler
-        run: npm install --no-save wrangler@latest
+        run: npm install --no-save wrangler@4
       - name: Export D1 to SQL
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
+          set -o pipefail   # a wrangler error must fail this step, not hide behind tail
           mkdir -p backups
           STAMP=$(date -u +%Y%m%d)
           npx wrangler d1 export hormuz-watch-data --remote --output=backups/d1-$STAMP.sql 2>&1 | tail -20

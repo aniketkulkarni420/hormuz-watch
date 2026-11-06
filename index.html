@@ -1001,7 +1001,7 @@ header{
         <!-- Brent headline - live estimate when available, EIA weekly otherwise -->
         <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:3px">
           <span style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--amber)" id="brentPrice">$-</span>
-          <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">/bbl Brent</span>
+          <span style="font-family:var(--mono);font-size:9px;color:var(--muted)" id="brentLabel">/bbl EIA Brent spot</span>
           <span style="font-family:var(--mono);font-size:10px;font-weight:700;margin-left:auto" id="brentChg"></span>
         </div>
         <!-- P0-3 (2026-06-11): standing war premium vs pre-war anchor (2026-02-27 close $72) -->
@@ -1015,11 +1015,11 @@ header{
         <!-- WTI + spread -->
         <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px">
           <span style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--muted)" id="wtiPrice">$-</span>
-          <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">/bbl WTI</span>
+          <span style="font-family:var(--mono);font-size:9px;color:var(--muted)" id="wtiLabel">/bbl EIA WTI spot</span>
           <span style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:auto" id="bwSpread"></span>
         </div>
         <div style="margin-bottom:8px">
-          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:5px">Brent 4-week trend</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:5px">EIA Brent spot, last 30 prints</div>
           <svg id="brentSparkline" viewBox="0 0 280 78" width="100%" height="78" preserveAspectRatio="none">
             <defs>
               <linearGradient id="brentTrendGrad" x1="0" y1="0" x2="0" y2="1">
@@ -1368,18 +1368,6 @@ header{
         </div>
       </div>
 
-      <!-- Layer 2 · INTERPRETATION -->
-      <div class="ip-layer">
-        <span class="ip-tag interp">Interpretation &middot; historical pattern</span>
-        <div class="ip-interp">
-          Crude-importing <b>refiners</b> have historically underperformed during Hormuz
-          stress episodes due to feedstock-cost compression - input crude rises while
-          retail price is policy-anchored. <b>Upstream producers</b> and <b>Indian-flag
-          tankers</b> have historically benefited from elevated crude and freight rates.
-          Integrated names (RIL) typically hedge-neutral via downstream offset.
-        </div>
-      </div>
-
       <!-- Layer 3 · NOT INVESTMENT ADVICE -->
       <div class="ip-layer">
         <span class="ip-tag notice">Not investment advice</span>
@@ -1612,7 +1600,7 @@ var LOCS = [
    cap:"Industrial \u00B7 refinery (198 kbpd) + petchem + bulk",
    role:"Oman's largest industrial port. Hormuz-immune (Indian Ocean side).",
    dep:"bypass",
-   equity:"Orpic / OQ (Oman state). Closure scenario beneficiary - routing premium."},
+   equity:"Orpic / OQ (Oman state)."},
   {id:"imam",lat:30.42,lng:49.08,zoom:10,type:"port",color:"#ffd166",name:"Bandar Imam Khomeini",sub:"Iran - Petchem Hub",flag:"\uD83C\uDDEE\uD83C\uDDF7",
    text:"Iran's primary petrochemical export terminal. ~1.5 mb/d. Sanctions-exposed shadow fleet origin.",
    cap:"Petrochemical + crude \u00B7 ~1.5 mb/d",
@@ -1630,7 +1618,7 @@ var LOCS = [
    cap:"Transshipment \u00B7 5 MTEU container hub",
    role:"Indian Ocean transshipment - fully Hormuz-immune (south Oman coast)",
    dep:"bypass",
-   equity:"APM Terminals (Maersk). Closure scenario beneficiary - transshipment volumes spike."}
+   equity:"APM Terminals (Maersk)."}
 ];
 
 var SHIP_TYPES = {
@@ -2467,7 +2455,7 @@ function _wireTensionGauge(sev){
   var map = {
     "NORMAL":   { color:"#1dd47e", path:"M 10 66 A 50 50 0 0 1 35 24",  dot:[35,24],  desc:"Routine baseline traffic.<br>No escalation signal." },
     "ELEVATED": { color:"#f09014", path:"M 10 66 A 50 50 0 0 1 60 16",  dot:[60,16],  desc:"Above baseline risk.<br>One signal flagged amber." },
-    "HIGH":     { color:"#ff6b35", path:"M 10 66 A 50 50 0 0 1 92 26",  dot:[92,26],  desc:"Multiple signals stressed.<br>Equity catalyst risk live." },
+    "HIGH":     { color:"#ff6b35", path:"M 10 66 A 50 50 0 0 1 92 26",  dot:[92,26],  desc:"Multiple signals stressed." },
     "CRITICAL": { color:"#ff3e52", path:"M 10 66 A 50 50 0 0 1 110 66", dot:[110,66], desc:"Severe disruption signal.<br>Closure / war premium active." }
   };
   var m = map[sev.level] || map["ELEVATED"];
@@ -4228,9 +4216,10 @@ function renderEIA() {
   // the legacy "primary"/"primary-stale" tiers. Otherwise Tier 0 fires
   // server-side but the frontend ignores it and falls back to EIA weekly
   // - that was the source of the 4.2 vs 3.6 spread variance.
-  var primaryOil   = (_liveOil && _liveOil.brent && isFinite(_liveOil.brent.level)
-                       && _liveOil.tier !== "secondary"
-                       && _liveOil.tier !== "tertiary-required") ? _liveOil : null;
+  // 2026-11-06: every Brent figure is EIA Brent spot (RBRTE daily, via
+  // /api/stooq), the same series India Risk Monitor shows. The live/futures
+  // tier from /api/oil is no longer used for the headline.
+  var primaryOil   = null;
   var secondaryEtf = (_liveOil && _liveOil.tier === "secondary"
                        && _liveOil.brent && isFinite(_liveOil.brent.proxyDp)) ? _liveOil : null;
   var officialBrent = (_liveOil && _liveOil.brentOfficial && isFinite(_liveOil.brentOfficial.level))
@@ -4277,6 +4266,10 @@ function renderEIA() {
 
   var brentEl = document.getElementById("brentPrice");
   if(brentEl) brentEl.textContent = "$" + Math.round(headlineBrent);
+  var brentLbl = document.getElementById("brentLabel");
+  if(brentLbl) brentLbl.textContent = headlineFromEiaDaily
+    ? "/bbl EIA Brent spot, " + _fmtDayMon(_stooqDoD.todayDate)
+    : "/bbl EIA Brent spot, week of " + period;
   // Tooltip surfacing the underlying full-precision value + source tier -
   // helps debug "why does WTI show X when source says Y" complaints by
   // making the actual code path inspectable from the DOM. (2026-05-21)
@@ -4426,12 +4419,12 @@ function renderEIA() {
       if(officialBrent && officialBrent.asOf) srcLine += " · EIA spot " + officialBrent.asOf;
     } else if (headlineFromEiaDaily) {
       // 2026-11-05: say exactly what the headline is and when it printed.
-      srcLine = "Brent + WTI: EIA daily spot, " + _fmtDayMon(_stooqDoD.todayDate) + " (EIA publishes 1-2 days late)";
+      srcLine = "EIA Brent spot and EIA WTI spot, " + _fmtDayMon(_stooqDoD.todayDate) + " (EIA publishes 1-2 days late)";
     } else {
       srcLine = "EIA weekly spot, week of " + period + " · live feed pending";
     }
     var trendLine = (_brentDailyHistory && _brentDailyHistory.length >= 2)
-      ? " · Trend chart: Brent futures daily closes (Yahoo) to " + _fmtDayMon(_brentDailyHistory[_brentDailyHistory.length-1].date)
+      ? " · Trend chart: EIA Brent spot daily, to " + _fmtDayMon(_brentDailyHistory[_brentDailyHistory.length-1].date)
       : (sixWkChg ? " · 6-wk: " + (parseFloat(sixWkChg) >= 0 ? "+" : "") + Math.round(parseFloat(sixWkChg)) + "%" : "");
     noteEl.textContent = srcLine + trendLine;
   }
@@ -4682,8 +4675,8 @@ function showEIAError(msg) {
                     ? _brentDailyHistory[_brentDailyHistory.length - 1] : null;
   if (brentEl) {
     if (lastDaily && isFinite(lastDaily.close)) {
-      brentEl.textContent = "$" + lastDaily.close.toFixed(1);
-      brentEl.title = "Live Brent feed down. Showing Yahoo daily close from " + lastDaily.date;
+      brentEl.textContent = "$" + Math.round(lastDaily.close);
+      brentEl.title = "Brent feed down. Showing the last EIA Brent spot print, " + lastDaily.date;
     } else {
       brentEl.textContent = "$-";
       brentEl.style.color = "var(--muted)";
@@ -4692,7 +4685,7 @@ function showEIAError(msg) {
   }
   if(chgEl){ chgEl.textContent = lastDaily ? "(stale)" : "-"; chgEl.style.color = "var(--muted)"; }
   if(noteEl) noteEl.textContent = lastDaily
-                                  ? ("Live feed down - showing Yahoo daily close from " + lastDaily.date)
+                                  ? ("Feed down: showing the last EIA Brent spot print, " + _fmtDayMon(lastDaily.date))
                                   : ("All oil feeds unreachable. " + (msg||""));
   if(tag){ tag.textContent="STALE"; tag.style.color="var(--amber)"; tag.style.background="var(--amber-dim)"; }
   console.warn("EIA all proxies failed:", msg, "\u00b7 using cached:", !!lastDaily);
@@ -4799,27 +4792,25 @@ fetchIntegrity();
 setInterval(fetchIntegrity, 3 * 60 * 1000); // every 3 min
 
 // ═══════════════════════════════════════════════════
-// DAILY OIL HISTORY - for the Brent + WTI sparklines
-// Source: Yahoo Finance via /api/oil-history. Daily settlements, ~30 day
-// lookback. Refreshes every 30 min - sparkline is daily-granular so any
-// faster is wasted. Falls back gracefully to EIA weekly if unreachable.
+// DAILY OIL HISTORY - for the Brent trend chart
+// 2026-11-06: one Brent series on Hormuz Watch and India Risk Monitor: EIA
+// Europe Brent Spot Price FOB (RBRTE), daily. The chart reads the last 30 EIA
+// daily prints from /api/eia (same series as the headline from /api/stooq).
+// Was Yahoo BZ=F futures closes, which showed $94-96 beside a $107 spot.
 // ═══════════════════════════════════════════════════
-var _brentDailyHistory = null;
-var _wtiDailyHistory   = null;
+var _brentDailyHistory = null;   // [{date, close}] ascending, EIA RBRTE daily
 function fetchOilHistory(){
-  fetch("/api/oil-history?range=1mo&_=" + Date.now())
-    .then(function(r){ if(!r.ok) throw new Error("oil-history "+r.status); return r.json(); })
+  fetch("/api/eia?series=RBRTE&frequency=daily&length=30")
+    .then(function(r){ if(!r.ok) throw new Error("eia daily "+r.status); return r.json(); })
     .then(function(d){
-      if (d && Array.isArray(d.brent) && d.brent.length) {
-        _brentDailyHistory = d.brent;
-      }
-      if (d && Array.isArray(d.wti) && d.wti.length) {
-        _wtiDailyHistory = d.wti;
-      }
-      // Trigger sparkline redraw if EIA already loaded
+      var rows = eiaParseV2(d)
+        .filter(function(x){ return Number.isFinite(x.val); })
+        .map(function(x){ return { date: x.period, close: x.val }; })
+        .reverse();
+      if (rows.length) _brentDailyHistory = rows;
       if (eiaState.loaded) try { renderEIA(); } catch(e){}
     })
-    .catch(function(e){ console.warn("oil-history fetch:", e.message); });
+    .catch(function(e){ console.warn("EIA daily Brent history:", e.message); });
 }
 fetchOilHistory();
 setInterval(fetchOilHistory, 30 * 60 * 1000); // 30-min refresh (sparkline is daily-granular)
@@ -5781,7 +5772,7 @@ function renderVerdictBlock(v){
   var gMap = {
     "NORMAL":   { desc:"Routine baseline.<br>No escalation signal." },
     "ELEVATED": { desc:"Above baseline risk.<br>One signal flagged." },
-    "HIGH":     { desc:"Multiple signals stressed.<br>Equity catalyst risk live." },
+    "HIGH":     { desc:"Multiple signals stressed." },
     "CRITICAL": { desc:"Severe disruption signal.<br>Closure / war premium active." }
   };
   var gp = GAUGE_PATHS[lvl] || GAUGE_PATHS["ELEVATED"];
