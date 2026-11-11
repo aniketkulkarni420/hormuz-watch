@@ -3094,6 +3094,9 @@ dataAge.bdti.status = "loading";
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(d){
       if(!d || !isFinite(d.value)) return;
+      // 2026-11-11: remembered so the hover verdict can say "paused" instead
+      // of reading a months-old print as the current freight market.
+      window._bdtiState = { stale: !!d.stale, asOf: d.asOf || null, value: d.value };
       var valEl   = document.getElementById("sigBDTI");
       var dirEl   = document.getElementById("sigBDTIDir");
       var asOfEl  = document.getElementById("sigBdtiAsOf");
@@ -5153,7 +5156,15 @@ function renderConclusions(){
     var m = bdtiDirEl.textContent.match(/([0-9.]+)%/);
     if(m) bdtiWow = parseFloat(m[1]) * (bdtiDirEl.textContent.indexOf("▼")>=0 ? -1 : 1);
   }
-  renderSigTooltip("ttipBdti", vBdti(bdtiLevel, bdtiWow));
+  var bs = window._bdtiState;
+  if(bs && bs.stale){
+    var bEl = document.getElementById("ttipBdti");
+    if(bEl) bEl.innerHTML = '<div class="sig-tt-verdict cv-normal" style="color:var(--muted)">PAUSED</div>'
+      + '<div class="sig-tt-text">BDTI feed paused. Last print ' + Math.round(bs.value)
+      + (bs.asOf ? ' on ' + _fmtDayMon(bs.asOf) : '') + '; no current freight reading.</div>';
+  } else {
+    renderSigTooltip("ttipBdti", vBdti(bdtiLevel, bdtiWow));
+  }
   // ACLED Incidents removed - will restore when Research-tier API is wired
 
   // Right-panel inline conclusions (6-9)
