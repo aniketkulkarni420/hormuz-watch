@@ -121,13 +121,7 @@ a:hover{text-decoration:underline}
 <p>When today's 24h transit count is 21 (half of baseline) and Brent is $109, projected daily oil flow value is approximately $1.15 billion. The header ticker accumulates the elapsed-day fraction of this number in real time.</p>
 
 <h3>Brent and WTI prices</h3>
-<p>The dashboard reads from a tiered source chain. The top working tier is always used; failures degrade silently to the next:</p>
-<ol>
-<li><b>Live commodity feed</b> - refreshed continuously during market hours</li>
-<li><b>Live ETF proxy</b> - applied to a daily reference level when primary degrades</li>
-<li><b>Daily reference</b> - accurate, 1-2 trading day lag</li>
-</ol>
-<p>The pulse tag at the top of the Market Pulse panel always names the current active tier.</p>
+<p>Every Brent figure on the dashboard is the <b>EIA Europe Brent Spot Price FOB</b> (series RBRTE, daily), shown with its observation date. WTI is the EIA Cushing WTI spot (RWTC) for the same date, so the Brent-WTI spread compares one source on one day. EIA publishes 1-2 trading days late; the date beside each price says which day it is. The same Brent series is used on India Risk Monitor.</p>
 
 <h3>Dark traffic / suspect vessels</h3>
 <p>The intended metric is a ratio - <code>satellite_events / (live_AIS_in_corridor + satellite_events)</code> - but it is <b>not currently computed as a percentage</b>: the live AIS denominator is unavailable during the provider outage. While AIS is degraded, the dashboard surfaces the <b>raw satellite-detected encounter and loitering event counts</b> (vessels appearing in imagery without corresponding AIS broadcasts) rather than a synthetic ratio.</p>

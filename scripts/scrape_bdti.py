@@ -114,6 +114,16 @@ def scrape_stockq():
         print("  StockQ: 'Baltic Dirty Tanker' page marker not found")
         return None, None, []
 
+    # 2026-11-06: since about 7 Aug 2026 StockQ ships every number as an
+    # encoded <span class="sq-obfuscated" data-sq=...> that its own script
+    # decodes in the browser. That is a deliberate anti-scraping measure; this
+    # scraper does not decode it. Say so plainly instead of "no sane value".
+    if "sq-obfuscated" in html:
+        print("  StockQ: values are obfuscated on the page (sq-obfuscated spans);"
+              " no plain-text value to read. Use /admin/bdti for a manual entry"
+              " until a new BDTI source is approved.")
+        return None, None, []
+
     # Strip tags across the whole page — the quote table sits well past the
     # title/breadcrumb occurrences of the heading, so window-by-heading is
     # unreliable.

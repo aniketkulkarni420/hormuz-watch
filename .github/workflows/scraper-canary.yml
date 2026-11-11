@@ -1,7 +1,7 @@
 name: scraper-canary
 on:
   schedule:
-    - cron: "0 12 * * 3"   # Wednesday 12:00 UTC — midweek, between Friday scrapes
+    - cron: "0 12 * * 3"   # Wednesday 12:00 UTC - midweek, between Friday scrapes
   workflow_dispatch:
 
 jobs:
@@ -13,11 +13,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # scrape_bdti.py imports + uses Playwright even in --dry-run, so the
-      # canary must install it — previously it installed only `requests`,
-      # which made the canary fail on every run. (Batch C · 2026-05-14)
-      - run: pip install --quiet requests playwright
-      - run: python -m playwright install --with-deps chromium
+      # scrape_bdti.py reads StockQ over plain HTTP (requests only); Playwright
+      # is no longer used. (2026-11-06)
+      - run: pip install --quiet requests
       - name: Run BDTI scraper (dry-run)
         id: dryrun
         continue-on-error: true
@@ -32,19 +30,26 @@ jobs:
           name: scraper-canary-${{ github.run_id }}
           path: /tmp/canary.log
           retention-days: 14
-      - name: Alert on failure
+      # 2026-11-06: email only when both secrets exist; without them the step
+      # logs a notice and skips. The job still fails when the scraper itself
+      # failed, because that is what the canary is for.
+      - name: Email alert (skipped without RESEND_KEY and ALERT_EMAIL)
         if: steps.dryrun.outcome != 'success'
         env:
           RESEND_KEY: ${{ secrets.RESEND_KEY }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: |
-          if [ -n "$RESEND_KEY" ] && [ -n "$ALERT_EMAIL" ]; then
-            LOG_TAIL=$(tail -40 /tmp/canary.log | sed 's/"/\\"/g' | tr '\n' ' ')
-            curl -X POST https://api.resend.com/emails \
-              -H "Authorization: Bearer $RESEND_KEY" \
-              -H "Content-Type: application/json" \
-              -d "{\"from\":\"Hormuz Watch <onboarding@resend.dev>\",\"to\":[\"$ALERT_EMAIL\"],\"subject\":\"Hormuz Watch — BDTI scraper canary failed\",\"text\":\"BDTI scraper canary failed — Investing.com or Macrotrends page structure may have changed. Manual BDTI update may be needed before Friday's scrape.\\n\\nLog tail:\\n$LOG_TAIL\"}"
-          else
-            echo "::warning::Canary failed but RESEND_KEY/ALERT_EMAIL not set"
+          if [ -z "$RESEND_KEY" ] || [ -z "$ALERT_EMAIL" ]; then
+            echo "::notice::RESEND_KEY or ALERT_EMAIL secret not set; email skipped"
+            exit 0
           fi
+          LOG_TAIL=$(tail -40 /tmp/canary.log | sed 's/"/\\"/g' | tr '\n' ' ')
+          curl -sS -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"from\":\"Hormuz Watch <onboarding@resend.dev>\",\"to\":[\"$ALERT_EMAIL\"],\"subject\":\"Hormuz Watch: BDTI scraper canary failed\",\"text\":\"BDTI scraper canary failed. The StockQ BDTI page structure may have changed. Manual BDTI entry at /admin/bdti may be needed.\\n\\nLog tail:\\n$LOG_TAIL\"}"
+      - name: Fail when the scraper dry-run failed
+        if: steps.dryrun.outcome != 'success'
+        run: |
+          echo "::error::BDTI scraper dry-run failed; see the canary log artifact"
           exit 1
