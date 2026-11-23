@@ -223,10 +223,18 @@ async def listen_and_capture(state, transits, crossing_imos):
                 }
     except (websockets.exceptions.ConnectionClosedError,
             websockets.exceptions.ConnectionClosed,
-            asyncio.exceptions.IncompleteReadError) as e:
+            websockets.exceptions.InvalidHandshake,
+            asyncio.exceptions.IncompleteReadError,
+            asyncio.TimeoutError,
+            OSError,
+            EOFError) as e:
         # AISStream closes the WS without a close-frame when the API key is rejected.
         # Surface the actual cause so debug isn't guesswork next time.
         connection_closed_early = True
+        if isinstance(e, (websockets.exceptions.InvalidHandshake, OSError, EOFError, asyncio.TimeoutError)):
+            # Handshake never completed: provider outage or network, not a key problem.
+            # Handled like a closed connection (recorded in ais_health, last good state kept) so the job does not crash.
+            print(f"    WebSocket handshake did not complete ({type(e).__name__}); treating as provider outage, last good state kept.")
         print(f"  ✗ AISStream closed the WebSocket without a close-frame · {type(e).__name__}: {e}")
         print(f"    Most likely · AIS_KEY rejected (revoked / expired / trailing whitespace / "
               f"monthly bandwidth quota at https://aisstream.io/login).")
