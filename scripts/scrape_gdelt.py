@@ -63,6 +63,9 @@ def main():
     for attempt in range(1, 4):
         if attempt > 1:
             wait = 20 * (attempt - 1)
+            if last_err == "http_429":
+                # GDELT allows one request per 5 seconds per IP and shared runner IPs hit it: wait longer.
+                wait = max(wait, 30 * (attempt - 1) + 10)
             print(f"  retry {attempt}/3 after {wait}s ...")
             time.sleep(wait)
         try:
@@ -126,6 +129,8 @@ def main():
     # ToneChart is slow — server-side it scans tens of thousands of articles
     # to build the histogram. Up to 3 tries, 60s each. 2026-05-18 fix after
     # first run timed out at 20s.
+    # GDELT allows one request per 5 seconds and the ArtList call above just ran.
+    time.sleep(6)
     for attempt in range(3):
         # Backoff between attempts — GDELT rate-limits aggressive callers
         # (saw HTTP 429 with 0-sleep retry). 0s, 8s, 25s.
